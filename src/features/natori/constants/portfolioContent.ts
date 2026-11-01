@@ -17,14 +17,18 @@ import type {
    カラートークン
    ここを書き換えるだけで全体の配色を調整できます
 ------------------------------------------------------------------- */
-/** 白に近い背景を基準に、パステルのピンクと水色、少量のオレンジを使う。 */
+/** 画用紙に近い生成り色を基準に、パステルのピンクと水色、少量のオレンジを使う。装飾は「紙・マーカー・付箋」の役割に限る。 */
 export const portfolioColors = {
-  page: "#FFFEFE",
+  page: "#FFFCF9",
   surface: "#FFFFFF",
-  surfaceSubtle: "#FFF8FA",
+  surfaceSubtle: "#FFF6F7",
   text: "#242027",
   textSoft: "#353038",
   borderSubtle: "#F2D9E0",
+  /** 手描き風の枠線（濃い墨色を薄く）。影の代わりに使う。 */
+  sketchLine: "rgba(59,47,51,0.28)",
+  /** 見出し下のマーカー線。 */
+  marker: "#FFC6DE",
   borderStrong: "#5C95A4",
   /** フォームの通常枠。白背景でも分かる淡いピンク。 */
   formBorder: "#E8A9C6",
@@ -56,7 +60,7 @@ export const portfolioColors = {
   success: "#007D64",
   successSoft: "#E8FFF8",
   overlay: "rgba(32,32,32,0.52)",
-  pageTranslucent: "rgba(255,254,254,0.96)",
+  pageTranslucent: "rgba(255,252,249,0.94)",
   shadowSoft: "rgba(0,0,0,0.06)",
   shadowHover: "rgba(0,0,0,0.10)",
   shadowFloating: "rgba(0,0,0,0.16)",

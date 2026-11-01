@@ -11,6 +11,7 @@ import { useCaseAdminOperation } from "./useCaseAdminOperation";
 import { CaseAdminConfirmation } from "./CaseAdministrationPanel";
 import { useCaseDraft } from "./useCaseDraft";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
+import { workspaceLook as look } from "../../constants/workspaceLook";
 import type { CaseOverviewPart, CaseSection } from "../../types/caseWorkspace";
 import { normalizeNatoriReferenceUrl } from "../../lib/referenceLinks";
 import { CaseWorkspaceLoadError } from "../../types/caseWorkspaceLoad";
@@ -128,7 +129,7 @@ export function CaseIntakePanel({
   return (
     <section
       hidden={section === "overview" ? overviewPart !== "request" : section !== "consultation"}
-      className="mt-4 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5"
+      className={`mt-4 ${look.cardPadded}`}
       aria-label="依頼の内容"
     >
       <h3 className="text-lg font-semibold">依頼の内容</h3>

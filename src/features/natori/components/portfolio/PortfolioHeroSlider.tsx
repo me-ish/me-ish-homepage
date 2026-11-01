@@ -223,8 +223,8 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
     >
       {/* 作品を額のように白い余白で囲む（マステは実績カードだけ）。枠は縦長（4:5）で、絵は切らずに収める。 */}
       <div
-        className="pf-hero-frame relative rounded-[1.25rem] p-2"
-        style={{ background: c.surface, boxShadow: `0 18px 40px ${c.shadowSoft}, 0 2px 8px ${c.shadowSoft}` }}
+        className="pf-hero-frame pf-sketch relative p-2"
+        style={{ background: c.surface }}
       >
         <div
           ref={surfaceRef}

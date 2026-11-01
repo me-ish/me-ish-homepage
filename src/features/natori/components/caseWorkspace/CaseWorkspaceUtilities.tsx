@@ -12,6 +12,7 @@ import EstimateForm from "../dashboard/EstimateForm";
 import { createClient } from "@/lib/supabase/client";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
+import { workspaceLook as look } from "../../constants/workspaceLook";
 import { CasePublicPages } from "./CasePublicPages";
 function publicPageHref(fallback: string, profile: NatoriUserProfile | null) {
   const raw = (fallback === "/natori/portfolio" ? profile?.portfolioUrl :
@@ -97,7 +98,7 @@ export function CaseWorkspaceUtilities({
       aria-label={
         mode === "settings" ? "設定" : "ざっくり見積"
       }
-      className="rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6"
+      className={look.cardPadded}
     >
       <h1 className="text-xl font-semibold">
         {mode === "settings" ? "設定" : "ざっくり見積"}
@@ -165,7 +166,7 @@ export function CaseWorkspaceUtilities({
             ログアウト
           </button>
           {/* Rarely needed, so it sits last and stays folded. */}
-          <details className="mt-6 rounded-xl border border-zinc-200 p-3">
+          <details className={`mt-6 ${look.inset}`}>
             <summary className="cursor-pointer text-sm font-semibold">困った時：緊急停止</summary>
             <CaseSystemControl onAccessRejected={reject}/>
           </details>

@@ -7,6 +7,7 @@ import { caseRegistration } from "../../lib/caseAdministration";
 import { calculateDueDate } from "../../lib/deliveryPlans";
 import { Plus } from "lucide-react";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
+import { workspaceLook as look } from "../../constants/workspaceLook";
 export function CaseRegistration({
   today,
   onChanged,
@@ -52,7 +53,7 @@ export function CaseRegistration({
   return (
     <section
       aria-label="新しい案件の登録"
-      className={wide ? "basis-full space-y-3 rounded-xl border border-zinc-200 bg-white p-3" : "ml-auto"}
+      className={wide ? `basis-full space-y-3 ${look.card}` : "ml-auto"}
     >
       <RegistrationDirty dirty={dirty} onChange={onDraftChange} />
       <button

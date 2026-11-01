@@ -61,9 +61,10 @@ export default function PortfolioHero({
           }`}
         >
           <div className="order-2 min-w-0 px-5 md:order-none md:px-0">
+            {/* 英字の肩書きは小さく、字間を広げない（看板の小さな札）。 */}
             <p
-              className="mb-3 hidden text-sm font-semibold uppercase tracking-[0.2em] md:block"
-              style={{ ...fontEnStyle, color: c.actionTextSmall }}
+              className="mb-3 hidden text-xs font-medium md:block"
+              style={{ ...fontEnStyle, color: c.textSoft }}
             >
               {content.roleEn}
             </p>
@@ -96,11 +97,9 @@ export default function PortfolioHero({
           <div className="order-3 min-w-0 px-5 md:order-none md:px-0">
             {facts.length > 0 ? (
               <dl
-                className={`mb-4 grid max-w-[26rem] overflow-hidden rounded-2xl border md:mb-6 ${hasArt ? "" : "md:mx-auto"}`}
+                className={`pf-sketch mb-4 grid max-w-[26rem] overflow-hidden md:mb-6 ${hasArt ? "" : "md:mx-auto"}`}
                 style={{
                   gridTemplateColumns: `repeat(${facts.length}, minmax(0, 1fr))`,
-                  background: c.surface,
-                  borderColor: c.borderSubtle,
                 }}
               >
                 {facts.map((fact, index) => (

@@ -10,9 +10,10 @@ import { caseDeliveryRequest,caseWorkLabels,caseOriginLabels,caseWorkNoticeLabel
 import { buildDeliveryMailDraft,DELIVERY_EXTENSION_DAYS,DELIVERY_VALID_DAYS } from "../../lib/orderMail";
 import { caseTime } from "../../lib/caseWorkspacePresentation";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
+import { workspaceLook as look } from "../../constants/workspaceLook";
 import type { CaseOverviewPart, CaseSection } from "../../types/caseWorkspace";
 
-const card="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5";
+const card=`space-y-4 ${look.cardPadded}`;
 const fileTime=(value:string|null|undefined)=>value?caseTime(value):"—";
 export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selectedNotificationId,overviewPart=null,talkEvents}:{talkEvents?:ReadonlyArray<{at:string;text:string}>;selectedNotificationId?:string;projectId:string;section:CaseSection;onChanged:()=>void;onDraftChange:(value:boolean)=>void;overviewPart?:CaseOverviewPart|null}){
  const [view,setView]=useState<CaseWorkView|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState("");
@@ -33,7 +34,7 @@ export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selecte
  if(!view)return <section className={card}><p role={error?"alert":"status"}>{error||"読み込み中…"}</p><button className={ui.btnSecondary} onClick={()=>void refresh()}>再読み込み</button></section>;
  const p=view.project,inactive=!!p.deletedAt||p.status==="closed",deliveredStatus=p.status==="delivered"||p.status==="completed",origin=view.records.find(r=>r.kind==="origin");
  return <div className="mt-4 space-y-4">
-  {error?<p role="alert" className="rounded-xl bg-amber-50 p-4">{error}</p>:null}{result?<p role="status">{result}</p>:null}
+  {error?<p role="alert" className={ui.alert.warning}>{error}</p>:null}{result?<p role="status">{result}</p>:null}
   
   <CaseAdministrationPanel selectedNotificationId={selectedNotificationId} projectId={projectId} section={section} overviewPart={overviewPart} refreshKey={view.revision} onChanged={()=>void refresh()} onDraftChange={setAdminDraft}/>
   <div hidden={section!=="overview"||overviewPart!=="outside"}>
@@ -105,7 +106,7 @@ function DeliveryWork({view,disabled,load,onChanged,onDraftChange}:{view:CaseWor
  return <section className={card}><h3 className="font-semibold">納品する</h3><DeliveryFilesManager projectId={p.id} folder="final" onFilesChange={setFiles} workspaceSafe/>
   <p className="text-sm text-zinc-600">ファイルを上げてメールを送ると、お客さんが専用のページで受け取ります。</p>
   {view.release?<p>納品した日：{caseTime(view.release.publishedAt)} / ページの期限：{caseTime(view.release.expiresAt)} / {p.deliveryAcceptedAt?"受け取ってもらいました":"受け取りはまだ"}</p>:null}
-  {frozen?<div className="space-y-3 rounded-xl border border-pink-200 bg-pink-50 p-3"><h4 className="font-semibold">送る前に見てください</h4><p>宛先：{frozen.to}</p><p>{p.title} / {frozen.extension?`期限を${frozen.extension.days}日延ばす：${frozen.extension.reason}`:view.release?"納品のメールを送り直す":"はじめての納品"}</p><p>ページの期限：{caseTime(frozen.expiresAt)}</p><ul>{frozen.fileIds.map(id=><li key={id}>{frozen.files.find(f=>f.id===id)?.fileName??id} · {Math.max(1,Math.round((frozen.files.find(f=>f.id===id)?.sizeBytes??0)/1024)).toLocaleString("ja-JP")} KB · {fileTime(frozen.files.find(f=>f.id===id)?.verifiedAt)}</li>)}</ul><p>{frozen.subject}</p><pre className="whitespace-pre-wrap break-words text-sm">{frozen.body}</pre>
+  {frozen?<div className={look.confirm}><h4 className="font-semibold">送る前に見てください</h4><p>宛先：{frozen.to}</p><p>{p.title} / {frozen.extension?`期限を${frozen.extension.days}日延ばす：${frozen.extension.reason}`:view.release?"納品のメールを送り直す":"はじめての納品"}</p><p>ページの期限：{caseTime(frozen.expiresAt)}</p><ul>{frozen.fileIds.map(id=><li key={id}>{frozen.files.find(f=>f.id===id)?.fileName??id} · {Math.max(1,Math.round((frozen.files.find(f=>f.id===id)?.sizeBytes??0)/1024)).toLocaleString("ja-JP")} KB · {fileTime(frozen.files.find(f=>f.id===id)?.verifiedAt)}</li>)}</ul><p>{frozen.subject}</p><pre className="whitespace-pre-wrap break-words text-sm">{frozen.body}</pre>
    <button className={ui.btnPrimary} disabled={disabled||busy||unknown} onClick={()=>void submit()}>納品してメールを送る</button>
    <button className={ui.btnSecondary} disabled={busy} onClick={()=>void lookup()}>結果を見る</button>
    {unknown?<><p>結果が分かるまで、もう一度は送れません。</p>

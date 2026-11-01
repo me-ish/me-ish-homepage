@@ -4,7 +4,19 @@
  * a segmented control for filters and one pink accent. Text uses the admin's system font.
  * Older admin pages keep `natoriAdminUi`.
  */
+import { natoriAdminUi } from "./adminUi";
+
 export const workspaceLook = {
+  /** 主ボタン（ピンク塗り）と副ボタン（白）。案件画面のすべてのパネルはこの2種だけを使う。 */
+  btnPrimary: natoriAdminUi.btnPrimary,
+  btnSecondary: natoriAdminUi.btnSecondary,
+  btnLink: natoriAdminUi.btnLink,
+  /** 白い角丸の面。枠線や影は付けない（iOS のグループと同じ）。 */
+  cardPadded: "rounded-2xl bg-white p-4 sm:p-5",
+  /** 送る・保存する前の確認。淡いピンクの面にピンク1色の枠。 */
+  confirm: "space-y-3 rounded-2xl border-2 border-pink-200 bg-pink-50 p-4",
+  /** 面の中の薄い灰色の小さな区画（一覧の1件など）。 */
+  inset: "rounded-xl bg-[#F2F2F7] p-3",
   page: "min-h-screen min-h-dvh bg-[#F2F2F7] text-[#1C1C1E]",
   header: "sticky top-0 z-20 border-b border-black/10 bg-[#F2F2F7]/85 backdrop-blur-xl backdrop-saturate-150 [@media(prefers-reduced-transparency:reduce)]:bg-[#F2F2F7] [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none",
   brand: "text-[20px] font-bold tracking-[-0.02em]",

@@ -39,11 +39,11 @@ describe("PF-02 portfolio semantic colors", () => {
     expect(contrastRatio(portfolioFormColors.formBorder, portfolioColors.surface)).toBeGreaterThanOrEqual(3);
   });
 
-  it("uses near-white surfaces with pastel pink, cyan, and a small orange accent", () => {
+  it("uses paper-white surfaces with pastel pink, cyan, and a small orange accent", () => {
     expect(portfolioColors).toMatchObject({
-      page: "#FFFEFE",
+      page: "#FFFCF9",
       surface: "#FFFFFF",
-      surfaceSubtle: "#FFF8FA",
+      surfaceSubtle: "#FFF6F7",
       text: "#242027",
       textSoft: "#353038",
       formBorder: "#E8A9C6",
@@ -69,7 +69,7 @@ describe("PF-02 portfolio semantic colors", () => {
     expect(portfolioDecorativeColors.placeholderMint).toBe("#A9DDE3");
   });
 
-  it("limits orange to the profile X link and gallery sparkle", () => {
+  it("limits orange to the profile X link (the gallery sparkle is gone; headings use the marker line)", () => {
     const componentDirectory = resolve(
       process.cwd(),
       "src/features/natori/components/portfolio"
@@ -93,11 +93,12 @@ describe("PF-02 portfolio semantic colors", () => {
     );
     const heroSource = readFileSync(resolve(componentDirectory, "PortfolioHero.tsx"), "utf8");
 
-    expect(highlightUsages).toEqual(["PortfolioAbout.tsx", "PortfolioGallery.tsx"]);
+    expect(highlightUsages).toEqual(["PortfolioAbout.tsx"]);
     expect(aboutSource).toContain("borderColor: c.highlightBorder");
     expect(aboutSource).toContain("background: c.highlight");
     expect(aboutSource).toContain("color: c.highlightDisplay");
-    expect(gallerySource).toContain("color: c.highlight");
+    expect(gallerySource).not.toContain("c.highlight");
+    expect(gallerySource).toContain('className="pf-marker"');
     expect(heroSource).not.toContain("c.highlight");
   });
 

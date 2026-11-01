@@ -41,6 +41,10 @@ const nextConfig = {
       { source: '/natori', destination: '/natori/portfolio', permanent: true },
       { source: '/ja/natori', destination: '/natori/portfolio', permanent: true },
       { source: '/en/natori', destination: '/en/natori/portfolio', permanent: true },
+      // 旧作品ページ（静的な works.ts・VGen 導線・旧配色）は廃止。作品はポートフォリオの実績へ。
+      { source: '/natori/works/:slug', destination: '/natori/portfolio', permanent: true },
+      { source: '/ja/natori/works/:slug', destination: '/natori/portfolio', permanent: true },
+      { source: '/en/natori/works/:slug', destination: '/en/natori/portfolio', permanent: true },
     ];
   },
 

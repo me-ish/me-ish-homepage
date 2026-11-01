@@ -281,7 +281,7 @@ export default function PortfolioGallery({
     <section id="gallery" className="mx-auto max-w-6xl px-5 py-16">
       <div className="mb-10">
         <h2 className="text-2xl font-black md:text-3xl">
-          ご依頼実績 <span aria-hidden="true" className="after:content-['°˖✧']" style={{ color: c.highlight }} />
+          <span className="pf-marker">ご依頼実績</span>
         </h2>
         {intro?.trim() ? (
           <p
@@ -309,8 +309,8 @@ export default function PortfolioGallery({
                 className="pf-cute-focus min-h-[44px] rounded-full border-2 px-4 py-2 text-sm font-bold"
                 style={
                   collection.id === (activeCollection?.collection.id ?? null)
-                    ? { background: c.text, borderColor: c.text, color: c.onAction }
-                    : { background: c.surface, borderColor: c.borderSubtle, color: c.text }
+                    ? { background: c.actionSoft, borderColor: c.action, color: c.text }
+                    : { background: c.surface, borderColor: c.sketchLine, color: c.text }
                 }
               >
                   {collectionLabel(collection.name)}
@@ -354,7 +354,7 @@ export default function PortfolioGallery({
                 aria-controls="portfolio-gallery-results"
                 onClick={() => setExpanded((current) => !current)}
                 className="pf-cute-focus min-h-[44px] rounded-full border-2 px-5 py-2.5 text-sm font-bold"
-                style={{ borderColor: c.action, background: c.surface, color: c.text }}
+                style={{ borderColor: c.sketchLine, background: c.surface, color: c.text }}
               >
                 {expanded ? "最初の6作品だけ表示" : "全" + filteredWorks.length + "作品を見る"}
               </button>
@@ -385,11 +385,8 @@ export default function PortfolioGallery({
           onKeyDown={onDialogKeyDown}
         >
           <div
-            className="relative flex max-h-full min-h-0 w-full max-w-3xl flex-col rounded-xl p-3 pb-4"
-            style={{
-              background: c.surface,
-              boxShadow: `0 20px 40px ${c.shadowFloating}`,
-            }}
+            className="pf-sketch relative flex max-h-full min-h-0 w-full max-w-3xl flex-col p-3 pb-4"
+            style={{ background: c.surface }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -566,18 +563,15 @@ function PortfolioWorkCard({
 
   return (
     <div
-      className={`pf-pin-card relative min-w-0 rounded-xl p-1.5 pb-2.5 pt-3.5 sm:p-2.5 sm:pb-3 sm:pt-4 ${
+      className={`pf-pin-card relative min-w-0 pt-3 ${
         landscape
           ? "col-span-2 lg:col-span-3"
           : featured
             ? "col-span-2 lg:col-span-4 lg:row-span-2 lg:flex lg:flex-col"
             : "lg:col-span-2"
       }`}
-      style={{
-        background: c.surface,
-        boxShadow: `0 10px 20px ${c.shadowSoft}`,
-      }}
     >
+      {/* 絵は額に入れず、画用紙にそのまま置く。マスキングテープはこれまでどおり全部の絵に貼る（先頭だけ大きめ）。 */}
       <MaskingTape color={collection.color} angle={tapeAngle} large={pickup} />
       <button
         type="button"
@@ -589,7 +583,7 @@ function PortfolioWorkCard({
         }
         disabled={!work.image}
         aria-label={work.image ? `${work.title} を拡大表示` : work.title}
-        className={`pf-cute-focus relative mb-2 flex w-full items-center justify-center overflow-hidden rounded-lg ${
+        className={`pf-cute-focus pf-sketch-soft relative mb-2 flex w-full items-center justify-center overflow-hidden ${
           landscape
             ? "aspect-video lg:max-h-[32rem]"
             : featured

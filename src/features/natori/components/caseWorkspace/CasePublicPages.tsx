@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { BarChart3, ExternalLink, Link2, Palette, type LucideIcon } from "lucide-react";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
+import { workspaceLook as look } from "../../constants/workspaceLook";
 
 type PublicPage = { title: string; description: string; icon: LucideIcon; viewHref: string | null; editHref: string };
 
@@ -12,7 +13,7 @@ export function CasePublicPages({ portfolioHref, linksHref }: { portfolioHref: s
     { title: "リンク集", description: "SNSや各ページへの入口", icon: Link2, viewHref: linksHref, editHref: "/natori/links/edit" },
   ];
   return <div className="space-y-3">
-    {pages.map(page => <article key={page.title} className="rounded-2xl border border-zinc-200 bg-white p-4">
+    {pages.map(page => <article key={page.title} className={look.card}>
       <div className="flex items-center gap-3">
         <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-800"><page.icon size={20} /></span>
         <div><h2 className="text-[16px] font-semibold leading-6">{page.title}</h2><p className="text-xs text-zinc-500">{page.description}</p></div>
@@ -23,7 +24,7 @@ export function CasePublicPages({ portfolioHref, linksHref }: { portfolioHref: s
         <Link href={page.editHref} className={ui.btnPrimary}>編集する</Link>
       </div>
     </article>)}
-    <Link href="/natori/results" className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4">
+    <Link href="/natori/results" className={`flex items-center gap-3 ${look.card} ${ui.focusRing}`}>
       <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-800"><BarChart3 size={20} /></span>
       <span className="min-w-0 flex-1"><span className="block text-[16px] font-semibold leading-6">実績</span><span className="block text-xs text-zinc-500">件数・売上の月別</span></span>
       <span aria-hidden="true" className="text-zinc-400">›</span>

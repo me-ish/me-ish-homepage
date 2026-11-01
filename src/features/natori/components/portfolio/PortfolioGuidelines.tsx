@@ -5,11 +5,6 @@ import type { ReactNode } from "react";
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
-const cardStyle = {
-  background: c.surface,
-  boxShadow: `0 10px 22px ${c.shadowSoft}`,
-} as const;
-
 const DEFAULT_REQUEST_GROUPS = [
   {
     title: "ご依頼内容",
@@ -63,10 +58,10 @@ export default function PortfolioGuidelines({ content, children }: { content: Po
   return (
     <section id="requests" className="pt-6 pb-16 md:py-16" style={{ background: c.surfaceSubtle }}>
       <div className="mx-auto max-w-3xl px-5">
-        <h2 className="mb-6 text-center text-2xl font-black md:text-3xl">ご依頼前にご確認ください</h2>
+        <h2 className="mb-6 text-center text-2xl font-black md:text-3xl"><span className="pf-marker">ご依頼前にご確認ください</span></h2>
 
         {/* 4つの小さなカードに分けず、1枚の中に見出しと内容を並べて縦の長さを抑える */}
-        <div className="divide-y rounded-2xl px-5 md:px-6" style={{ ...cardStyle, borderColor: c.borderSubtle }}>
+        <div className="pf-sketch divide-y divide-[#F2D9E0] px-5 md:px-6">
           {groups.map((group, groupIndex) => {
             const headingId = `request-group-${groupIndex}`;
             return (

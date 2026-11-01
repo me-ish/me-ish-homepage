@@ -28,11 +28,8 @@ export default function PortfolioProcessVideoFrame({
   return (
     <div className="relative mx-auto" style={FRAME_BY_SHAPE[shape]}>
       <div
-        className="absolute inset-0 overflow-hidden rounded-2xl"
-        style={{
-          background: `linear-gradient(135deg, ${c.actionSoft}, ${c.accentSoft})`,
-          boxShadow: `0 10px 22px ${c.shadowSoft}`,
-        }}
+        className="pf-sketch absolute inset-0 overflow-hidden"
+        style={{ background: `linear-gradient(135deg, ${c.actionSoft}, ${c.accentSoft})` }}
       >
         {children}
         {posterImage ? (

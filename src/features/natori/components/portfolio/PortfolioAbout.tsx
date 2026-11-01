@@ -65,8 +65,8 @@ export default function PortfolioAbout({
         <div className="flex flex-col items-center md:col-span-1">
           {/* プロフィールアイコン。編集画面から画像を設定すると差し替わる */}
           <div
-            className="rounded-full p-6"
-            style={{ background: c.surface, boxShadow: `0 12px 24px ${c.shadowSoft}` }}
+            className="rounded-full border-2 p-3"
+            style={{ background: c.surface, borderColor: c.sketchLine }}
           >
             {content.aboutImage ? (
               <div className="relative h-[140px] w-[140px] overflow-hidden rounded-full">
@@ -109,13 +109,13 @@ export default function PortfolioAbout({
           ) : null}
         </div>
         <div className="md:col-span-2">
-          <h2 className="mb-3 text-2xl font-black">プロフィール</h2>
+          <h2 className="mb-3 text-2xl font-black"><span className="pf-marker">プロフィール</span></h2>
           {content.aboutParagraphs.map((paragraph, index) => (
             <p key={index} className="mb-4 leading-relaxed" style={{ color: c.textSoft }}>
               {paragraph}
             </p>
           ))}
-          <div className="rounded-xl p-3 md:p-5" style={{ background: c.surface }}>
+          <div className="pf-sketch-soft p-3 md:p-5">
             <p className="mb-2 font-bold md:mb-3">対応内容</p>
             {/* スマホでも 13px。収まらない分は自然に折り返す */}
             <ul className="flex flex-wrap justify-center gap-1.5 md:gap-2">

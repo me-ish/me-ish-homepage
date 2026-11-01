@@ -27,8 +27,6 @@ function planDescription(description: string): string {
 }
 
 export default function PortfolioPricing({ content, contactPath = "/natori/portfolio/contact", structuredIntake = false }: { content: PortfolioContent; contactPath?: string; structuredIntake?: boolean }) {
-  const gridCols =
-    content.plans.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2 lg:grid-cols-3";
   const commonFeatures =
     content.plans.length > 0
       ? content.plans[0].features.filter((feature) =>
@@ -55,7 +53,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
   return (
     <section id="pricing" className="mx-auto max-w-6xl px-5 pb-12 pt-6 md:py-16">
       <h2 className="mb-6 text-center text-2xl font-black md:mb-8 md:text-3xl">
-        コミッション料金
+        <span className="pf-marker">コミッション料金</span>
       </h2>
 
       <p className="mb-2 text-sm font-black sm:mb-3">通常イラスト</p>
@@ -116,8 +114,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
       {/* スマホ: 2段構成で説明を残しつつ、複数プランを比較しやすい密度にする */}
       <ul
         aria-label="通常イラスト料金（スマホ）"
-        className="overflow-hidden rounded-2xl border sm:hidden"
-        style={{ background: c.surface, borderColor: c.borderSubtle }}
+        className="pf-sketch overflow-hidden sm:hidden"
       >
         {content.plans.map((plan, index) => {
           const planSpecificFeatures = plan.features.filter(
@@ -174,15 +171,19 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
         })}
       </ul>
 
-      {/* タブレット / PC: 従来のカード表示を維持 */}
-      <div className={`hidden gap-6 sm:grid ${gridCols}`}>
+      {/* タブレット / PC: カードを並べず、1枚の「お品書き」として縦に読む。作例は行の左に小さく添える。 */}
+      <ul
+        aria-label="通常イラスト料金"
+        className="pf-sketch mx-auto hidden max-w-3xl divide-y divide-[#F2D9E0] sm:block"
+      >
         {content.plans.map((plan, index) => {
           const sample = planSamples[index];
+          const planSpecificFeatures = plan.features.filter((feature) => !commonFeatures.includes(feature));
           return (
-            <div
+            <li
               key={plan.id ?? `legacy-plan-${index}`}
-              className="relative flex flex-col rounded-2xl p-6"
-              style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
+              className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-5 px-5 py-4 md:px-7"
+              style={{ borderColor: c.borderSubtle }}
             >
               {hasPlanSamples ? (
                 sample ? (
@@ -191,59 +192,58 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                     src={sample.image}
                     alt={`${plan.name}の作例「${sample.title}」`}
                     loading="lazy"
-                    className="mb-4 aspect-[4/5] w-full rounded-xl object-contain"
+                    className="pf-sketch-soft h-24 w-[4.8rem] object-contain md:h-28 md:w-[5.6rem]"
                     style={{ background: c.surfaceSubtle }}
                   />
                 ) : (
                   <div
-                    className="mb-4 flex aspect-[4/5] w-full items-center justify-center rounded-xl text-sm font-bold"
+                    className="pf-sketch-soft flex h-24 w-[4.8rem] items-center justify-center text-center text-[11px] font-bold leading-tight md:h-28 md:w-[5.6rem]"
                     style={{ background: c.surfaceSubtle, color: c.textSoft }}
                   >
                     作例は準備中です
                   </div>
                 )
-              ) : null}
-              <h3 className="mb-1 text-lg font-bold">{plan.name}</h3>
-              <p className="mb-2 text-2xl font-bold" style={{ color: c.text }}>
-                {startingPriceLabel(plan.price)}
-              </p>
-              <div className="mb-6 flex-1">
-                <p className="text-sm" style={{ color: c.textSoft }}>
+              ) : (
+                <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: c.action }} />
+              )}
+              <div className="min-w-0">
+                <h3 className="text-lg font-bold">{plan.name}</h3>
+                <p className="mt-0.5 text-sm" style={{ color: c.textSoft }}>
                   {planDescription(plan.desc)}
                 </p>
-                {plan.features.some((feature) => !commonFeatures.includes(feature)) && (
-                  <ul className="mt-4 space-y-1.5 text-sm">
-                    {plan.features
-                      .filter((feature) => !commonFeatures.includes(feature))
-                      .map((feature) => (
-                        <li key={feature} className="flex items-start gap-2">
-                          <span style={{ color: c.actionText }} aria-hidden="true">
-                            ✓
-                          </span>
-                          <span style={{ color: c.textSoft }}>{feature}</span>
-                        </li>
-                      ))}
+                {planSpecificFeatures.length > 0 ? (
+                  <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                    {planSpecificFeatures.map((feature) => (
+                      <li key={feature} className="flex items-start gap-1.5">
+                        <span style={{ color: c.actionText }} aria-hidden="true">✓</span>
+                        <span style={{ color: c.textSoft }}>{feature}</span>
+                      </li>
+                    ))}
                   </ul>
-                )}
+                ) : null}
               </div>
-              <a
-                href={planHref(plan)}
-                onClick={() => trackPlan(plan.name)}
-                className="pf-cute-focus rounded-full border-2 py-2.5 text-center font-bold"
-                style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
-              >
-                このプランで相談
-              </a>
-            </div>
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                <p className="text-2xl font-bold tabular-nums" style={{ color: c.text }}>
+                  {startingPriceLabel(plan.price)}
+                </p>
+                <a
+                  href={planHref(plan)}
+                  onClick={() => trackPlan(plan.name)}
+                  className="pf-cute-focus inline-flex min-h-10 items-center rounded-full border-2 px-4 text-sm font-bold"
+                  style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
+                >
+                  このプランで相談
+                </a>
+              </div>
+            </li>
           );
         })}
-      </div>
+      </ul>
 
       {/* 受付停止中は説明や作例を出さず、1行だけで知らせる */}
       {content.massProductionIllustrationOpen ? (
         <div
-          className="mx-auto mt-6 max-w-3xl rounded-2xl border-2 px-4 py-4 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-5 sm:px-5"
-          style={{ background: c.surface, borderColor: c.actionSoft }}
+          className="pf-sketch-soft mx-auto mt-6 max-w-3xl px-4 py-4 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-5 sm:px-5"
         >
           <div className="min-w-0">
             <div className="flex items-baseline justify-between gap-3">
@@ -303,8 +303,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
         </div>
       ) : (
         <div
-          className="mx-auto mt-6 flex max-w-3xl flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-xl border px-4 py-2.5 sm:px-5"
-          style={{ background: c.surface, borderColor: c.borderSubtle }}
+          className="pf-sketch-soft mx-auto mt-6 flex max-w-3xl flex-wrap items-baseline justify-between gap-x-3 gap-y-1 px-4 py-2.5 sm:px-5"
         >
           <h3 className="font-bold">量産イラスト</h3>
           <p className="flex items-baseline gap-2 text-sm" style={{ color: c.textSoft }}>
@@ -317,8 +316,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
       {/* 追加オプション。一覧は畳み、見出しに代表的な名前だけ出す */}
       {content.options.length > 0 ? (
         <details
-          className="group mx-auto mt-8 max-w-3xl rounded-2xl sm:mt-12"
-          style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
+          className="group pf-sketch-soft mx-auto mt-8 max-w-3xl sm:mt-12"
         >
           <summary className="pf-cute-focus flex min-h-[48px] cursor-pointer list-none items-center gap-3 rounded-2xl px-4 py-3 sm:px-6 md:px-8 md:py-4 [&::-webkit-details-marker]:hidden">
             <div className="min-w-0 flex-1">

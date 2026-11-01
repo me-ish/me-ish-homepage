@@ -6,6 +6,7 @@ import {CASE_HISTORY_SOURCES,type CaseHistoryView,type CaseFinancialDisplay} fro
 import {getNatoriProjectActivityLabel,type NatoriProjectActivityEventType} from "../../lib/projectActivity";
 import {caseTime} from "../../lib/caseWorkspacePresentation";
 import {natoriAdminUi as ui} from "../../constants/adminUi";
+import {workspaceLook as look} from "../../constants/workspaceLook";
 import type {CaseSection} from "../../types/caseWorkspace";
 const money=(value:number|null)=>value===null?"—":`${value.toLocaleString('ja-JP')}円`;
 export function CaseHistoryPanel({projectId,section,page,refreshKey,onPage,onAccessRejected,onNotice}:{projectId:string;section:CaseSection;page:number;refreshKey:string;onNotice?:(id:string)=>void;onPage:(page:number)=>void;onAccessRejected:()=>void}){
@@ -34,7 +35,7 @@ export function CaseHistoryPanel({projectId,section,page,refreshKey,onPage,onAcc
  },[projectId,active,page,reload,refreshKey]);
  const restart=()=>{cursor.current=null;setFinancial(null);setLegacy([]);onPage(1);setReload(v=>v+1);};
  return <section hidden={!active} className="mt-4 space-y-4" aria-label="入金と履歴">
-  <div className="rounded-[18px_14px_20px_13px] border-[1.5px] border-[#3B2F33]/25 bg-white p-4 sm:p-5"><h3 className="font-semibold">入金と返金</h3>
+  <div className={look.cardPadded}><h3 className="font-semibold">入金と返金</h3>
    {financial?<>{/* Without refunds the three figures say the same thing, so one line is enough. */}
     {financial.refunded||financial.pendingCount||financial.reviewCount?<dl className="my-3 grid grid-cols-3 gap-2 text-sm"><div><dt className="text-zinc-600">入金</dt><dd className="font-semibold">{money(financial.gross)}</dd></div><div><dt className="text-zinc-600">返金</dt><dd className="font-semibold">{money(financial.refunded)}</dd></div><div><dt className="text-zinc-600">差し引き</dt><dd className="font-semibold">{money(financial.net)}</dd></div></dl>:<p className="mt-2 text-sm font-semibold">入金 {money(financial.gross)}</p>}
     <p className="text-sm">{financial.method===null?"入金の記録はありません":financial.method==="manual"?"あなたが記録した入金":financial.method==="stripe"?"カード決済":"以前の方法での入金"}{financial.method!==null&&financial.confirmedAt?` · ${caseTime(financial.confirmedAt)}`:""}</p>
@@ -46,7 +47,7 @@ export function CaseHistoryPanel({projectId,section,page,refreshKey,onPage,onAcc
    {section==="transaction"?<>{error?<><p role="alert">最新の記録を読み込めませんでした。</p><button className={`${ui.btnSecondary} mt-3`} disabled={pending} onClick={restart}>再読み込み</button></>:null}</>:null}
   </div>
   {/* Every record is one line (date + what happened); its details open on tap. The full list is folded. */}
-  <details hidden={section!=="history"} className="rounded-2xl bg-white p-4 sm:p-5"><summary className="cursor-pointer font-semibold">細かい記録{view?`（${view.total}件）`:""}</summary>
+  <details hidden={section!=="history"} className={look.cardPadded}><summary className="cursor-pointer font-semibold">細かい記録{view?`（${view.total}件）`:""}</summary>
    {pending?<p role="status">読み込み中</p>:null}
    {error?<><p role="alert">{error==="changed"?"記録が増えました。最初のページから読み込み直してください。":"記録を読み込めませんでした。"}</p>
    <button className={ui.btnSecondary} disabled={pending} onClick={restart}>最初のページから読み込み直す</button></>:null}
@@ -64,7 +65,7 @@ export function CaseHistoryPanel({projectId,section,page,refreshKey,onPage,onAcc
     </div></details></li>)}</ol>
     <nav aria-label="案件履歴のページ" className="mt-4 flex flex-wrap items-center gap-3"><button className={ui.btnSecondary} disabled={pending||page<=1} onClick={()=>onPage(page-1)}>前へ</button><span>{page}ページ</span><button className={ui.btnSecondary} disabled={pending||view.next===null} onClick={()=>onPage(page+1)}>次へ</button></nav>
    </>:null}
-   {legacy.length?<aside className="mt-5 rounded-xl bg-amber-50 p-3 text-sm"><h4 className="font-semibold">以前のメモ</h4><ul>{legacy.map((r,i)=><li key={i}>{r.dateISO} · {r.label}</li>)}</ul></aside>:null}
+   {legacy.length?<aside className={`mt-5 ${ui.alert.warning}`}><h4 className="font-semibold">以前のメモ</h4><ul>{legacy.map((r,i)=><li key={i}>{r.dateISO} · {r.label}</li>)}</ul></aside>:null}
   </details>
  </section>;
 }

@@ -5,10 +5,6 @@ import { workflowStepView } from "@/features/natori/lib/portfolioStepText";
 import { resolvePortfolioWorkflow } from "@/features/natori/lib/portfolioWorkflow";
 import type { PortfolioDisplayContent } from "@/features/natori/types/portfolioDisplay";
 
-const cardStyle = {
-  background: c.surface,
-  boxShadow: `0 10px 22px ${c.shadowSoft}`,
-} as const;
 
 export default function PortfolioWorkflow({ content }: { content: PortfolioDisplayContent }) {
   const workflow = resolvePortfolioWorkflow(content.workflow, content.workflowProjectionAllowed !== false);
@@ -17,7 +13,7 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioDispl
     <section id="flow" className="pb-6 pt-16 md:py-16" style={{ background: c.surfaceSubtle }}>
       <div className="mx-auto max-w-4xl space-y-10 px-5">
         <div>
-          <h2 className="mb-6 text-center text-2xl font-black md:text-3xl">制作の流れ</h2>
+          <h2 className="mb-6 text-center text-2xl font-black md:text-3xl"><span className="pf-marker">制作の流れ</span></h2>
           {/* 番号の丸を縦の線でつないだ時系列。各 li の線は次の丸まで伸ばし、最後の項目だけ線を引かない */}
           <ol>
             {workflow.map((step, index) => (
@@ -38,8 +34,8 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioDispl
                 </span>
                 {index < workflow.length - 1 ? (
                   <span
-                    className="absolute bottom-0 left-5 top-10 w-0.5 -translate-x-1/2 rounded-full"
-                    style={{ background: c.formBorder }}
+                    className="absolute bottom-0 left-5 top-10 w-0 -translate-x-1/2 border-l-2 border-dashed"
+                    style={{ borderColor: c.formBorder }}
                     aria-hidden="true"
                   />
                 ) : null}
@@ -50,8 +46,8 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioDispl
         </div>
 
         <div>
-          <h2 className="mb-6 text-center text-2xl font-black md:text-3xl">納期について</h2>
-          <div className="rounded-2xl p-6 md:p-8" style={cardStyle}>
+          <h2 className="mb-6 text-center text-2xl font-black md:text-3xl"><span className="pf-marker">納期について</span></h2>
+          <div className="pf-sketch p-6 md:p-8">
             <p className="mb-5 leading-relaxed" style={{ color: c.textSoft }}>
               {content.deliveryLead}
             </p>
@@ -87,7 +83,7 @@ function WorkflowStepCard({ title, body }: { title: string; body: string }) {
   const { lead, detail } = workflowStepView({ title, body });
   if (!detail) {
     return (
-      <div className="min-w-0 flex-1 rounded-2xl p-4 md:p-5" style={cardStyle}>
+      <div className="min-w-0 flex-1 pt-1.5 md:pt-2">
         <p className="mb-1 font-bold">{title}</p>
         <p className="text-sm leading-relaxed" style={{ color: c.textSoft }}>
           {lead}
@@ -96,8 +92,8 @@ function WorkflowStepCard({ title, body }: { title: string; body: string }) {
     );
   }
   return (
-    <details className="group min-w-0 flex-1 rounded-2xl" style={cardStyle}>
-      <summary className="pf-cute-focus block cursor-pointer list-none rounded-2xl p-4 md:p-5 [&::-webkit-details-marker]:hidden">
+    <details className="group min-w-0 flex-1">
+      <summary className="pf-cute-focus block cursor-pointer list-none rounded-2xl pt-1.5 md:pt-2 [&::-webkit-details-marker]:hidden">
         <p className="mb-1 font-bold">{title}</p>
         <p className="text-sm leading-relaxed" style={{ color: c.textSoft }}>
           <span className="group-open:hidden">{lead}</span>

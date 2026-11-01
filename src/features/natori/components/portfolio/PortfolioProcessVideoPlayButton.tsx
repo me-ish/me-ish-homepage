@@ -16,8 +16,8 @@ export default function PortfolioProcessVideoPlayButton({ onClick }: { onClick: 
     >
       <span
         aria-hidden="true"
-        className="grid h-16 w-16 place-items-center rounded-full transition-transform group-hover:scale-105 motion-reduce:transition-none md:h-20 md:w-20"
-        style={{ background: c.surface, boxShadow: `0 8px 20px ${c.shadowHover}` }}
+        className="grid h-16 w-16 place-items-center rounded-full border-2 transition-transform group-hover:scale-105 motion-reduce:transition-none md:h-20 md:w-20"
+        style={{ background: c.surface, borderColor: c.sketchLine }}
       >
         <Play
           className="h-7 w-7 translate-x-0.5 md:h-9 md:w-9"
