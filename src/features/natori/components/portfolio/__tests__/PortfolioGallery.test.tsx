@@ -44,11 +44,12 @@ const collections = [
 beforeEach(() => vi.clearAllMocks());
 
 describe("PortfolioGallery collections", () => {
-  it("横長画像はカードを全幅にし、縦長画像は通常の比率を保つ", () => {
+  it("横長画像も縦長画像も同じ3:4の枠にそろえ、段に穴を空けない", () => {
     render(
       <PortfolioGallery
         collections={collections}
         works={[
+          work("first", { image: "https://example.com/first.webp" }),
           work("wide", { image: "https://example.com/wide.webp" }),
           work("tall", { image: "https://example.com/tall.webp" }),
         ]}
@@ -62,11 +63,11 @@ describe("PortfolioGallery collections", () => {
     fireEvent.load(wideImage);
     fireEvent.load(tallImage);
 
-    expect(wideImage.closest(".pf-pin-card")?.className).toContain("col-span-2 lg:col-span-3");
-    expect(wideImage.closest("#portfolio-gallery-results")?.className).toContain("lg:grid-cols-6");
-    expect(wideImage.parentElement?.className).toContain("aspect-video");
-    expect(tallImage.closest(".pf-pin-card")?.className).toContain("lg:col-span-2");
-    expect(tallImage.parentElement?.className).toContain("aspect-[3/4]");
+    expect(wideImage.closest("#portfolio-gallery-results")?.className).toContain("lg:grid-cols-3");
+    for (const image of [wideImage, tallImage]) {
+      expect(image.closest(".pf-pin-card")?.className).toContain("col-span-1");
+      expect(image.parentElement?.className).toContain("aspect-[3/4]");
+    }
   });
 
   it("卵商品をつなぐのカテゴリとして案内する", () => {
@@ -370,9 +371,9 @@ describe("PortfolioGallery pick-up and lightbox browsing", () => {
 
     const cards = Array.from(document.querySelectorAll("#portfolio-gallery-results .pf-pin-card"));
     expect(cards).toHaveLength(3);
-    expect(cards[0].className).toContain("col-span-2 lg:col-span-4 lg:row-span-2");
+    expect(cards[0].className).toContain("col-span-2 lg:row-span-2");
     expect(cards[0].textContent).not.toContain("PICK UP");
-    expect(cards[1].className).toContain("lg:col-span-2");
+    expect(cards[1].className).toContain("col-span-1");
     expect(cards[1].className).not.toContain("lg:row-span-2");
     expect(cards[1].textContent).not.toContain("PICK UP");
     for (const card of cards) {

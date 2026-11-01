@@ -196,12 +196,8 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                     style={{ background: c.surfaceSubtle }}
                   />
                 ) : (
-                  <div
-                    className="pf-sketch-soft flex h-24 w-[4.8rem] items-center justify-center text-center text-[11px] font-bold leading-tight md:h-28 md:w-[5.6rem]"
-                    style={{ background: c.surfaceSubtle, color: c.textSoft }}
-                  >
-                    作例は準備中です
-                  </div>
+                  // 作例のないプランは空枠を見せず、幅だけ取って名前と金額の位置をそろえる
+                  <span aria-hidden="true" data-plan-sample-spacer className="w-[4.8rem] md:w-[5.6rem]" />
                 )
               ) : (
                 <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: c.action }} />

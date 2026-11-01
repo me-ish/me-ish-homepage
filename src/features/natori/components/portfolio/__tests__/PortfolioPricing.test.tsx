@@ -145,8 +145,9 @@ describe("PortfolioPricing", () => {
     const strip = screen.getByRole("group", { name: "通常イラストの作例" });
     expect(strip.className).toContain("sm:hidden");
     expect(within(strip).getAllByRole("img")).toHaveLength(1);
-    // 作例のないプランも PC では同じ高さの枠を取る
-    expect(screen.getAllByText("作例は準備中です")).toHaveLength(3);
+    // 作例のないプランは空枠を出さず、幅だけ取って位置をそろえる
+    expect(screen.queryByText("作例は準備中です")).toBeNull();
+    expect(document.querySelectorAll("[data-plan-sample-spacer]")).toHaveLength(3);
   });
 
   it("adds no plan sample area until a sample is chosen", () => {
