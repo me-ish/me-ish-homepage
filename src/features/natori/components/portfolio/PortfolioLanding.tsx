@@ -70,9 +70,8 @@ export default function PortfolioLanding({
         <PortfolioAbout content={content} variant={variant} flatPlaceholders={flatPlaceholders} />
       ) : (
         <>
-          <PortfolioPricing content={content} contactPath={contactPath} structuredIntake={Boolean(demoStructuredQuery)} />
-          {/* 制作過程の動画は、作品と料金の間に挟まず、料金を見たあとに置く（スマホで料金まで遠くならないように）。 */}
           <PortfolioProcessVideo content={content} />
+          <PortfolioPricing content={content} contactPath={contactPath} structuredIntake={Boolean(demoStructuredQuery)} />
           <PortfolioWorkflow content={content} />
           <PortfolioAbout content={content} variant={variant} flatPlaceholders={flatPlaceholders} />
           <PortfolioGuidelines content={content}>
