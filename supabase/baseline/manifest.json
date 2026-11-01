@@ -62,9 +62,10 @@
     "supabase/migrations/20261023010000_natori_case_system_hold.sql",
     "supabase/migrations/20261023020000_natori_case_system_review.sql",
     "supabase/migrations/20261023030000_natori_case_system_fence.sql",
-    "supabase/migrations/20261025000000_natori_production_mail_evidence.sql"
+    "supabase/migrations/20261025000000_natori_production_mail_evidence.sql",
+    "supabase/migrations/20261101120000_natori_case_completion.sql"
   ],
-  "activeMigrationCount": 54,
+  "activeMigrationCount": 55,
   "legacyMigrationCount": 55,
   "remoteOnlyEvidenceCount": 3,
   "sourceProjectRef": "lvnfspyainrxtztjytbo",
@@ -136,7 +137,8 @@
     "20261023010000_natori_case_system_hold.sql",
     "20261023020000_natori_case_system_review.sql",
     "20261023030000_natori_case_system_fence.sql",
-    "20261025000000_natori_production_mail_evidence.sql"
+    "20261025000000_natori_production_mail_evidence.sql",
+    "20261101120000_natori_case_completion.sql"
   ],
   "archiveVerification": {
     "status": "verified",
@@ -319,7 +321,8 @@
     "sha256:supabase/migrations/20261023010000_natori_case_system_hold.sql": "7f43ab89faac7a88bd7ac2090ca502a1106f868ab04946cce9dd2878e392ea35",
     "sha256:supabase/migrations/20261023020000_natori_case_system_review.sql": "187a55088086472cf4248310e5aaa17b6db266d602ba59705985a3f711b7ee87",
     "sha256:supabase/migrations/20261023030000_natori_case_system_fence.sql": "b10d58b48188a594847a25144bf00ec99082a64644147997b72a5f866b452369",
-    "sha256:supabase/migrations/20261025000000_natori_production_mail_evidence.sql": "68cdd825fecc26905a0a270a816ba8d0b9f9d9106956dd99bb41125c452593d8"
+    "sha256:supabase/migrations/20261025000000_natori_production_mail_evidence.sql": "68cdd825fecc26905a0a270a816ba8d0b9f9d9106956dd99bb41125c452593d8",
+    "sha256:supabase/migrations/20261101120000_natori_case_completion.sql": "3aedcf0a69e685248e06afba6d676fa340cfe4a35dad14cf36d089320d110a33"
   },
   "operatorConfirmationRequired": [
     "target project ref is non-production and not lvnfspyainrxtztjytbo",

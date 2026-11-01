@@ -6,7 +6,7 @@ import ConsultationThread from "../consultation/ConsultationThread";
 import DeliveryFilesManager from "../dashboard/DeliveryFilesManager";
 import type { NatoriDeliveryFileView } from "../../data/supabaseDeliveryFiles";
 import { fetchCaseWork,mutateCaseWork } from "../../data/supabaseCaseWork";
-import { caseDeliveryRequest,caseWorkLabels,caseOriginLabels,caseWorkNoticeLabel,openCaseRevisions,type CaseWorkView,type CaseDeliveryRequest } from "../../lib/caseWork";
+import { caseDeliveryRequest,caseWorkLabels,caseOriginLabels,caseWorkNoticeLabel,openCaseRevisions,caseCompletionOption,caseCompletionResultText,type CaseWorkView,type CaseDeliveryRequest } from "../../lib/caseWork";
 import { buildDeliveryMailDraft,DELIVERY_EXTENSION_DAYS,DELIVERY_VALID_DAYS } from "../../lib/orderMail";
 import { caseTime } from "../../lib/caseWorkspacePresentation";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
@@ -52,6 +52,7 @@ export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selecte
    <section className={card}><h3 className="font-semibold">修正の依頼を記録</h3><p className="text-sm text-zinc-600">お客さんのメッセージと、どのラフかを選びます。追加料金がかかる時は、相談で決めてください。</p>
     <RevisionForm view={view} disabled={busy||inactive} save={command} onDirty={setRevisionDraft}/></section>
    <DeliveryWork key={projectId} view={view} disabled={busy||inactive} load={load} onChanged={onChanged} onDraftChange={setDeliveryDraft}/>
+   <CompleteWork key={`${projectId}/complete`} view={view} disabled={busy||inactive} load={load} onChanged={onChanged}/>
   </div>
   <section hidden={section!=="history"} className={card}><h3 className="font-semibold">あなたが書いた記録</h3>
    {view.records.length===0?<p>まだありません。</p>:view.records.map(r=><article key={r.id} className="border-t py-3 text-sm"><p className="font-semibold">{caseWorkLabels[r.kind]}</p><p>{r.data.note}</p>{r.data.target?<p>{r.data.target}</p>:null}<p className="text-zinc-600">{r.data.occurredAt?`${caseTime(r.data.occurredAt)}のこと · `:""}{caseTime(r.created_at)}に記録 · {r.operator.kind==="auth-user"?"ログインした人":"共有の鍵で入った人"}</p></article>)}
@@ -117,5 +118,39 @@ function DeliveryWork({view,disabled,load,onChanged,onDraftChange}:{view:CaseWor
    {view.release?<><label className="block">ページの期限<select className={ui.input} value={days} onChange={e=>setDays(Number(e.target.value))}><option value={0}>いまの期限のまま</option>{DELIVERY_EXTENSION_DAYS.filter(()=>Date.parse(view.release!.expiresAt)<=Date.now()).map(d=><option key={d} value={d}>{d}日延ばす（前のリンクは使えなくなります）</option>)}</select></label>{days?<label className="block">延ばす理由<input className={ui.input} value={reason} maxLength={200} onChange={e=>setReason(e.target.value)}/></label>:null}</>:null}
    <button className={ui.btnSecondary} disabled={disabled||busy||unknown} onClick={()=>void prepare()}>納品する（送る前に内容を表示）</button></div>}
   {message?<p role="status" className="whitespace-pre-wrap text-sm">{message}</p>:null}
+ </section>;
+}
+const localDate=(d:Date)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+/** Completion when no customer will press 受け取り: outside-the-site orders, or an expired delivery page. */
+function CompleteWork({view,disabled,load,onChanged}:{view:CaseWorkView;disabled:boolean;load:(operationId?:string)=>Promise<CaseWorkView>;onChanged:()=>void}){
+ const option=caseCompletionOption(view,Date.now());
+ const [confirming,setConfirming]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
+ const [date,setDate]=useState(()=>localDate(new Date()));
+ const [note,setNote]=useState(option==="deemed"?"納品ページの期限までに受け取りが押されなかった":"サイトの外で納品した");
+ const request=useRef(""),lock=useRef(false);
+ if(!option)return message?<section className={card}><p role="status" className="text-sm">{message}</p></section>:null;
+ const deemed=option==="deemed";
+ const submit=async()=>{if(lock.current)return;lock.current=true;setBusy(true);setMessage("");
+  request.current=request.current||crypto.randomUUID();
+  try{
+   const at=deemed?undefined:new Date(`${date}T12:00:00`);
+   const completedAt=at&&localDate(at)===localDate(new Date())?new Date().toISOString():at?.toISOString();
+   const response=await mutateCaseWork({command:"complete",projectId:view.project.id,revision:view.revision,requestId:request.current,kind:option,note:note.trim(),...(completedAt?{completedAt}:{})});
+   setMessage(caseCompletionResultText(response.result));
+   if(response.result==="applied"){request.current="";setConfirming(false);}
+   else if(response.result!=="conflict")request.current="";
+   await load();onChanged();
+  }catch(e){setMessage(e instanceof Error?e.message:"うまくいったか分かりません。");}finally{lock.current=false;setBusy(false);}
+ };
+ return <section className={card}><h3 className="font-semibold">{deemed?"受け取り済みとみなして完了にする":"完了にする"}</h3>
+  <p className="text-sm text-zinc-600">{deemed?`納品ページの期限（${caseTime(view.release?.expiresAt??"")}）が過ぎて、受け取りは押されていません。期限の日に完了したことになります。`:"サイトの外で受けた案件です。納品が済んだら、ここで完了にすると実績に載ります。"}</p>
+  {confirming?<div className={look.confirm}>
+   {deemed?null:<label className="block">完了した日<input type="date" className={ui.input} value={date} max={localDate(new Date())} onChange={e=>setDate(e.target.value)}/></label>}
+   <label className="block">メモ<textarea required className={ui.input} value={note} maxLength={2000} onChange={e=>setNote(e.target.value)}/></label>
+   <p className="text-sm">完了にすると元に戻せません。</p>
+   <button className={ui.btnPrimary} disabled={disabled||busy||!note.trim()||(!deemed&&!date)} onClick={()=>void submit()}>完了にする</button>
+   <button className={ui.btnSecondary} disabled={busy} onClick={()=>{setConfirming(false);request.current="";}}>やめる</button>
+  </div>:<button className={ui.btnSecondary} disabled={disabled} onClick={()=>{setConfirming(true);setMessage("");}}>{deemed?"受け取り済みとみなして完了にする":"完了にする"}</button>}
+  {message?<p role="status" className="text-sm">{message}</p>:null}
  </section>;
 }
