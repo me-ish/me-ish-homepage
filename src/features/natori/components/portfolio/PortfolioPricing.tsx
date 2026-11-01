@@ -75,12 +75,6 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
           </p>
         </div>
       )}
-      {/* 受付停止中はフォームが送れないので、相談を促す一行は出さない */}
-      {content.commissionOpen ? (
-        <p className="mb-3 text-center text-sm leading-5 sm:mb-6 sm:text-sm" style={{ color: c.textSoft }}>
-          どのプランか迷ったら、フォームでプランを「未定」にしたまま相談できます。
-        </p>
-      ) : null}
 
 
       {/* スマホ: 作例は一覧の上に並べ、描く範囲の違いを見比べられるようにする */}
@@ -159,7 +153,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                 <a
                   href={planHref(plan)}
                   onClick={() => trackPlan(plan.name)}
-                  className="pf-cute-focus inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border-2 px-3 py-1 text-sm font-bold"
+                  className="pf-btn pf-btn-sm pf-cute-focus inline-flex min-h-11 shrink-0 items-center justify-center px-3 py-1 text-sm font-bold"
                   style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
                   aria-label={`${plan.name}を選ぶ`}
                 >
@@ -225,7 +219,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                 <a
                   href={planHref(plan)}
                   onClick={() => trackPlan(plan.name)}
-                  className="pf-cute-focus inline-flex min-h-10 items-center rounded-full border-2 px-4 text-sm font-bold"
+                  className="pf-btn pf-btn-sm pf-cute-focus inline-flex min-h-10 items-center px-4 text-sm font-bold"
                   style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
                 >
                   このプランで相談
@@ -291,7 +285,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
           <a
             href={`${contactPath}?mode=quote&plan=${NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE}${structuredIntake ? "&structured=1" : ""}`}
             onClick={() => trackPlan("量産イラスト")}
-            className="pf-cute-focus mt-3 block shrink-0 rounded-full border-2 px-5 py-2.5 text-center text-sm font-bold sm:mt-0"
+            className="pf-btn pf-btn-sm pf-cute-focus mt-3 block shrink-0 px-5 py-2.5 text-center text-sm font-bold sm:mt-0"
             style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
           >
             このプランで相談

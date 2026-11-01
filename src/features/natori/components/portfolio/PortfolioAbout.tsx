@@ -94,7 +94,7 @@ export default function PortfolioAbout({
             <PortfolioSnsLink
               href={xLink.href}
               label="X"
-              className="pf-cute-focus mt-3 inline-flex items-center gap-2 rounded-full border-2 px-4 py-1.5 text-sm font-black hover:brightness-95"
+              className="pf-btn pf-btn-sm pf-cute-focus mt-3 inline-flex min-h-[44px] items-center gap-2 px-4 py-1.5 text-sm font-black"
               style={{
                 borderColor: c.highlightBorder,
                 color: c.highlightDisplay,

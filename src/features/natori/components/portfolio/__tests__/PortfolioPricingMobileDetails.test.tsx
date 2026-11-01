@@ -41,7 +41,7 @@ describe("PortfolioPricing mobile details", () => {
       expect(within(mobileList).getByText(plan.desc)).toBeTruthy();
       const cta = within(mobileList).getByRole("link", { name: `${plan.name}を選ぶ` });
       expect(cta.textContent).toBe("このプランで相談");
-      expect(cta.className).toContain("rounded-full");
+      expect(cta.className).toContain("pf-btn");
       expect(cta.className).toContain("min-h-11");
     }
 

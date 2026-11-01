@@ -68,7 +68,8 @@ function MaskingTape({ color, angle, large }: { color: string; angle: number; la
   return (
     <span
       className={`absolute left-1/2 z-10 rounded-[2px] ${
-        large ? "-top-3.5 h-6 w-20 sm:h-7 sm:w-28" : "-top-3 h-5 w-12 sm:w-16"
+        // カードの上余白は 0.75rem。テープの中心をちょうど絵の枠の上辺に重ねる
+        large ? "top-0 h-6 w-20 sm:-top-0.5 sm:h-7 sm:w-28" : "top-0.5 h-5 w-12 sm:w-16"
       }`}
       aria-hidden="true"
       style={{
@@ -280,13 +281,13 @@ export default function PortfolioGallery({
 
   return (
     <section id="gallery" className="mx-auto max-w-6xl px-5 py-16">
-      <div className="mb-10">
+      <div className="mb-10 text-center">
         <h2 className="text-2xl font-black md:text-3xl">
           <span className="pf-marker">ご依頼実績</span>
         </h2>
         {intro?.trim() ? (
           <p
-            className="mt-3 max-w-2xl whitespace-pre-line text-sm leading-relaxed md:text-base"
+            className="mx-auto mt-3 max-w-2xl whitespace-pre-line text-sm leading-relaxed md:text-base"
             style={{ color: c.textSoft }}
           >
             {intro.trim()}
@@ -296,7 +297,7 @@ export default function PortfolioGallery({
 
       {groups.length > 0 ? (
         <>
-          <div role="group" aria-label="作品のカテゴリ" className="mb-5 flex flex-wrap gap-2">
+          <div role="group" aria-label="作品のカテゴリ" className="mb-5 flex flex-wrap justify-center gap-2">
             {[{ id: null, name: "すべて" }, ...groups.map((group) => group.collection)].map((collection) => (
               <button
                 key={collection.id ?? "all"}
@@ -332,7 +333,7 @@ export default function PortfolioGallery({
             ) : null}
           </div>
           {activeCollection?.collection.description ? (
-            <p className="mb-6 text-sm" style={{ color: c.textSoft }}>{activeCollection.collection.description}</p>
+            <p className="mb-6 text-center text-sm" style={{ color: c.textSoft }}>{activeCollection.collection.description}</p>
           ) : null}
           <div ref={resultsRef} id="portfolio-gallery-results" className="grid grid-cols-2 gap-x-4 gap-y-8 pt-2 sm:gap-x-8 sm:gap-y-10 lg:grid-cols-3">
             {shownWorks.map(({ work, collection }, index) => (
@@ -524,7 +525,7 @@ export default function PortfolioGallery({
                     <a
                       href={consultationHref}
                       onClick={() => trackNatoriPageEvent("portfolio_primary_cta_click", "gallery")}
-                      className="pf-cute-focus inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-full border-2 px-5 py-2 text-sm font-bold sm:text-sm"
+                      className="pf-btn pf-btn-sm pf-cute-focus inline-flex min-h-[44px] shrink-0 items-center justify-center px-5 py-2 text-sm font-bold sm:text-sm"
                       style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
                     >
                       この雰囲気で相談する
