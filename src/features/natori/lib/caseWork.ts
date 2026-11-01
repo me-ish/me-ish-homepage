@@ -48,3 +48,33 @@ export function openCaseRevisions(records:CaseWorkView["records"]){
 export const caseWorkLabels:Record<z.infer<typeof caseWorkKind>,string>={origin:"どこで受けた案件か",revision_open:"修正の依頼",revision_handled:"修正に対応した",manual_agreement:"サイトの外で決まった",manual_delivery:"サイトの外で納品した",manual_receipt:"サイトの外で受け取ってもらった",manual_completion:"完了にした"};
 export const caseOriginLabels={internal:"このサイト",external:"サイトの外（SNS・メールなど）",manual:"あなたが登録した案件",historical:"過去の実績",unknown:"分からない"};
 export const caseWorkNoticeLabel=(status:string)=>({pending:"送信待ち",sending:"送信中",sent:"送信しました",failed:"送れませんでした",unknown:"送れたか分かりません"}[status]??"送れたか分かりません");
+
+/** Owner completion without a customer pressing 受け取り. The DB decides; this only shapes the request. */
+export const caseCompletionKind=z.enum(["external","deemed"]);
+export type CaseCompletionKind=z.infer<typeof caseCompletionKind>;
+export const caseCompletionCommand=z.object({
+ command:z.literal("complete"),projectId:z.uuid(),revision:z.string().regex(/^[a-f0-9]{64}$/),requestId:z.uuid(),
+ kind:caseCompletionKind,note:z.string().trim().min(1).max(2000),completedAt:z.iso.datetime({offset:true}).optional(),
+}).refine(v=>v.kind==="external"||v.completedAt===undefined,{path:["completedAt"],message:"deemed_uses_page_expiry"});
+export type CaseCompletionCommand=z.infer<typeof caseCompletionCommand>;
+/**
+ * Which completion the screen offers. Mirrors natori_case_complete_v1:
+ * external = no delivery page, not from the site form, not recorded as a site case;
+ * deemed = delivery page expired (with extensions) and never accepted.
+ */
+export function caseCompletionOption(view:CaseWorkView,now:number):CaseCompletionKind|null{
+ const p=view.project;
+ if(p.deletedAt||p.completedAt||p.deliveryAcceptedAt||p.status==="completed"||p.status==="closed")return null;
+ if(view.release)return !view.release.acceptedAt&&p.status==="delivered"&&Date.parse(view.release.expiresAt)<=now?"deemed":null;
+ if(p.requestData!==null||p.deliveredMailAt)return null;
+ return view.records.some(r=>r.kind==="origin"&&r.data.origin==="internal")?null:"external";
+}
+export const caseCompletionResultText=(result:string|undefined)=>({
+ applied:"完了にしました。",
+ "already-completed":"この案件はもう完了しています。",
+ "not-eligible":"この案件はここからは完了にできません。納品ページを出した案件は、お客さんの受け取りか期限切れを待ってください。",
+ "not-expired":"納品ページの期限がまだ残っています。期限が過ぎてから押してください。",
+ stale:"ほかの画面で案件が変わりました。読み込み直してから、もう一度押してください。",
+ conflict:"同じ操作がすでに記録されています。読み込み直して確認してください。",
+ inactive:"終了した案件なので完了にできません。",
+}[result??""]??"完了にできませんでした。読み込み直してから、もう一度試してください。");

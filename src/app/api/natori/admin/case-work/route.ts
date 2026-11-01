@@ -4,6 +4,7 @@ import { checkCsrf } from "@/lib/auth/csrf";
 import { withNatoriManagement } from "@/features/natori/server/natoriManagementRoute";
 import { caseWorkspaceReadAvailable } from "@/features/natori/server/caseWorkspaceRead";
 import { readCaseWork,commandCaseWork,commandCaseDelivery } from "@/features/natori/server/caseWork";
+import { commandCaseCompletion } from "@/features/natori/server/caseCompletion";
 export const runtime="nodejs",dynamic="force-dynamic";
 const headers={"Cache-Control":"no-store","Vary":"Cookie"};
 export const GET=withNatoriManagement("case-work.GET",false,async(request:Request)=>{
@@ -16,6 +17,7 @@ export const POST=withNatoriManagement("case-work.POST",true,async(request:Reque
  const csrf=checkCsrf(request);if(csrf)return csrf;
  if(!caseWorkspaceReadAvailable())return NextResponse.json({error:"unavailable"},{status:404,headers});
  try{const raw:unknown=await request.json();const delivery=z.object({command:z.literal("delivery"),request:z.unknown()}).safeParse(raw);
-  const result=delivery.success?await commandCaseDelivery(delivery.data.request):await commandCaseWork(raw);return NextResponse.json(result,{headers});
+  const complete=z.object({command:z.literal("complete")}).safeParse(raw).success;
+  const result=delivery.success?await commandCaseDelivery(delivery.data.request):complete?await commandCaseCompletion(raw):await commandCaseWork(raw);return NextResponse.json(result,{headers});
  }catch(error){return NextResponse.json({error:error instanceof z.ZodError?"invalid":"result_unconfirmed"},{status:error instanceof z.ZodError?400:503,headers});}
 });
