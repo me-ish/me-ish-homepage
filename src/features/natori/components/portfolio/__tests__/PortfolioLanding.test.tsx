@@ -127,14 +127,14 @@ describe("PF-01 portfolio information architecture", () => {
     expect(document.querySelector("#faq")).toBeNull();
   });
 
-  it("places the process video right under the gallery, on the full variant only", () => {
+  it("places the process video after the pricing, on the full variant only", () => {
     const content = { ...defaultPortfolioContent, processVideo: { url: "https://youtu.be/dQw4w9WgXcQ" } };
     render(<PortfolioLanding content={content} structuredIntake />);
     expect(sectionOrder()).toEqual([
       "hero",
       "gallery",
-      "process-video",
       "pricing",
+      "process-video",
       "workflow",
       "about",
       "guidelines",

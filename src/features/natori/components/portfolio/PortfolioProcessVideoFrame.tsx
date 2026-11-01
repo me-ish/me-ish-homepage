@@ -7,8 +7,8 @@ import type { PortfolioProcessVideoShape } from "@/features/natori/types/portfol
 /** 縦長・正方形は、スマホでも画面に収まるよう幅を抑える */
 const FRAME_BY_SHAPE: Record<PortfolioProcessVideoShape, { aspectRatio: string; maxWidth: string }> = {
   landscape: { aspectRatio: "16 / 9", maxWidth: "100%" },
-  square: { aspectRatio: "1 / 1", maxWidth: "min(100%, 32rem)" },
-  portrait: { aspectRatio: "9 / 16", maxWidth: "min(100%, 22rem)" },
+  square: { aspectRatio: "1 / 1", maxWidth: "min(80%, 28rem)" },
+  portrait: { aspectRatio: "9 / 16", maxWidth: "min(64%, 18rem)" },
 };
 
 export default function PortfolioProcessVideoFrame({
