@@ -45,10 +45,31 @@ const nextConfig = {
   },
 
   async headers() {
+    // Content-Security-Policy はまず Report-Only で配る（違反はブラウザのコンソールに出るだけで、表示は止めない）。
+    // 相談・見積・納品ページはトークンが URL にあるため、XSS の最後の防壁として入れる。
+    // script-src に 'unsafe-inline' が残るのは、Next の inline script と GA の初期化に nonce を
+    // まだ配っていないため。nonce 配布（middleware）に移したら外す。
+    const supabaseOrigin = SUPABASE_HOST ? `https://${SUPABASE_HOST}` : '';
+    const csp = [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "form-action 'self' https://*.stripe.com",
+      `img-src 'self' data: blob: ${supabaseOrigin} https://www.googletagmanager.com https://*.google-analytics.com`.trim(),
+      `media-src 'self' blob: ${supabaseOrigin}`.trim(),
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://va.vercel-scripts.com",
+      `connect-src 'self' ${supabaseOrigin} ${SUPABASE_HOST ? `wss://${SUPABASE_HOST}` : ''} https://*.google-analytics.com https://www.googletagmanager.com https://vitals.vercel-insights.com https://va.vercel-scripts.com`.replace(/\s+/g, ' ').trim(),
+      "frame-src https://www.youtube-nocookie.com https://www.youtube.com",
+      "worker-src 'self' blob:",
+    ].join('; ').replace(/\s{2,}/g, ' ');
     return [
       {
         source: '/(.*)',
         headers: [
+          { key: 'Content-Security-Policy-Report-Only', value: csp },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },

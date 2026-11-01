@@ -39,7 +39,7 @@ export default async function middleware(request: NextRequest) {
       if (!target || request.nextUrl.origin !== target.origin) throw Error("acceptance_origin");
       const fixtureEvents=pathname==='/api/natori/admin/events'&&Boolean(process.env.NATORI_CASE_ACCEPTANCE_EVENTS);
       const entryIndex=pathname==='/api/natori/admin/case-workspace/entries'; // handler validates exact kind and fixture scope
-      if (pathname.startsWith('/api/') && !fixtureEvents&&!entryIndex&&!/^\/api\/(?:natori\/(?:admin\/(?:case-[a-z-]+|consultation(?:\/rough(?:-ok)?)?|delivery-files|payment-link|order-mail|notifications|structured-quote|estimate-draft)|consultation-file|consult\/[A-Za-z0-9_-]+(?:\/(?:rough-ok|renew|open))?|quote\/accept|delivery\/accept)|cron\/natori-payment-expiry|webhook\/(?:stripe|resend))$/.test(pathname)) {
+      if (pathname.startsWith('/api/') && !fixtureEvents&&!entryIndex&&!/^\/api\/(?:natori\/(?:admin\/(?:case-[a-z-]+|consultation(?:\/rough(?:-ok)?)?|delivery-files|payment-link|order-mail|notifications|structured-quote|estimate-draft|logout)|consultation-file|consult\/[A-Za-z0-9_-]+(?:\/(?:rough-ok|renew|open))?|quote\/accept|delivery\/accept)|cron\/natori-payment-expiry|webhook\/(?:stripe|resend))$/.test(pathname)) {
         return NextResponse.json({error:'acceptance_route_disabled'},{status:404});
       }
     } catch { return NextResponse.json({error:'acceptance_target_invalid'},{status:503}); }
