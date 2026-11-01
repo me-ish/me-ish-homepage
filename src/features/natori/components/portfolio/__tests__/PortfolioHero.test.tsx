@@ -88,13 +88,13 @@ describe("PF-03 portfolio hero", () => {
     expect((primaryLink as HTMLElement).style.background).toBe("");
     expect((primaryLink as HTMLElement).style.borderColor).toBe("");
     expect((primaryLink as HTMLElement).style.color).toBe("");
-    expect(primaryLink.className).toContain("border-2");
-    expect(primaryLink.className).toContain("rounded-full");
+    expect(primaryLink.className).toContain("pf-btn");
+    expect(primaryLink.className).not.toContain("rounded-full");
     expect(primaryLink.className).toContain("text-base font-black");
     const worksLink = screen.getByRole("link", { name: "作品を見る" });
     expect(worksLink.getAttribute("href")).toBe("#gallery");
-    expect((worksLink as HTMLElement).style.borderColor).toBe("rgb(236, 72, 153)");
-    expect(worksLink.className).toContain("rounded-full");
+    expect((worksLink as HTMLElement).style.borderColor).toBe("rgb(59, 47, 51)");
+    expect(worksLink.className).toContain("pf-btn");
 
     fireEvent.click(screen.getByRole("link", { name: "相談・見積もり" }));
     expect(trackNatoriPageEvent).toHaveBeenCalledWith(

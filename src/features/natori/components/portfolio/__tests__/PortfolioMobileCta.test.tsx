@@ -26,8 +26,8 @@ describe("PortfolioMobileCta analytics", () => {
     expect(cta.className).toContain("px-4");
     expect(cta.className).toContain("py-2");
     expect(cta.className).toContain("text-sm font-black");
-    expect(cta.className).toContain("shadow-md");
-    expect(cta.className).toContain("border-2");
+    expect(cta.className).toContain("pf-btn pf-btn-sm");
+    expect(cta.className).not.toContain("shadow-md");
     expect(cta.className).toContain(natoriSoftActionClassName);
     expect(cta.style.background).toBe("");
     expect(cta.style.borderColor).toBe("");

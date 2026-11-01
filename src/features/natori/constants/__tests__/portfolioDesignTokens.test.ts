@@ -296,7 +296,7 @@ describe("portfolio choice controls", () => {
 
   it("keeps both request-form submit buttons large, bold, and on the action colors", () => {
     const submitClass =
-      'className={`${natoriPrimaryActionClassName} pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black`}';
+      'className={`${natoriPrimaryActionClassName} pf-btn pf-cute-focus w-full py-3.5 text-base font-black`}';
 
     expect(structuredFormSource).toContain(submitClass);
     expect(structuredFormSource).toContain("constants/natoriPrimaryAction");

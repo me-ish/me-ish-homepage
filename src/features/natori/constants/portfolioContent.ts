@@ -27,6 +27,8 @@ export const portfolioColors = {
   borderSubtle: "#F2D9E0",
   /** 手描き風の枠線（濃い墨色を薄く）。影の代わりに使う。 */
   sketchLine: "rgba(59,47,51,0.28)",
+  /** 手描き線の濃い墨色。ボタンの枠と「貼った紙」の影に使う。 */
+  ink: "#3B2F33",
   /** 見出し下のマーカー線。 */
   marker: "#FFC6DE",
   borderStrong: "#5C95A4",

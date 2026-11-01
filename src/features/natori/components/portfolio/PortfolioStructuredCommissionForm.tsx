@@ -1623,11 +1623,11 @@ export default function PortfolioStructuredCommissionForm({
         <FormSection title="確認して送信">
           <PortfolioLegalNotice />
           <button type="submit" disabled={!commissionOpen || sending || retrySeconds > 0} aria-busy={sending}
-            className={`${natoriPrimaryActionClassName} pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black`}>
+            className={`${natoriPrimaryActionClassName} pf-btn pf-cute-focus w-full py-3.5 text-base font-black`}>
             {!commissionOpen ? "現在受付停止中です" : sending ? "送信中…" : retrySeconds > 0 ? `再送まで ${retrySeconds}秒` : state.inquiryMode === "quote" ? "見積もりを依頼する" : "相談内容を送信する"}
           </button>
         </FormSection>
-      ) : <button type="button" onClick={nextStep} className={`${natoriPrimaryActionClassName} pf-cute-focus w-full min-h-[48px] rounded-full border-2 px-4 py-3 font-black`}>
+      ) : <button type="button" onClick={nextStep} className={`${natoriPrimaryActionClassName} pf-btn pf-cute-focus w-full min-h-[48px] px-4 py-3 font-black`}>
         {step === 0 && state.inquiryMode === "quote" ? "条件・連絡先へ" : "内容を確認する"}
       </button>}
       </fieldset>

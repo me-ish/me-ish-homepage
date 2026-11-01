@@ -616,14 +616,14 @@ function PortfolioCommissionFormSession({
               key="legacy-submit"
               type="submit"
               disabled={!commissionOpen || status === "sending"}
-              className={`${natoriPrimaryActionClassName} pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black`}
+              className={`${natoriPrimaryActionClassName} pf-btn pf-cute-focus w-full py-3.5 text-base font-black`}
             >
               {!commissionOpen
                 ? "現在受付停止中です"
                 : status === "sending"
                   ? "送信中…"
                   : "この内容で送信する"}
-            </button> : <button key="legacy-next" type="button" onClick={(event) => { event.preventDefault(); nextLegacyStep(); }} disabled={!commissionOpen} className={`${natoriPrimaryActionClassName} pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black`}>次へ進む</button>}
+            </button> : <button key="legacy-next" type="button" onClick={(event) => { event.preventDefault(); nextLegacyStep(); }} disabled={!commissionOpen} className={`${natoriPrimaryActionClassName} pf-btn pf-cute-focus w-full py-3.5 text-base font-black`}>次へ進む</button>}
 
             </fieldset>
             <IntakeRecoveryPanel intake={intake} />
