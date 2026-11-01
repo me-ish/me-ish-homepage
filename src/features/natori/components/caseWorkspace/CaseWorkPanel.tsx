@@ -143,7 +143,7 @@ function CompleteWork({view,disabled,load,onChanged}:{view:CaseWorkView;disabled
   }catch(e){setMessage(e instanceof Error?e.message:"うまくいったか分かりません。");}finally{lock.current=false;setBusy(false);}
  };
  return <section className={card}><h3 className="font-semibold">{deemed?"受け取り済みとみなして完了にする":"完了にする"}</h3>
-  <p className="text-sm text-zinc-600">{deemed?`納品ページの期限（${caseTime(view.release?.expiresAt??"")}）が過ぎて、受け取りは押されていません。期限の日に完了したことになります。`:"サイトの外で受けた案件です。納品が済んだら、ここで完了にすると実績に載ります。"}</p>
+  <p className="text-sm text-zinc-600">{deemed?`納品ページの期限（${caseTime(view.release?.expiresAt??"")}）が過ぎて、受け取りは押されていません。期限の日に完了したことになります。`:view.project.paidAt||view.project.paymentConfirmedAt?"サイトの外で受けた案件です。納品が済んだら、ここで完了にすると実績に載ります。":"サイトの外で受けた案件です。納品が済んだら、ここで完了にできます。実績に載せるには、入金の記録（振込などの入金を記録）も必要です。"}</p>
   {confirming?<div className={look.confirm}>
    {deemed?null:<label className="block">完了した日<input type="date" className={ui.input} value={date} max={localDate(new Date())} onChange={e=>setDate(e.target.value)}/></label>}
    <label className="block">メモ<textarea required className={ui.input} value={note} maxLength={2000} onChange={e=>setNote(e.target.value)}/></label>
