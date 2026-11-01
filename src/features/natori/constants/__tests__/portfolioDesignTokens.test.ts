@@ -248,9 +248,9 @@ describe("PF-08 image and font loading", () => {
     expect(siteFontsSource).toContain("preload: false");
   });
 
-  it("matches portrait and landscape image candidates to their responsive grid widths", () => {
+  it("matches pick-up and regular image candidates to their responsive grid widths", () => {
     expect(gallerySource).toContain(
-      '"(min-width: 1024px) 540px, calc(100vw - 40px)"'
+      '"(min-width: 1024px) 730px, calc(100vw - 40px)"'
     );
     expect(gallerySource).toContain(
       '"(min-width: 1024px) 352px, (min-width: 640px) calc(50vw - 36px), calc(50vw - 44px)"'

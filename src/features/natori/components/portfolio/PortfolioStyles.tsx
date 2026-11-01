@@ -71,9 +71,9 @@ export default function PortfolioStyles() {
           radial-gradient(circle at 22% 18%, ${c.accentSoft} 0%, transparent 42%),
           linear-gradient(145deg, ${c.surfaceSubtle}, ${c.surface});
       }
-      /* 1画面目の作品の額。スマホは幅 20rem までの固定（画面の高さで決めると、X のアプリ内ブラウザ・Safari・ホーム画面のアプリで大きさが変わるため）。
+      /* 1画面目の作品の額。スマホは本文の幅いっぱい（最大 22.5rem）の固定（画面の高さで決めると、X のアプリ内ブラウザ・Safari・ホーム画面のアプリで大きさが変わるため）。
          PC は右列いっぱいの縦長（4:5）。幅は整数pxに切り捨てる（端数があるとスライドの位置が1px未満ずれる）。round() 非対応の環境は1つ前の指定を使う。 */
-      .pf-hero-frame { margin-inline: auto; width: 100%; max-width: 20rem; }
+      .pf-hero-frame { margin-inline: auto; width: 100%; max-width: 22.5rem; }
       @media (min-width: 768px) { .pf-hero-frame { width: min(42vw, calc(70vh * 0.8 + 1rem)); width: round(down, min(42vw, calc(70vh * 0.8 + 1rem)), 1px); max-width: none; } }
       @media (min-width: 1024px) { .pf-hero-frame { width: min(34rem, calc(70vh * 0.8 + 1rem)); width: round(down, min(34rem, calc(70vh * 0.8 + 1rem)), 1px); } }
       .pf-form-control { border-color: ${c.formBorder}; }

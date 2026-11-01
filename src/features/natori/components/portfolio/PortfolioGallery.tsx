@@ -1,8 +1,9 @@
 "use client";
 
 // features/natori/components/portfolio/PortfolioGallery.tsx
-// ご依頼実績。マスキングテープで貼ったポラロイド風のカードをまっすぐに並べ、先頭の1枚は「ピックアップ」として大きく見せる。
-// 画像はX(Twitter)の縦長表示に近い 3:4 で見せ、クリックでモーダル拡大表示（前後の作品にも移れる）。
+// ご依頼実績。マスキングテープで貼ったカードをまっすぐに並べ、先頭の1枚は「ピックアップ」として大きく見せる。
+// 2枚目以降は縦長・横長に関係なく同じ 3:4 の枠にそろえ（絵は枠の中に全体を収める）、段に穴が空かないようにする。
+// クリックでモーダル拡大表示（前後の作品にも移れる）。
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import Image from "./PortfolioImage";
@@ -67,7 +68,8 @@ function MaskingTape({ color, angle, large }: { color: string; angle: number; la
   return (
     <span
       className={`absolute left-1/2 z-10 rounded-[2px] ${
-        large ? "-top-3.5 h-6 w-20 sm:h-7 sm:w-28" : "-top-3 h-5 w-12 sm:w-16"
+        // カードの上余白は 0.75rem。テープの中心をちょうど絵の枠の上辺に重ねる
+        large ? "top-0 h-6 w-20 sm:-top-0.5 sm:h-7 sm:w-28" : "top-0.5 h-5 w-12 sm:w-16"
       }`}
       aria-hidden="true"
       style={{
@@ -279,13 +281,13 @@ export default function PortfolioGallery({
 
   return (
     <section id="gallery" className="mx-auto max-w-6xl px-5 py-16">
-      <div className="mb-10">
+      <div className="mb-10 text-center">
         <h2 className="text-2xl font-black md:text-3xl">
           <span className="pf-marker">ご依頼実績</span>
         </h2>
         {intro?.trim() ? (
           <p
-            className="mt-3 max-w-2xl whitespace-pre-line text-sm leading-relaxed md:text-base"
+            className="mx-auto mt-3 max-w-2xl whitespace-pre-line text-sm leading-relaxed md:text-base"
             style={{ color: c.textSoft }}
           >
             {intro.trim()}
@@ -295,7 +297,7 @@ export default function PortfolioGallery({
 
       {groups.length > 0 ? (
         <>
-          <div role="group" aria-label="作品のカテゴリ" className="mb-5 flex flex-wrap gap-2">
+          <div role="group" aria-label="作品のカテゴリ" className="mb-5 flex flex-wrap justify-center gap-2">
             {[{ id: null, name: "すべて" }, ...groups.map((group) => group.collection)].map((collection) => (
               <button
                 key={collection.id ?? "all"}
@@ -331,9 +333,9 @@ export default function PortfolioGallery({
             ) : null}
           </div>
           {activeCollection?.collection.description ? (
-            <p className="mb-6 text-sm" style={{ color: c.textSoft }}>{activeCollection.collection.description}</p>
+            <p className="mb-6 text-center text-sm" style={{ color: c.textSoft }}>{activeCollection.collection.description}</p>
           ) : null}
-          <div ref={resultsRef} id="portfolio-gallery-results" className="grid grid-cols-2 gap-x-4 gap-y-8 pt-2 sm:gap-x-8 sm:gap-y-10 lg:grid-cols-6">
+          <div ref={resultsRef} id="portfolio-gallery-results" className="grid grid-cols-2 gap-x-4 gap-y-8 pt-2 sm:gap-x-8 sm:gap-y-10 lg:grid-cols-3">
             {shownWorks.map(({ work, collection }, index) => (
               <PortfolioWorkCard
                 key={work.id}
@@ -523,7 +525,7 @@ export default function PortfolioGallery({
                     <a
                       href={consultationHref}
                       onClick={() => trackNatoriPageEvent("portfolio_primary_cta_click", "gallery")}
-                      className="pf-cute-focus inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-full border-2 px-5 py-2 text-sm font-bold sm:text-sm"
+                      className="pf-btn pf-btn-sm pf-cute-focus inline-flex min-h-[44px] shrink-0 items-center justify-center px-5 py-2 text-sm font-bold sm:text-sm"
                       style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
                     >
                       この雰囲気で相談する
@@ -555,20 +557,14 @@ function PortfolioWorkCard({
   flatPlaceholder?: boolean;
   onSelect: (work: PortfolioWork, collectionName: string, trigger: HTMLButtonElement) => void;
 }) {
-  const [landscape, setLandscape] = useState(false);
   const palette = placeholderPalettes[index % placeholderPalettes.length];
   const tapeAngle = index % 2 === 0 ? -2 : 2;
-  // 横長の作品はもともと幅広のカードなので、先頭でも大きさは変えない。
-  const featured = pickup && !landscape;
+  const featured = pickup;
 
   return (
     <div
       className={`pf-pin-card relative min-w-0 pt-3 ${
-        landscape
-          ? "col-span-2 lg:col-span-3"
-          : featured
-            ? "col-span-2 lg:col-span-4 lg:row-span-2 lg:flex lg:flex-col"
-            : "lg:col-span-2"
+        featured ? "col-span-2 lg:row-span-2 lg:flex lg:flex-col" : "col-span-1"
       }`}
     >
       {/* 絵は額に入れず、画用紙にそのまま置く。マスキングテープはこれまでどおり全部の絵に貼る（先頭だけ大きめ）。 */}
@@ -584,11 +580,9 @@ function PortfolioWorkCard({
         disabled={!work.image}
         aria-label={work.image ? `${work.title} を拡大表示` : work.title}
         className={`pf-cute-focus pf-sketch-soft relative mb-2 flex w-full items-center justify-center overflow-hidden ${
-          landscape
-            ? "aspect-video lg:max-h-[32rem]"
-            : featured
-              ? "aspect-[4/5] sm:aspect-auto sm:h-[30rem] lg:h-auto lg:min-h-[30rem] lg:flex-1"
-              : "aspect-[3/4]"
+          featured
+            ? "aspect-[4/5] sm:aspect-auto sm:h-[30rem] lg:h-auto lg:min-h-[30rem] lg:flex-1"
+            : "aspect-[3/4]"
         } ${work.image ? "cursor-zoom-in" : "cursor-default"}`}
         style={{ background: c.surfaceSubtle }}
       >
@@ -597,13 +591,10 @@ function PortfolioWorkCard({
             src={work.image}
             alt={work.title}
             fill
-            sizes={landscape
-              ? "(min-width: 1024px) 540px, calc(100vw - 40px)"
-              : featured
-                ? "(min-width: 1024px) 730px, calc(100vw - 40px)"
-                : "(min-width: 1024px) 352px, (min-width: 640px) calc(50vw - 36px), calc(50vw - 44px)"}
+            sizes={featured
+              ? "(min-width: 1024px) 730px, calc(100vw - 40px)"
+              : "(min-width: 1024px) 352px, (min-width: 640px) calc(50vw - 36px), calc(50vw - 44px)"}
             className="object-cover"
-            onLoad={(event) => setLandscape(event.currentTarget.naturalWidth > event.currentTarget.naturalHeight)}
           />
         ) : flatPlaceholder ? (
           <span

@@ -13,7 +13,7 @@ export default function PortfolioProcessVideo({ content }: { content: PortfolioC
 
   return (
     <section id="process" className="mx-auto max-w-3xl px-5 pb-6 md:pb-4">
-      <h2 className="text-center text-2xl font-black md:text-3xl">制作過程</h2>
+      <h2 className="text-center text-2xl font-black md:text-3xl"><span className="pf-marker">制作過程</span></h2>
       {/* 本文の既定が大きいので、スマホは 15px に下げる（PC は既定のまま） */}
       {view.caption ? (
         <p className="mx-auto mt-3 max-w-xl text-center text-base leading-relaxed md:text-base" style={{ color: c.textSoft }}>

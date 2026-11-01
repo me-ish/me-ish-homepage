@@ -59,11 +59,8 @@ describe("PortfolioPricing", () => {
     expect(screen.getByText(/リテイク2回まで、簡単な小物・簡易背景/)).toBeTruthy();
   });
 
-  it("shows the undecided-plan hint only while commissions are open", () => {
-    const { unmount } = render(<PortfolioPricing content={{ ...defaultPortfolioContent, commissionOpen: true }} />);
-    expect(screen.getByText(/プランを「未定」にしたまま相談できます/)).toBeTruthy();
-    unmount();
-    render(<PortfolioPricing content={{ ...defaultPortfolioContent, commissionOpen: false }} />);
+  it("does not add an undecided-plan hint under the heading", () => {
+    render(<PortfolioPricing content={{ ...defaultPortfolioContent, commissionOpen: true }} />);
     expect(screen.queryByText(/プランを「未定」にしたまま相談できます/)).toBeNull();
   });
 
@@ -145,8 +142,9 @@ describe("PortfolioPricing", () => {
     const strip = screen.getByRole("group", { name: "通常イラストの作例" });
     expect(strip.className).toContain("sm:hidden");
     expect(within(strip).getAllByRole("img")).toHaveLength(1);
-    // 作例のないプランも PC では同じ高さの枠を取る
-    expect(screen.getAllByText("作例は準備中です")).toHaveLength(3);
+    // 作例のないプランは空枠を出さず、幅だけ取って位置をそろえる
+    expect(screen.queryByText("作例は準備中です")).toBeNull();
+    expect(document.querySelectorAll("[data-plan-sample-spacer]")).toHaveLength(3);
   });
 
   it("adds no plan sample area until a sample is chosen", () => {
