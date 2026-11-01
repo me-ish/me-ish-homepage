@@ -83,10 +83,23 @@ class InMemoryRateLimitStore implements RateLimitStore {
 
 const defaultStore = new InMemoryRateLimitStore();
 let activeStore: RateLimitStore = defaultStore;
+// UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN が設定された環境だけ、全インスタンスで
+// 共有される Redis のカウントに切り替える（初回呼び出し時に 1 度だけ判定）。
+// 外部ストアが応答しないときは in-memory に委ねる。
+let externalStoreResolved = false;
+async function resolveStore(): Promise<RateLimitStore> {
+  if (externalStoreResolved || activeStore !== defaultStore) return activeStore;
+  externalStoreResolved = true;
+  const { readUpstashConfig, UpstashRateLimitStore } = await import("./rateLimitUpstash");
+  const config = readUpstashConfig();
+  if (config) activeStore = new UpstashRateLimitStore(config, defaultStore);
+  return activeStore;
+}
 
 /** ストアを差し替える（例: Upstash Redis 実装）。テストでのモック差し込みにも使う */
 export function setRateLimitStore(store: RateLimitStore | null) {
   activeStore = store ?? defaultStore;
+  externalStoreResolved = true;
 }
 
 /**
@@ -98,7 +111,7 @@ export async function checkRateLimit(
   key: string,
   opts: { limit: number; windowMs: number }
 ): Promise<RateLimitResult> {
-  return activeStore.hit(key, opts.limit, opts.windowMs);
+  return (await resolveStore()).hit(key, opts.limit, opts.windowMs);
 }
 
 /**
@@ -139,4 +152,5 @@ export function rateLimitExceeded(retryAfterMs: number): NextResponse {
 export function _resetRateLimitStore() {
   defaultStore.reset();
   activeStore = defaultStore;
+  externalStoreResolved = false;
 }

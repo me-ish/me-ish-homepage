@@ -10,6 +10,7 @@ import { ProfileSettingsPanel } from "../dashboard/NatoriDashboardLegacy";
 import PageEventsPanel from "../dashboard/PageEventsPanel";
 import EstimateForm from "../dashboard/EstimateForm";
 import { createClient } from "@/lib/supabase/client";
+import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
 import { CasePublicPages } from "./CasePublicPages";
 function publicPageHref(fallback: string, profile: NatoriUserProfile | null) {
@@ -138,8 +139,12 @@ export function CaseWorkspaceUtilities({
               )
                 return;
               setBusy(true);
-              void createClient()
-                .auth.signOut()
+              // 共有鍵の Cookie も一緒に消す（Supabase のログアウトだけだと、共有鍵で入った端末は 8 時間開けたまま）。
+              void fetch("/api/natori/admin/logout", { method: "POST", headers: CSRF_HEADERS, credentials: "same-origin" })
+                .then((response) => {
+                  if (!response.ok) throw new Error("logout_failed");
+                  return createClient().auth.signOut();
+                })
                 .then(({ error }) => {
                   if (error) throw error;
                   setProfile(null);
@@ -147,6 +152,7 @@ export function CaseWorkspaceUtilities({
                   setError(
                     "ログアウトしました。",
                   );
+                  window.location.assign("/admin-login");
                 })
                 .catch(() =>
                   setError(

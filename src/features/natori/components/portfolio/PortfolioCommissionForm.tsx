@@ -287,29 +287,11 @@ function PortfolioCommissionFormSession({
     >
       <div className="mx-auto max-w-2xl px-5">
         {!hideHeading && <h2 className="mb-2 text-center text-2xl font-black md:text-3xl">ご依頼フォーム</h2>}
-        <p
-          className={`${tsunaguLink ? "mb-2" : "mb-8"} text-center`}
-          style={{ color: c.textSoft }}
-        >
+        <p className="mb-8 text-center" style={{ color: c.textSoft }}>
           {commissionOpen
             ? "まずはお気軽にご相談ください。"
             : "現在コミッションは停止中です。再開まで今しばらくお待ちください。"}
         </p>
-        {tsunaguLink ? (
-          <p className="mb-8 text-center" style={{ color: c.textSoft }}>
-            <a
-              href={tsunaguLink.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => trackNatoriPageEvent("portfolio_sns_click", "つなぐ")}
-              className="pf-cute-focus font-bold underline decoration-2 underline-offset-4 hover:opacity-70"
-              style={{ color: c.actionTextSmall, textDecorationColor: c.actionSoft }}
-            >
-              つなぐ
-            </a>
-            からのご依頼も受付中です
-          </p>
-        ) : null}
 
         {status === "success" ? (
           <div
@@ -647,6 +629,22 @@ function PortfolioCommissionFormSession({
             <IntakeRecoveryPanel intake={intake} />
           </form>
         )}
+        {/* 外部プラットフォームの案内は、自社フォームの下に小さく添える（入口の最初のリンクにはしない）。 */}
+        {tsunaguLink && status !== "success" ? (
+          <p className="mt-6 text-center text-sm" style={{ color: c.textSoft }}>
+            <a
+              href={tsunaguLink.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackNatoriPageEvent("portfolio_sns_click", "つなぐ")}
+              className="pf-cute-focus font-bold underline decoration-2 underline-offset-4 hover:opacity-70"
+              style={{ color: c.actionTextSmall, textDecorationColor: c.actionSoft }}
+            >
+              つなぐ
+            </a>
+            からのご依頼も受付中です
+          </p>
+        ) : null}
       </div>
     </section>
   );
