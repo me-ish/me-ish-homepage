@@ -19,7 +19,7 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioDispl
             {workflow.map((step, index) => (
               <li
                 key={`${step.title}-${index}`}
-                className="relative flex items-start gap-4 pb-8 last:pb-0 md:gap-5"
+                className="relative flex items-start gap-4 pb-6 last:pb-0 md:gap-5"
               >
                 <span
                   className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-base font-black"
@@ -76,35 +76,27 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioDispl
 }
 
 /**
- * 各ステップは短い説明だけを見せ、全文はカードを押すと開く。文面は削らない。
- * 開く合図は説明の最終行の末尾に↓だけ置き、専用の行を増やさない。
+ * 各ステップは見出しだけを並べ、説明は見出しを押したときだけ全文で出す（文面は削らない）。
+ * 開く合図は見出しの横の↓だけにする。
  */
 function WorkflowStepCard({ title, body }: { title: string; body: string }) {
   const { lead, detail } = workflowStepView({ title, body });
-  if (!detail) {
-    return (
-      <div className="min-w-0 flex-1 pt-1.5 md:pt-2">
-        <p className="mb-1 font-bold">{title}</p>
-        <p className="text-sm leading-relaxed" style={{ color: c.textSoft }}>
-          {lead}
-        </p>
-      </div>
-    );
-  }
+  const text = detail || lead;
   return (
     <details className="group min-w-0 flex-1">
-      <summary className="pf-cute-focus block cursor-pointer list-none rounded-2xl pt-1.5 md:pt-2 [&::-webkit-details-marker]:hidden">
-        <p className="mb-1 font-bold">{title}</p>
-        <p className="text-sm leading-relaxed" style={{ color: c.textSoft }}>
-          <span className="group-open:hidden">{lead}</span>
-          <span className="hidden group-open:inline">{detail}</span>
+      <summary className="pf-cute-focus flex min-h-10 cursor-pointer list-none items-center rounded-2xl font-bold [&::-webkit-details-marker]:hidden">
+        <span>
+          {title}
           <ChevronDown
             aria-hidden="true"
             className="ml-1 inline-block h-4 w-4 align-[-3px] transition-transform group-open:rotate-180 motion-reduce:transition-none"
             style={{ color: c.actionTextSmall }}
           />
-        </p>
+        </span>
       </summary>
+      <p className="mt-1 text-sm leading-relaxed" style={{ color: c.textSoft }}>
+        {text}
+      </p>
     </details>
   );
 }
