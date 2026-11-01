@@ -7,6 +7,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { canonicalIntakeJson, isMassProductionIntake, type CanonicalIntake } from "../lib/intakeOperation";
 import { prepareIntakeReferenceImage, uploadIntakeReferenceImage } from "./intakeReferenceStorage";
 import { resolvePublicIntakeOwnerId } from "./publicIntakeOwner";
+import { scheduleEstimateAssistant } from "./estimateAssistantService";
 import { scheduleAcceptanceNotifications } from "./scheduleAcceptanceNotifications";
 import type { Json } from "@/types/supabase";
 
@@ -133,6 +134,7 @@ export async function submitPublicIntakeOperation(operationId: string, input: Ca
     if (result.kind === "completed") {
       const stored = readRow(completed.data);
       if (stored) scheduleAcceptanceNotifications(stored.notification_ids);
+      scheduleEstimateAssistant(owner.ownerId, projectId);
     } else if (result.kind === "failed") await cleanDefinitivelyFailedOperation(owner.ownerId, operationId, requestHash);
     return result;
   } catch {
