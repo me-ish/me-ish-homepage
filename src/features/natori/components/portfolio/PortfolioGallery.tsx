@@ -563,7 +563,7 @@ function PortfolioWorkCard({
 
   return (
     <div
-      className={`pf-pin-card relative min-w-0 ${pickup ? "pt-3" : ""} ${
+      className={`pf-pin-card relative min-w-0 pt-3 ${
         landscape
           ? "col-span-2 lg:col-span-3"
           : featured
@@ -571,8 +571,8 @@ function PortfolioWorkCard({
             : "lg:col-span-2"
       }`}
     >
-      {/* 絵は額に入れず、画用紙にそのまま置く。マスキングテープは先頭の1枚だけに貼る。 */}
-      {pickup ? <MaskingTape color={collection.color} angle={tapeAngle} large /> : null}
+      {/* 絵は額に入れず、画用紙にそのまま置く。マスキングテープはこれまでどおり全部の絵に貼る（先頭だけ大きめ）。 */}
+      <MaskingTape color={collection.color} angle={tapeAngle} large={pickup} />
       <button
         type="button"
         data-work-id={work.id}
