@@ -190,9 +190,12 @@ async function main() {
         const first = page.getByRole('button', { name: 'Phase 7 synthetic work 1 を拡大表示', exact: true }); await expect(first).toBeVisible();
         const categories = page.getByRole('group', { name: '作品のカテゴリ' }); await expect(categories).toBeVisible();
         await expect(page.locator('#portfolio-gallery-results .pf-pin-card')).toHaveCount(6);
-        const decoration = await first.locator('..').evaluate(element => ({ rotation: getComputedStyle(element).transform, shadow: getComputedStyle(element).boxShadow }));
-        evidence.captures[0].observed_findings.push({ width, decoration, interpretation: 'Card shadow retained; per-card rotation was removed with the artist approval of 2026-10-05; synthetic work does not decide artist preference' });
-        check(decoration.shadow !== 'none', 'DECORATION_PRESERVED');
+        const decoration = await first.evaluate(element => {
+          const card = getComputedStyle(element.parentElement), frame = getComputedStyle(element);
+          return { rotation: card.transform, shadow: card.boxShadow, frame: { style: frame.borderTopStyle, width: frame.borderTopWidth, radius: frame.borderTopLeftRadius } };
+        });
+        evidence.captures[0].observed_findings.push({ width, decoration, interpretation: 'Card chrome (shadow) was removed and the hand-drawn frame border on the image was adopted with the artist approval of 2026-11-01; per-card rotation was removed with the artist approval of 2026-10-05; synthetic work does not decide artist preference' });
+        check(decoration.frame.style === 'solid' && parseFloat(decoration.frame.width) > 0, 'DECORATION_PRESERVED');
         await screenshot(page, ids[0], width, 'list'); await noOverflow(page);
         await page.getByRole('button', { name: '全8作品を見る', exact: true }).click(); await expect(page.locator('#portfolio-gallery-results .pf-pin-card')).toHaveCount(8);
         await first.click(); const modal = page.getByRole('dialog', { name: 'Phase 7 synthetic work 1', exact: true }); await expect(modal).toBeVisible();
