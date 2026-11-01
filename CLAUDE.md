@@ -97,6 +97,6 @@ src/features/natori/
 
 ### 旧 path について
 - `src/lib/natori/*` / `src/types/natori/*` / `src/components/natori/*` の shim は削除済み。新規・既存コードどちらも旧 path を使わない。
-- `src/lib/natori/` ディレクトリも削除済み。natori gallery 作品データは `src/features/natori/constants/works.ts` に集約されている。
+- `src/lib/natori/` ディレクトリも削除済み。静的な作品一覧ファイル（旧 `constants/works.ts`）も 2026-11-01 に削除済みで、作品データは DB の掲載内容を `server/portfolioSiteService.ts` 経由で読む。旧 `/natori/works/:slug` は `/natori/portfolio` へ転送。
 - API route (`src/app/api/natori/admin/projects/route.ts`) は HTTP I/O 中心に薄型化済みで、業務ロジックは `features/natori/server/projectsService.ts` に集約されている。
 
