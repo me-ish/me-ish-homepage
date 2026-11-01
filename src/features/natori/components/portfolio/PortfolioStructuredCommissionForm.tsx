@@ -1499,7 +1499,7 @@ export default function PortfolioStructuredCommissionForm({
       }}
       noValidate
       className="pf-commission-form space-y-4 rounded-2xl p-5 md:p-8"
-      style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
+      style={{ background: c.surface, border: `1.5px solid ${c.sketchLine}`, borderRadius: "18px 14px 20px 13px / 14px 19px 13px 20px" }}
     >
       <fieldset className="contents" disabled={intake.frozen || sending}>
       <PortfolioFormStyles />

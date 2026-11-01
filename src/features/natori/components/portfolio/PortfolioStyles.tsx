@@ -1,7 +1,15 @@
 // features/natori/components/portfolio/PortfolioStyles.tsx
-// /natori/portfolio 専用のキーフレーム・フォーカスリング。
+// /natori/portfolio 専用のキーフレーム・フォーカスリング・手描き風の部品。
 // 他ページと衝突しないよう pf- プレフィックスを付けている。
+//
+// 見た目の方針: 作品が主役。UI は「画用紙・マーカー・付箋」の役割だけを持つ。
+// - 影は使わない。囲みが要るところは .pf-sketch（少し歪んだ手描きの枠線）1 種類。
+// - 見出しの英字小見出しは出さず、日本語見出しの下にマーカー線（.pf-marker）だけ引く。
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+
+/** 画用紙の紙目（軽い SVG ノイズ）。作品の上には重ねない。 */
+const PAPER_GRAIN =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.36 0 0 0 0 0.3 0 0 0 0 0.32 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
 export default function PortfolioStyles() {
   return (
@@ -10,8 +18,36 @@ export default function PortfolioStyles() {
       @keyframes pf-wobble { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
       .pf-floaty { animation: pf-floaty 4s ease-in-out infinite; }
       .pf-wobble { animation: pf-wobble 2.4s ease-in-out infinite; }
-      .pf-pin-card { transition: transform 0.25s ease, box-shadow 0.25s ease; }
-      .pf-pin-card:hover, .pf-pin-card:focus-within { transform: translateY(-6px) !important; box-shadow: 0 18px 30px ${c.shadowHover}; }
+      /* 画用紙。背景色の上に薄い紙目を重ねる（画像や白いカードには掛からない）。 */
+      .pf-portfolio-root { background-image: ${PAPER_GRAIN}; background-attachment: scroll; }
+      /* 手描き風の枠。角の丸みを少しずつ変えて、定規で引いた線に見せない。影は使わない。 */
+      .pf-sketch {
+        border: 1.5px solid ${c.sketchLine};
+        border-radius: 18px 14px 20px 13px / 14px 19px 13px 20px;
+        background: ${c.surface};
+      }
+      .pf-sketch-soft {
+        border: 1.5px solid ${c.borderSubtle};
+        border-radius: 18px 14px 20px 13px / 14px 19px 13px 20px;
+        background: ${c.surface};
+      }
+      /* 見出しの下のマーカー線。少し傾けて、蛍光ペンで引いた一本に見せる。 */
+      .pf-marker { position: relative; display: inline-block; }
+      .pf-marker::after {
+        content: "";
+        position: absolute;
+        left: -0.15em;
+        right: -0.15em;
+        bottom: 0.08em;
+        height: 0.42em;
+        background: ${c.marker};
+        border-radius: 999px 4px 999px 6px;
+        transform: rotate(-1.2deg);
+        z-index: -1;
+      }
+      .pf-marker { isolation: isolate; }
+      .pf-pin-card { transition: transform 0.25s ease; }
+      .pf-pin-card:hover, .pf-pin-card:focus-within { transform: translateY(-4px); }
       .pf-portfolio-root #gallery .pf-pin-card > button > img[alt] {
         object-fit: contain !important;
         padding: clamp(0.25rem, 1.5vw, 0.5rem);
@@ -24,24 +60,6 @@ export default function PortfolioStyles() {
       .pf-hero-frame { margin-inline: auto; width: 100%; max-width: 20rem; }
       @media (min-width: 768px) { .pf-hero-frame { width: min(42vw, calc(70vh * 0.8 + 1rem)); width: round(down, min(42vw, calc(70vh * 0.8 + 1rem)), 1px); max-width: none; } }
       @media (min-width: 1024px) { .pf-hero-frame { width: min(34rem, calc(70vh * 0.8 + 1rem)); width: round(down, min(34rem, calc(70vh * 0.8 + 1rem)), 1px); } }
-      /* 見出しの上に添える英字の小見出し（飾り）。content の「/ ""」で読み上げには含めない。
-         制作の流れ（PortfolioWorkflow.tsx）は CI が中身を固定しているため、すべてここで付ける。 */
-      .pf-portfolio-root :is(#gallery, #pricing, #about, #faq) h2::before,
-      .pf-portfolio-root #flow > div > div:first-child > h2::before {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-family: var(--pf-font-en);
-        font-size: 13px;
-        font-weight: 600;
-        letter-spacing: 0.2em;
-        line-height: 1.2;
-        color: ${c.actionTextSmall};
-      }
-      .pf-portfolio-root #gallery h2::before { content: "WORKS" / ""; }
-      .pf-portfolio-root #pricing h2::before { content: "PRICE" / ""; }
-      .pf-portfolio-root #flow > div > div:first-child > h2::before { content: "FLOW" / ""; }
-      .pf-portfolio-root #about h2::before { content: "PROFILE" / ""; }
-      .pf-portfolio-root #faq h2::before { content: "FAQ" / ""; }
       .pf-form-control { border-color: ${c.formBorder}; }
       .pf-form-control::placeholder { font-size: 0.875rem; }
       .pf-choice-control {
@@ -80,7 +98,7 @@ export default function PortfolioStyles() {
       @media (prefers-reduced-motion: reduce) {
         .pf-floaty, .pf-wobble { animation: none; }
         .pf-pin-card { transition: none; }
-        .pf-pin-card:hover, .pf-pin-card:focus-within { transform: none !important; }
+        .pf-pin-card:hover, .pf-pin-card:focus-within { transform: none; }
         .pf-choice-control { transition: none; }
       }
       @media (forced-colors: active) {
@@ -88,6 +106,7 @@ export default function PortfolioStyles() {
           appearance: auto;
           background-image: none;
         }
+        .pf-marker::after { display: none; }
       }
     `}</style>
   );

@@ -21,16 +21,15 @@ export default function PortfolioFaq({ content, embedded = false }: {
       aria-labelledby="faq-heading"
     >
       {embedded ? (
-        <h3 id="faq-heading" className="text-center text-xl font-black md:text-2xl">よくある質問</h3>
+        <h3 id="faq-heading" className="text-center text-xl font-black md:text-2xl"><span className="pf-marker">よくある質問</span></h3>
       ) : (
-        <h2 id="faq-heading" className="text-center text-2xl font-black md:text-3xl">よくある質問</h2>
+        <h2 id="faq-heading" className="text-center text-2xl font-black md:text-3xl"><span className="pf-marker">よくある質問</span></h2>
       )}
       <div className={embedded ? "mt-4 space-y-3 md:mt-6" : "mt-6 space-y-3 md:mt-8"}>
         {faqs.map((faq, index) => (
           <details
             key={`${faq.question}-${index}`}
-            className="group rounded-2xl"
-            style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
+            className="group pf-sketch-soft"
           >
             <summary className="pf-cute-focus flex min-h-[52px] cursor-pointer list-none items-center gap-3 rounded-2xl px-4 py-3 font-bold md:px-5 [&::-webkit-details-marker]:hidden">
               <span aria-hidden="true" className="shrink-0 text-lg" style={{ ...fontEnStyle, color: c.actionTextSmall }}>

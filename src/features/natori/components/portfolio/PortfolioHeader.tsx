@@ -105,8 +105,7 @@ export default function PortfolioHeader({
             style={{
               background: c.surface,
               color: content.commissionOpen ? c.text : c.textSoft,
-              border: `1px solid ${c.borderSubtle}`,
-              boxShadow: `0 4px 12px ${c.shadowSoft}`,
+              border: `1.5px solid ${c.sketchLine}`,
             }}
           >
             <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">

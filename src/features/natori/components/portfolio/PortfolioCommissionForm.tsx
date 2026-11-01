@@ -314,7 +314,7 @@ function PortfolioCommissionFormSession({
         {status === "success" ? (
           <div
             className="rounded-2xl p-8 text-center"
-            style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
+            style={{ background: c.surface, border: `1.5px solid ${c.sketchLine}`, borderRadius: "18px 14px 20px 13px / 14px 19px 13px 20px" }}
           >
             <h3 ref={successHeadingRef} tabIndex={-1} className="mb-1 text-lg font-bold outline-none">
               送信ありがとうございます!
@@ -365,7 +365,7 @@ function PortfolioCommissionFormSession({
             onSubmit={handleSubmit}
             noValidate
             className="space-y-5 rounded-2xl p-6 md:p-8"
-            style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
+            style={{ background: c.surface, border: `1.5px solid ${c.sketchLine}`, borderRadius: "18px 14px 20px 13px / 14px 19px 13px 20px" }}
           >
             {/* form の space-y-5 は display:contents の fieldset の中まで届かないので、行の間隔はここで付ける */}
             <fieldset className="contents space-y-5" disabled={intake.frozen || status === "sending"}>
