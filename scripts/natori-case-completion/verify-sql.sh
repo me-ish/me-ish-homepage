@@ -15,7 +15,9 @@ fails=0
 ok(){ if [ "$2" = "$3" ]; then echo "ok   $1"; else echo "FAIL $1: expected [$3] got [$2]"; fails=$((fails+1)); fi; }
 q "do \$\$begin if not exists(select 1 from pg_roles where rolname='anon') then create role anon nologin;end if;if not exists(select 1 from pg_roles where rolname='authenticated') then create role authenticated nologin;end if;if not exists(select 1 from pg_roles where rolname='service_role') then create role service_role nologin bypassrls;end if;end\$\$" >/dev/null
 $P -d "$DB" -f "$ROOT/scripts/legacy-entry-read-security/fresh-bootstrap.sql" >/dev/null
+# SKIP_MIGRATIONS: space-separated file names to leave out (e.g. to mirror a DB that never got one).
 for f in $(python3 -c "import json,sys;print(' '.join(json.load(open(sys.argv[1]))['activeMigrations']))" "$ROOT/supabase/baseline/manifest.json"); do
+  case " ${SKIP_MIGRATIONS:-} " in *" $(basename "$f") "*) echo "skip $f"; continue;; esac
   $P -d "$DB" -f "$ROOT/$f" >/dev/null
 done
 echo "ok   all active migrations applied"

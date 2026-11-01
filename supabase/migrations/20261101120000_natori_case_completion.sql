@@ -10,7 +10,8 @@ select pg_catalog.pg_advisory_xact_lock(7261549321761::bigint);
 do $preflight$
 declare r record;
 begin
- if (select md5(prosrc) from pg_proc where oid='natori_case_guard.images()'::regprocedure)<>'13f3b8f50e9013b6d72e01af347bfaeb'
+ -- images(): before (5976…) or after (13f3…) 20261025000000_natori_production_mail_evidence.
+ if (select md5(prosrc) from pg_proc where oid='natori_case_guard.images()'::regprocedure) not in ('5976c98c2bf0435358bfbda70a311be8','13f3b8f50e9013b6d72e01af347bfaeb')
   or (select md5(prosrc) from pg_proc where oid='natori_case_guard.check_contract(text)'::regprocedure)<>'5dee460563666848471d9912b93048a3'
   then raise exception 'case_completion_guard_contract_mismatch';end if;
  if (select md5(prosrc) from pg_proc where oid='public.natori_delivery_project_guard_v1()'::regprocedure)<>'5669d0837ba50a7f5a31de9b08208d22'
