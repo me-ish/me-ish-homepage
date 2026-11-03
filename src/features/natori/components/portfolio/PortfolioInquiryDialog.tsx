@@ -114,7 +114,7 @@ export default function PortfolioInquiryDialog({
         <h2 className="text-2xl font-black md:text-3xl">ご相談・ご依頼</h2>
         <p className="mt-3 leading-relaxed" style={{ color: c.textSoft }}>
           {content.commissionOpen
-            ? "イメージが決まっていなくても大丈夫。まずは気軽にお話を聞かせてください。"
+            ? "まずはお気軽にご相談ください。"
             : "現在コミッションは停止中です。再開まで今しばらくお待ちください。"}
         </p>
         {content.commissionOpen && (

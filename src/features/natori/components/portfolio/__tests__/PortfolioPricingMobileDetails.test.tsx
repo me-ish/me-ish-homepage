@@ -11,7 +11,7 @@ import PortfolioPricing from "@/features/natori/components/portfolio/PortfolioPr
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
 
 describe("PortfolioPricing mobile details", () => {
-  it("keeps plan descriptions while using compact mobile rows", () => {
+  it("shows name and price without plan descriptions in compact mobile rows", () => {
     const firstPlan = defaultPortfolioContent.plans[0];
     const planSpecificFeature = "表情差分1点込み";
 
@@ -30,7 +30,7 @@ describe("PortfolioPricing mobile details", () => {
       />
     );
 
-    const mobileList = screen.getByRole("list", { name: "通常イラスト料金（スマホ）" });
+    const mobileList = screen.getByRole("list", { name: "料金表（スマホ）" });
     const rows = within(mobileList).getAllByRole("listitem").filter((item) =>
       item.parentElement === mobileList
     );
@@ -38,7 +38,7 @@ describe("PortfolioPricing mobile details", () => {
     expect(rows).toHaveLength(defaultPortfolioContent.plans.length);
 
     for (const plan of defaultPortfolioContent.plans) {
-      expect(within(mobileList).getByText(plan.desc)).toBeTruthy();
+      expect(within(mobileList).queryByText(plan.desc)).toBeNull();
       const cta = within(mobileList).getByRole("link", { name: `${plan.name}を選ぶ` });
       expect(cta.textContent).toBe("このプランで相談");
       expect(cta.className).toContain("pf-btn");
@@ -50,8 +50,6 @@ describe("PortfolioPricing mobile details", () => {
     expect(within(mobileList).queryByText("リテイク2回まで無料")).toBeNull();
     expect(within(mobileList).queryByText("簡単な小物・簡易背景無料")).toBeNull();
 
-    const commonNote = screen.getByText("通常イラスト共通").parentElement as HTMLElement;
-    expect(commonNote.className).toContain("py-2");
     expect(
       screen.getByText(/表示価格には、リテイク2回まで、簡単な小物・簡易背景が含まれます/)
     ).toBeTruthy();

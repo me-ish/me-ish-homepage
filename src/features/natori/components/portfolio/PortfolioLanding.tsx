@@ -80,7 +80,7 @@ export default function PortfolioLanding({
           <section id="form" className="mx-auto max-w-3xl px-5 py-14 text-center md:py-20">
             <h2 className="text-2xl font-black md:text-3xl">ご相談・ご依頼</h2>
             <p className="mt-3 leading-relaxed" style={{ color: c.textSoft }}>
-              {content.commissionOpen ? "イメージが決まっていなくても大丈夫。まずは気軽にお話を聞かせてください。" : "現在コミッションは停止中です。再開まで今しばらくお待ちください。"}
+              {content.commissionOpen ? "まずはお気軽にご相談ください。" : "現在コミッションは停止中です。再開まで今しばらくお待ちください。"}
             </p>
             {/* 入口はほかの主ボタンと同じ「相談・見積もり」1つにし、相談か見積もりかはフォームの中で選んでもらう。 */}
             {content.commissionOpen && <div className="mt-6 flex justify-center">

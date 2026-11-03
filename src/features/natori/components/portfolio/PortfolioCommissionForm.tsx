@@ -287,11 +287,12 @@ function PortfolioCommissionFormSession({
     >
       <div className="mx-auto max-w-2xl px-5">
         {!hideHeading && <h2 className="mb-2 text-center text-2xl font-black md:text-3xl">ご依頼フォーム</h2>}
-        <p className="mb-8 text-center" style={{ color: c.textSoft }}>
-          {commissionOpen
-            ? "まずはお気軽にご相談ください。"
-            : "現在コミッションは停止中です。再開まで今しばらくお待ちください。"}
-        </p>
+        {/* 受付中の「まずはお気軽にご相談ください。」は作品ページ側の見出し下で伝えているので、ここでは重ねない */}
+        {commissionOpen ? null : (
+          <p className="mb-8 text-center" style={{ color: c.textSoft }}>
+            現在コミッションは停止中です。再開まで今しばらくお待ちください。
+          </p>
+        )}
 
         {status === "success" ? (
           <div
