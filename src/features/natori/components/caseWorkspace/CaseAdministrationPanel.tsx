@@ -16,7 +16,7 @@ import { notificationPurposeName } from "../../lib/notificationLabels";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
 import { workspaceLook as look } from "../../constants/workspaceLook";
 import type { CaseOverviewPart, CaseSection } from "../../types/caseWorkspace";
-const DETAIL_LABELS = { title: "案件名", client_name: "お客さんの名前", amount: "金額", delivery_plan: "納期のプラン", start_date: "作業を始める日", due_date: "納期", note: "メモ" } as const;
+const DETAIL_LABELS = { title: "案件名", client_name: "お客さんの名前", amount: "金額", delivery_plan: "納期のプラン", start_date: "作業を始める日", due_date: "納期", note: "依頼文" } as const;
 const card = `space-y-3 ${look.cardPadded}`;
 type Operation = ReturnType<typeof useCaseAdminOperation>;
 export function CaseAdminConfirmation({ operation }: { operation: Operation }) {
@@ -209,11 +209,16 @@ export function CaseAdministrationPanel({
               : "入金はまだ"}
           </p>
           <p className="text-sm">
-            カード決済ではなく、振込などで受け取った時に使います。
+            カード決済ではなく、振込や外部サイト（つなぐ等）で受け取った時に使います。
           </p>
+          {!paymentRecorded && (p.amount === null || p.type === "undecided") ? (
+            <p className="text-sm text-amber-900">
+              記録する前に{[p.amount === null ? "金額（その他 → 案件の情報を直す）" : "", p.type === "undecided" ? "依頼の種類（制作）" : ""].filter(Boolean).join("と")}を決めてください。
+            </p>
+          ) : null}
           <button
             className={ui.btnSecondary}
-            disabled={disabled || inactive || paymentRecorded}
+            disabled={disabled || inactive || paymentRecorded || p.amount === null || p.type === "undecided"}
             onClick={() =>
               prepare({ command: "manual-payment" }, [
                 `金額：${p.amount === null ? "まだ決まっていません" : `${p.amount.toLocaleString("ja-JP")}円`}`,
@@ -398,7 +403,7 @@ function BasicDetails({
           </select>
         </label>
         <label className="block text-sm">
-          メモ
+          依頼文
           <textarea
             className={ui.input}
             value={form.note}

@@ -109,7 +109,7 @@ export function CaseRegistration({
                   data.mode === "manual"
                     ? `種類：${data.type} / 金額：${Number(data.amount).toLocaleString("ja-JP")}円 / 納期：${data.dueDate} / いまの段階：${data.status}`
                     : "案件だけを登録します。お客さんにメールは送りません。",
-                  `メモ：${data.note}`,
+                  `依頼文：${data.note || "なし"}`,
                 ],
               );
               setError("");
@@ -245,9 +245,9 @@ export function CaseRegistration({
               </>
             ) : null}
             <label className="block text-sm">
-              メモ
+              依頼文（お客さんから届いた文章を貼れます）
               <textarea
-                className={ui.input}
+                className={`${ui.input} min-h-32`}
                 value={form.note}
                 onChange={(e) =>
                   setForm((v) => ({ ...v, note: e.target.value }))

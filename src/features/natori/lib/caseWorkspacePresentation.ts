@@ -39,6 +39,14 @@ export function observationLabel(value: CaseObservation<unknown>, absent = "ま�
     : value.state === "unavailable" ? value.reason === "read_failed" ? "読み込めませんでした"
       : value.reason === "incomplete" ? "一部を読み込めませんでした" : "この形式は表示できません" : "読み込み済み";
 }
+/**
+ * A saved estimate draft with no issued quote. The quote reader reports it as
+ * "unsupported" (a draft has no issued amount), and that is its only source of
+ * "unsupported" for quotes. It is a normal stage, not a read failure.
+ */
+export function caseQuoteDraftOnly(value: CaseObservation<unknown>): boolean {
+  return value.state === "unavailable" && value.reason === "unsupported" && !value.lastKnown;
+}
 export const caseTargetSection = (kind: string): CaseSection =>
   kind === "quote" || kind === "payment_link" ? "transaction"
     : kind === "rough" || kind === "delivery" ? "production" : kind === "consultation" ? "consultation" : "history";
@@ -125,7 +133,8 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
     add(item.key, item.waitingOn, text, section, attentionButton[item.reason], MAIL_CHECK_REASONS.has(item.reason) ? true : undefined);
   }
   const inactive = !!project?.archivedAt || project?.rawStatus === "closed" || project?.rawStatus === "completed";
-  const quoteUnconfirmed = !quote && (m.facts.quote.state === "unavailable" || m.facts.quote.state === "not_requested");
+  const quoteDraft = !quote && caseQuoteDraftOnly(m.facts.quote);
+  const quoteUnconfirmed = !quote && !quoteDraft && (m.facts.quote.state === "unavailable" || m.facts.quote.state === "not_requested");
   // Missing quote evidence is not an earlier business stage. Preserve confirmed
   // downstream facts and the model's higher-priority operation checks.
   if (quoteUnconfirmed && !inactive && !receipt && !payment && !delivery) {
@@ -140,6 +149,8 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
       add("payment", "staff", "支払いリンクを送る", "transaction", "支払いリンクを送る");
     } else if (!payment && quote && (m.agreement === "needs_review" || quote.state === "draft")) {
       add("quote-review", "staff", quote.state === "draft" ? "見積の下書きを仕上げて送る" : "OKの内容と見積が合っているか見る", "transaction");
+    } else if (!payment && !delivery && quoteDraft) {
+      add("quote-review", "staff", "見積の下書きを仕上げて送る", "transaction");
     }
   }
   if (receipt?.correspondence === "unconfirmed") unknown.push("要確認：受け取りの記録はありますが、どの納品の受け取りか分かりません。");
@@ -150,6 +161,7 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
   for (const [label, observation] of domains) {
     // 旧方式の入金は、返金を追うための Stripe の情報が記録に無く、この形式では表示できない。入金そのものは読めているので、読み込み失敗の警告にはしない（返金はStripeの画面で確認する）。
     if (observation === m.facts.financialReview && observation.state === "unavailable" && observation.reason === "unsupported" && m.facts.payment.state === "ready") continue;
+    if (observation === m.facts.quote && quoteDraft) continue;
     if (observation.state === "unavailable" || observation.state === "not_requested") {
       unknown.push(`${label}：${observationLabel(observation)}`);
     }
@@ -163,7 +175,7 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
     : project?.rawStatus === "closed" ? "終了" : project?.rawStatus === "completed" ? "完了"
       : delivery ? "納品済み・受取待ち" : payment ? "制作中"
         : m.stage === "payment_notified" ? "入金待ち" : m.agreement === "accepted" ? paymentUnread ? "見積OK・入金は読み込めず" : "見積OK・支払い前" : quoteUnconfirmed ? "見積の状態が分かりません"
-          : quote?.state === "draft" ? "見積の準備中" : m.agreement === "needs_review" ? "見積の確認が必要" : quote ? "見積の返事待ち" : "相談中";
+          : quote?.state === "draft" || quoteDraft ? "見積の準備中" : m.agreement === "needs_review" ? "見積の確認が必要" : quote ? "見積の返事待ち" : "相談中";
   if (!project && !receipt && !payment && !delivery && !quote) status = "読み込めませんでした";
   // Mail checks go last so the main next step is always a real one.
   waits.sort((a, b) => Number(!!a.mailCheck) - Number(!!b.mailCheck));
@@ -172,7 +184,7 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
       : { label: "相談を開く", section: "consultation" as const };
   return { status, primary, waits, unknown, facts: [
     { label: "見積", value: quote ? `${quote.version > 1 ? `${quote.version}回目の見積` : "見積"}${m.agreement === "accepted" ? "でOK" : m.agreement === "needs_review" ? "（内容の確認が必要）" : quote.state === "draft" ? "（下書き）" : "（返事待ち）"}`
-      : observationLabel(m.facts.quote, "まだ") },
+      : quoteDraft ? "下書き" : observationLabel(m.facts.quote, "まだ") },
     { label: m.agreement === "needs_review" && quote?.acceptance ? "OKをもらった金額（要確認）" : "決まった金額",
       value: quote?.acceptance && (m.agreement === "accepted" || m.agreement === "needs_review") ? caseMoney(quote.acceptance.money) : quoteUnconfirmed ? "分かりません" : "まだ" },
     { label: "入金", value: payment ? `${caseMoney(payment.money)}・入金済み` : observationLabel(m.facts.payment, "まだ") },

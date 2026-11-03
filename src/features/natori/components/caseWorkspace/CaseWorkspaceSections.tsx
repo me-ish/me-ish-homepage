@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 import type { CaseOverviewPart, CaseSection, CaseWorkspaceRecord } from "../../types/caseWorkspace";
 import type { CaseStepKey } from "../../lib/caseSteps";
-import { CASE_TASK_STAGE_LABELS as stages, caseDate, caseKnown, caseMoney, caseTime, observationLabel } from "../../lib/caseWorkspacePresentation";
+import { CASE_TASK_STAGE_LABELS as stages, caseDate, caseKnown, caseMoney, caseQuoteDraftOnly, caseTime, observationLabel } from "../../lib/caseWorkspacePresentation";
 import { CASE_NOTICE_PURPOSES, caseNoticeLabel } from "../../lib/caseWorkspaceEntries";
 
 import { CaseReconciliationPanel } from "./CaseReconciliationPanel";
@@ -24,26 +24,28 @@ export function CaseWorkspaceSections({ record, section,step=null,application=fa
   const quote = caseKnown(m.facts.quote), payment = caseKnown(d.payment), delivery = caseKnown(m.facts.delivery);
   const receipt = caseKnown(d.receipt), tasks = caseKnown(d.tasks), conversation = caseKnown(d.conversation);
   const roughs = caseKnown(m.facts.roughs);
+  // Orders taken outside the site (つなぐ, SNS, mail) do not use the site's talk or mail/Stripe checks unless something was recorded.
+  const external = caseKnown(m.facts.project)?.origin === "external";
   if (section === "consultation") return <div className="space-y-4">
-    <Card title="相談">{conversation ? <><p className="font-semibold">最後に書いた人：{conversation.latestSender === "client" ? "お客さん" : "あなた"}</p>
+    {external && !conversation ? null : <Card title="相談">{conversation ? <><p className="font-semibold">最後に書いた人：{conversation.latestSender === "client" ? "お客さん" : "あなた"}</p>
       <p className="mt-2 text-sm text-zinc-600">{caseTime(conversation.latestAt)}</p></>
-      : <p>{observationLabel(d.conversation)}</p>}</Card>
+      : <p>{observationLabel(d.conversation)}</p>}</Card>}
     {!application?<p className="rounded-xl bg-zinc-100 p-4 text-sm text-zinc-600">見本の画面なので、返信は送れません。</p>:null}
   </div>;
   const agreed = quote?.acceptance && m.agreement === "accepted" ? quote.acceptance : null;
   const quoteReply = m.agreement === "accepted" ? `OK · ${caseTime(quote!.acceptance!.acceptedAt)}` : m.agreement === "needs_review" ? "要確認" : "まだ";
   if (section === "transaction") return <div className="space-y-4">
-    {step === "quote" ? <Rows rows={[["見積", quote ? `第${quote.version}版` : observationLabel(m.facts.quote, "まだありません")], ["金額", quote ? caseMoney(quote.money) : "—"], ["お客さんの返事", quote ? quoteReply : "—"]]} />
+    {step === "quote" ? <Rows rows={[["見積", quote ? `第${quote.version}版` : caseQuoteDraftOnly(m.facts.quote) ? "下書き（まだ送っていません）" : observationLabel(m.facts.quote, "まだありません")], ["金額", quote ? caseMoney(quote.money) : "—"], ["お客さんの返事", quote ? quoteReply : "—"]]} />
       : <Rows rows={[["金額", agreed ? caseMoney(agreed.money) : quote ? `${caseMoney(quote.money)}（OK前）` : "—"], ["宛先", `${record.clientLabel}さん（登録メール）`],
         ["入金", payment ? `入金済み · ${caseTime(payment.confirmedAt)}` : "まだ"], ["支払いリンク", caseKnown(m.facts.link) ? "作成済み" : observationLabel(m.facts.link, "まだ")]]} />}
     {step !== "quote" && caseKnown(m.facts.payment) && caseKnown(m.facts.link)?.source === "legacy_projection" && caseKnown(m.facts.link)?.providerState === "unverified"
       ? <p className="text-sm leading-6 text-zinc-600">入金が済んだので、Stripe の管理画面でこの支払いリンクが「無効」になっているか見てください。有効のままなら、そこで無効にしてください。</p> : null}
-    {application&&!readOnly?<CaseReconciliationPanel selectedNotificationId={selectedNotificationId} key={`reconciliation-${record.id}`} projectId={record.id} onChanged={onChanged}/>:null}
+    {application&&!readOnly&&!(external&&!caseKnown(m.facts.operations)?.length)?<CaseReconciliationPanel selectedNotificationId={selectedNotificationId} key={`reconciliation-${record.id}`} projectId={record.id} onChanged={onChanged}/>:null}
     {application&&!readOnly?<CasePaymentPanel key={record.id} projectId={record.id} onChanged={onChanged}/>:<p className="rounded-xl bg-pink-50 p-4 text-sm text-pink-950">{readOnly?"いまは見るだけなので、支払いリンクは送れません。":"見本の画面なので、見積や支払いリンクは送れません。"}</p>}
     <Records title="見積・入金・メールの記録">
     <div className="grid gap-4 sm:grid-cols-2"><Card title="見積">{quote ? <><p className="font-semibold">第{quote.version}版 · {caseMoney(quote.money)}</p>
       <p className="mt-2 text-sm">{m.agreement === "accepted" ? `OKをもらった日時：${caseTime(quote.acceptance!.acceptedAt)}` : m.agreement === "needs_review" ? "要確認：OKの内容がこの見積と合っているか見てください" : "まだOKをもらっていません"}</p></>
-      : <p>{observationLabel(m.facts.quote, "見積はまだありません")}</p>}</Card>
+      : <p>{caseQuoteDraftOnly(m.facts.quote) ? "下書きがあります（まだ送っていません）" : observationLabel(m.facts.quote, "見積はまだありません")}</p>}</Card>
       <Card title="入金">{payment ? <><p className="font-semibold">{caseMoney(payment.money)} · 入金済み</p><p className="mt-2 text-sm">{caseTime(payment.confirmedAt)}</p>
         <p className="mt-2 text-sm text-zinc-600">{payment.method === "manual" ? "あなたが記録した入金" : payment.method === "stripe" ? "カード決済（Stripe）" : "以前の方法での入金"}</p></>
         : <p>{observationLabel(m.facts.payment, "まだ入金はありません")}</p>}</Card></div>
