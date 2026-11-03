@@ -40,7 +40,7 @@ export function CaseWorkspaceSections({ record, section,step=null,application=fa
         ["入金", payment ? `入金済み · ${caseTime(payment.confirmedAt)}` : "まだ"], ["支払いリンク", caseKnown(m.facts.link) ? "作成済み" : observationLabel(m.facts.link, "まだ")]]} />}
     {step !== "quote" && caseKnown(m.facts.payment) && caseKnown(m.facts.link)?.source === "legacy_projection" && caseKnown(m.facts.link)?.providerState === "unverified"
       ? <p className="text-sm leading-6 text-zinc-600">入金が済んだので、Stripe の管理画面でこの支払いリンクが「無効」になっているか見てください。有効のままなら、そこで無効にしてください。</p> : null}
-    {application&&!readOnly&&!(external&&!caseKnown(m.facts.operations)?.length)?<CaseReconciliationPanel selectedNotificationId={selectedNotificationId} key={`reconciliation-${record.id}`} projectId={record.id} onChanged={onChanged}/>:null}
+    {application&&!readOnly&&!(external&&(m.facts.operations.state==="absent"||(m.facts.operations.state==="ready"&&m.facts.operations.value.length===0)))?<CaseReconciliationPanel selectedNotificationId={selectedNotificationId} key={`reconciliation-${record.id}`} projectId={record.id} onChanged={onChanged}/>:null}
     {application&&!readOnly?<CasePaymentPanel key={record.id} projectId={record.id} onChanged={onChanged}/>:<p className="rounded-xl bg-pink-50 p-4 text-sm text-pink-950">{readOnly?"いまは見るだけなので、支払いリンクは送れません。":"見本の画面なので、見積や支払いリンクは送れません。"}</p>}
     <Records title="見積・入金・メールの記録">
     <div className="grid gap-4 sm:grid-cols-2"><Card title="見積">{quote ? <><p className="font-semibold">第{quote.version}版 · {caseMoney(quote.money)}</p>
