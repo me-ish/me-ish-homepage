@@ -88,7 +88,7 @@ export function createPortfolioStructuredPricingConfig(
 
   pushBaseFromPlan(items, content, "sd", "SD");
   pushBaseFromPlan(items, content, "bust_up", "胸上");
-  pushBaseFromPlan(items, content, "waist_up", "膝・腰上");
+  pushBaseFromPlan(items, content, "waist_up", "膝〜腰上");
   pushBaseFromPlan(items, content, "full_body", "全身");
 
   items.push({

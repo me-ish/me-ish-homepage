@@ -163,7 +163,7 @@ export function createNatoriEstimateSuggestionV1(
       "pricing_base_scope_unresolved",
       "blocker",
       "基本料金を決める制作範囲が未確定です",
-      "SD以外の通常依頼は、胸上／膝・腰上／全身の制作範囲を確定してください。",
+      "SD以外の通常依頼は、胸上／膝〜腰上／全身の制作範囲を確定してください。",
       "requestData.commissionScope",
       "base:scope-required"
     ));

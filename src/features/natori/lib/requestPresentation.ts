@@ -36,7 +36,7 @@ export const NATORI_COMMISSION_SCOPE_LABELS_V1: Readonly<
 > = {
   undecided: "未定・相談して決めたい",
   bust_up: "胸上",
-  waist_up: "膝・腰上",
+  waist_up: "膝〜腰上",
   full_body: "全身",
   other: "その他",
 };

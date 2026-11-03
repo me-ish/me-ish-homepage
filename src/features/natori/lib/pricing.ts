@@ -28,7 +28,7 @@ export const baseItems: readonly NatoriBaseItem[] = [
   },
   {
     id: "waist_up",
-    label: "膝・腰上",
+    label: "膝〜腰上",
     basePrice: 6000,
     priority: 20,
     note: "リテイク2回まで無料。簡単な小物、簡易背景無料。",

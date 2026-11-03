@@ -16,16 +16,14 @@ afterEach(() => {
 });
 
 describe("PortfolioPricing", () => {
-  it("プランの説明文は出さず、旧表記「膝〜腰上」も「膝・腰上」で見せる", () => {
-    const plans = defaultPortfolioContent.plans.map((plan) =>
-      plan.id === "waist_up" ? { ...plan, name: "膝〜腰上" } : plan
-    );
-    render(<PortfolioPricing content={{ ...defaultPortfolioContent, plans }} />);
+  it("プランの説明文は出さず、フルカラーであることは料金表の下に一度だけ書く", () => {
+    render(<PortfolioPricing content={defaultPortfolioContent} />);
     expect(screen.queryByText(/フルカラーイラスト/)).toBeNull();
-    expect(screen.queryByText("膝〜腰上")).toBeNull();
-    expect(screen.getAllByRole("heading", { name: "膝・腰上" })).toHaveLength(2);
+    expect(screen.getAllByText(/すべてフルカラーです/)).toHaveLength(1);
+    expect(screen.getAllByRole("heading", { name: "膝〜腰上" })).toHaveLength(2);
     expect(screen.getByText(/ご依頼内容も非公開で対応します/)).toBeTruthy();
   });
+
   it("shows each fixed plan price as a starting price without altering ranges", () => {
     render(
       <PortfolioPricing
