@@ -127,6 +127,7 @@ export const LEGACY_PORTFOLIO_PLAN_ID_BY_EXACT_NAME: Readonly<Record<string, str
   "SDキャラ": PORTFOLIO_PLAN_IDS.sd,
   胸上: PORTFOLIO_PLAN_IDS.bustUp,
   "膝〜腰上": PORTFOLIO_PLAN_IDS.waistUp,
+  "膝・腰上": PORTFOLIO_PLAN_IDS.waistUp,
   全身: PORTFOLIO_PLAN_IDS.fullBody,
 };
 
@@ -233,7 +234,7 @@ export const defaultPortfolioContent: PortfolioContent = {
     },
     {
       id: PORTFOLIO_PLAN_IDS.waistUp,
-      name: "膝〜腰上",
+      name: "膝・腰上",
       price: "6,000円",
       desc: "膝・腰上から上のフルカラーイラスト",
       features: ["リテイク2回まで無料", "簡単な小物・簡易背景無料"],
@@ -358,7 +359,12 @@ export const tapeColors = ["#FFE8A3", "#FFD3E2", "#CFF3E8", "#DCE4FF"] as const;
 ------------------------------------------------------------------- */
 /** フォームの「サイズ / プラン」選択肢の表記。料金カードとフォームで共有する */
 export function planChoiceLabel(plan: { name: string; price: string }): string {
-  return `${plan.name}（${plan.price}）`;
+  return `${portfolioPlanDisplayName(plan.name)}（${plan.price}）`;
+}
+
+/** 旧表記「膝〜腰上」は「膝・腰上」にそろえて見せる（保存済みのプラン名が古くても公開側は統一する）。 */
+export function portfolioPlanDisplayName(name: string): string {
+  return name === "膝〜腰上" ? "膝・腰上" : name;
 }
 
 export type PortfolioPlanSelectDetail = {

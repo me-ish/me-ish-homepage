@@ -9,7 +9,7 @@ const pricingConfig: NatoriPricingConfigV1 = {
   items: [
     { id: "sd", kind: "base", label: "SD", amount: 3000 },
     { id: "bust_up", kind: "base", label: "胸上", amount: 4000 },
-    { id: "waist_up", kind: "base", label: "膝〜腰上", amount: 6000 },
+    { id: "waist_up", kind: "base", label: "膝・腰上", amount: 6000 },
     { id: "full_body", kind: "base", label: "全身", amount: 10000 },
     { id: "mass_production_illustration", kind: "base", label: "量産イラスト", amount: 1500 },
     { id: "expression_variation", kind: "fixed", label: "表情差分", amount: 500 },

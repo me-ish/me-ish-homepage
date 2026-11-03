@@ -143,7 +143,7 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
     const selected = url.searchParams.get("plan");
     url.searchParams.set("structured", "1");
     await page.goto(url.toString());
-    const labels = { bust_up: "胸上", waist_up: "膝〜腰上", full_body: "全身", sd: "SDキャラクター" };
+    const labels = { bust_up: "胸上", waist_up: "膝・腰上", full_body: "全身", sd: "SDキャラクター" };
     if (!selected || !labels[selected]) throw new Error("unexpected pricing plan fixture");
     await expect(page.getByText(/料金から選んだ内容：/)).toContainText(labels[selected]);
     const input = page.getByLabel(selected === "sd" ? "ご依頼の種類" : "制作範囲", { exact: true });

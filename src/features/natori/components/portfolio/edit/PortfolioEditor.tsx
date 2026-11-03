@@ -1074,11 +1074,7 @@ export default function PortfolioEditor({
                   />
                 </div>
                 <div className="mt-3 space-y-3">
-                  <TextInput
-                    label="説明"
-                    value={plan.desc}
-                    onChange={(v) => patch({ plans: updateItem(content.plans, index, { desc: v }) })}
-                  />
+                  {/* プランの説明文は公開ページに出さなくなったので、入力欄も置かない（保存済みの値はそのまま残る） */}
                   <TextArea
                     label="含まれるもの（1行に1つ）"
                     value={plan.features.join("\n")}

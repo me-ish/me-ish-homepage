@@ -32,7 +32,7 @@ type Workspace={revision:string;onChanged:()=>void;onDirty:(v:boolean)=>void;loc
 type Props = { project: NatoriProject; portfolioContent: PortfolioContent | null;workspace?:Workspace };
 const field = natoriAdminUi.input;
 const scopeLabels: Record<NatoriAgreedTerms["scope"], string> = {
-  undecided: "相談して決める", bust_up: "胸上", waist_up: "膝〜腰上", full_body: "全身", sd: "SD", other: "その他",
+  undecided: "相談して決める", bust_up: "胸上", waist_up: "膝・腰上", full_body: "全身", sd: "SD", other: "その他",
 };
 
 const workspaceQuoteDraftSchema=z.strictObject({

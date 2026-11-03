@@ -142,7 +142,7 @@ export function makeDemoWorkspaceProjects(today: Date): NatoriProject[] {
       note: inquiryNote({
         email: "chikuwa@example.com",
         kind: "一枚絵",
-        plan: "膝〜腰上",
+        plan: "膝・腰上",
         options: "しっかり背景 / 商用利用",
         budget: "10,000円〜20,000円",
         details: ["新商品の告知用イラストをお願いします。"],

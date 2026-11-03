@@ -37,8 +37,8 @@ describe("inferNatoriProjectType", () => {
 
 describe("buildInquiryTitle", () => {
   it("appends a concrete plan", () => {
-    expect(buildInquiryTitle(makeInput({ requestType: "立ち絵", plan: "膝〜腰上（6,000円）" }))).toBe(
-      "立ち絵・膝〜腰上（6,000円）"
+    expect(buildInquiryTitle(makeInput({ requestType: "立ち絵", plan: "膝・腰上（6,000円）" }))).toBe(
+      "立ち絵・膝・腰上（6,000円）"
     );
   });
 

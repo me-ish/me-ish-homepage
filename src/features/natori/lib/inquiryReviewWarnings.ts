@@ -133,7 +133,7 @@ export function collectNatoriInquiryReviewWarnings(
       code: "commission_scope_undecided",
       severity: "attention",
       title: "制作範囲が未定",
-      action: "胸上／膝〜腰上／全身などの範囲を相談して決めてください。",
+      action: "胸上／膝・腰上／全身などの範囲を相談して決めてください。",
       sourceField: "requestData.commissionScope",
     });
   }

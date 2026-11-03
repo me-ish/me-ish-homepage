@@ -162,7 +162,7 @@ export function isInactiveStatus(status: NatoriProjectStatus): boolean {
   return isDoneStatus(status) || isClosedStatus(status);
 }
 
-// キャラクター系 3 タイプ（胸上 / 膝〜腰上 / 全身）の共通タスクテンプレ。
+// キャラクター系 3 タイプ（胸上 / 膝・腰上 / 全身）の共通タスクテンプレ。
 // ラフ作成 → ラフ提出 → 線画 → 着彩 → 最終確認 → 納品 の 6 工程で統一する。
 // 表情差分は本人の運用ヒアリングで除外。納期負荷の違いは estimatedHours で吸収。
 function createCharacterTasks(hours: {

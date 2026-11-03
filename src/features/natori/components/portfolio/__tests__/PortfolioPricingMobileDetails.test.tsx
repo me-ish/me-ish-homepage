@@ -11,7 +11,7 @@ import PortfolioPricing from "@/features/natori/components/portfolio/PortfolioPr
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
 
 describe("PortfolioPricing mobile details", () => {
-  it("keeps plan descriptions while using compact mobile rows", () => {
+  it("shows name and price without plan descriptions in compact mobile rows", () => {
     const firstPlan = defaultPortfolioContent.plans[0];
     const planSpecificFeature = "表情差分1点込み";
 
@@ -38,7 +38,7 @@ describe("PortfolioPricing mobile details", () => {
     expect(rows).toHaveLength(defaultPortfolioContent.plans.length);
 
     for (const plan of defaultPortfolioContent.plans) {
-      expect(within(mobileList).getByText(plan.desc)).toBeTruthy();
+      expect(within(mobileList).queryByText(plan.desc)).toBeNull();
       const cta = within(mobileList).getByRole("link", { name: `${plan.name}を選ぶ` });
       expect(cta.textContent).toBe("このプランで相談");
       expect(cta.className).toContain("pf-btn");

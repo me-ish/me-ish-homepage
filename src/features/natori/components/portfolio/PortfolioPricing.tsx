@@ -4,7 +4,7 @@
 // コミッション料金。見出しのすぐ下に料金表を置き、作例は表の行に添える。共通の補足は表の下。
 // CTA からフォームへスクロールしつつ依頼種別 / 制作範囲を自動で合わせる。
 import { ChevronDown } from "lucide-react";
-import { PORTFOLIO_OPTION_IDS, planChoiceLabel, portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import { PORTFOLIO_OPTION_IDS, planChoiceLabel, portfolioColors as c, portfolioPlanDisplayName } from "@/features/natori/constants/portfolioContent";
 import { NATORI_MASS_PRODUCTION_BASE_AMOUNT } from "@/features/natori/constants/portfolioPricing";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import { portfolioPlanSample } from "@/features/natori/lib/portfolioPlanSamples";
@@ -18,12 +18,6 @@ function startingPriceLabel(price: string): string {
 
 function yen(amount: number): string {
   return `${amount.toLocaleString("ja-JP")}円`;
-}
-
-function planDescription(description: string): string {
-  return description === "膝〜腰上までのフルカラーイラスト"
-    ? "膝・腰上から上のフルカラーイラスト"
-    : description;
 }
 
 export default function PortfolioPricing({ content, contactPath = "/natori/portfolio/contact", structuredIntake = false }: { content: PortfolioContent; contactPath?: string; structuredIntake?: boolean }) {
@@ -79,7 +73,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={sample.image}
-                    alt={`${plan.name}の作例「${sample.title}」`}
+                    alt={`${portfolioPlanDisplayName(plan.name)}の作例「${sample.title}」`}
                     loading="lazy"
                     className="aspect-[4/5] w-16 shrink-0 rounded-lg border object-contain"
                     style={{ borderColor: c.borderSubtle, background: c.surfaceSubtle }}
@@ -90,7 +84,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
               ) : null}
               <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-3">
-                <h3 className="min-w-0 font-bold">{plan.name}</h3>
+                <h3 className="min-w-0 font-bold">{portfolioPlanDisplayName(plan.name)}</h3>
                 <span className="shrink-0 font-bold" style={{ color: c.text }}>
                   {startingPriceLabel(plan.price)}
                 </span>
@@ -98,10 +92,6 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
 
               <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                 <div className="min-w-0">
-                  {/* スマホでも 13px。切らずに折り返して、説明を最後まで読めるようにする */}
-                  <p className="text-sm leading-5" style={{ color: c.textSoft }}>
-                    {planDescription(plan.desc)}
-                  </p>
                   {planSpecificFeatures.length > 0 ? (
                     <ul className="mt-0.5 space-y-0.5 text-sm leading-5">
                       {planSpecificFeatures.map((feature) => (
@@ -123,7 +113,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                   onClick={() => trackPlan(plan.name)}
                   className="pf-btn pf-btn-sm pf-cute-focus inline-flex min-h-11 shrink-0 items-center justify-center px-3 py-1 text-sm font-bold"
                   style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
-                  aria-label={`${plan.name}を選ぶ`}
+                  aria-label={`${portfolioPlanDisplayName(plan.name)}を選ぶ`}
                 >
                   このプランで相談
                 </a>
@@ -153,7 +143,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={sample.image}
-                    alt={`${plan.name}の作例「${sample.title}」`}
+                    alt={`${portfolioPlanDisplayName(plan.name)}の作例「${sample.title}」`}
                     loading="lazy"
                     className="pf-sketch-soft h-24 w-[4.8rem] object-contain md:h-28 md:w-[5.6rem]"
                     style={{ background: c.surfaceSubtle }}
@@ -166,10 +156,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                 <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: c.action }} />
               )}
               <div className="min-w-0">
-                <h3 className="text-lg font-bold">{plan.name}</h3>
-                <p className="mt-0.5 text-sm" style={{ color: c.textSoft }}>
-                  {planDescription(plan.desc)}
-                </p>
+                <h3 className="text-lg font-bold">{portfolioPlanDisplayName(plan.name)}</h3>
                 {planSpecificFeatures.length > 0 ? (
                   <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                     {planSpecificFeatures.map((feature) => (

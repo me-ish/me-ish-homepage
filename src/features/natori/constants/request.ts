@@ -19,7 +19,7 @@ export const NATORI_REQUEST_TYPE_CHOICES = [
 export const NATORI_COMMISSION_SCOPE_CHOICES = [
   { id: "undecided", label: "未定・相談して決めたい" },
   { id: "bust_up", label: "胸上" },
-  { id: "waist_up", label: "膝〜腰上" },
+  { id: "waist_up", label: "膝・腰上" },
   { id: "full_body", label: "全身" },
   { id: "other", label: "その他" },
 ] as const satisfies readonly Choice<NatoriCommissionScopeV1>[];
