@@ -1,6 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { loadCaseContext } from "../../data/supabaseCaseScreen";
+import { loadCaseAdministration } from "../../data/supabaseCaseAdministration";
+import { caseBasicDetails } from "../../lib/caseAdministration";
 import type { CaseContext } from "../../lib/caseScreenContext";
 import type { CaseAdminRequest } from "../../lib/caseAdministration";
 import { buildNatoriInquiryRequestView } from "../../lib/inquiryRequestView";
@@ -133,9 +135,6 @@ export function CaseIntakePanel({
       aria-label="依頼の内容"
     >
       <h3 className="text-lg font-semibold">依頼の内容</h3>
-      <p className="mt-2 text-sm">
-        お客さんが送ってきた内容と、あなたのメモです。
-      </p>
       {error ? <p role="alert">{error}</p> : null}
       <button
         className={`${ui.btnSecondary} my-3`}
@@ -228,12 +227,9 @@ function IntakeContent({
   return (
     <div className="space-y-4">
       <InquiryRequestSummary view={request} />
-      {request.kind === "legacy" ? (
-        <section aria-label="以前の形式の依頼">
-          <h4 className="font-semibold">以前の形式の依頼</h4>
-          <p className="text-xs">
-            受け付けた時のメモです。
-          </p>
+      {request.kind === "legacy" && note.isAutoInquiry ? (
+        <section aria-label="受け付けた時の内容">
+          <h4 className="font-semibold">受け付けた時の内容</h4>
           <dl>
             {note.fields.map((f) => (
               <div key={f.label}>
@@ -243,7 +239,7 @@ function IntakeContent({
             ))}
           </dl>
           <p className="whitespace-pre-wrap break-words">
-            {note.details || note.plainNote || "内容の記録はありません"}
+            {note.details || note.plainNote}
           </p>
           <p className="whitespace-pre-wrap">{note.message}</p>
           {note.refImages.map((url, i) =>
@@ -263,6 +259,13 @@ function IntakeContent({
           )}
           <p className="whitespace-pre-wrap break-words">{note.refText}</p>
         </section>
+      ) : request.kind === "legacy" ? (
+        <RequestText
+          projectId={p.id}
+          note={p.note}
+          disabled={disabled}
+          prepare={prepare}
+        />
       ) : null}
       <InquiryReferenceFiles
         files={view.files}
@@ -424,5 +427,120 @@ function IntakeContent({
         </p>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * The client's request, pasted by hand (orders taken outside the site).
+ * It is the case's note, the same field as 「案件の情報を直す」. Saving goes
+ * through that same details command, so it needs that form's current values
+ * and revision; they are read fresh when the save is prepared.
+ */
+function RequestText({
+  projectId,
+  note,
+  disabled,
+  prepare,
+}: {
+  projectId: string;
+  note: string | null;
+  disabled: boolean;
+  prepare: (
+    action: CaseAdminRequest["action"],
+    summary: string[],
+    revision: string,
+  ) => void;
+}) {
+  const [editing, setEditing] = useState(false),
+    [text, setText] = useState(note ?? ""),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  const current = note ?? "";
+  return (
+    <section aria-label="依頼文">
+      <h4 className="font-semibold">依頼文</h4>
+      {editing ? (
+        <form
+          className="mt-2 space-y-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setBusy(true);
+            setError("");
+            void loadCaseAdministration(projectId)
+              .then(({ view }) => {
+                if (!view) throw Error("案件が見つかりません。");
+                const q = view.project;
+                if ((q.note ?? "") !== current)
+                  throw Error(
+                    "ほかの画面で依頼文が変わりました。「やめる」を押して、最新の内容から貼り直してください。",
+                  );
+                const patch = caseBasicDetails.parse({
+                  title: q.title,
+                  client_name: q.clientName,
+                  amount: q.amount,
+                  delivery_plan: q.deliveryPlan,
+                  start_date: q.startDate,
+                  due_date: q.dueDate,
+                  note: text.trim() ? text : null,
+                });
+                prepare(
+                  { command: "details", patch },
+                  ["依頼文を保存", text.trim() ? text : "（空にする）"],
+                  view.revision,
+                );
+                setEditing(false);
+              })
+              .catch((e: unknown) =>
+                setError(e instanceof Error ? e.message : "読み込めませんでした。"),
+              )
+              .finally(() => setBusy(false));
+          }}
+        >
+          <label className="block text-sm">
+            お客さんから届いた文章をそのまま貼れます
+            <textarea
+              className={`${ui.input} min-h-40`}
+              value={text}
+              maxLength={10000}
+              onChange={(e) => setText(e.target.value)}
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button className={ui.btnSecondary} disabled={busy}>
+              保存する（前に内容を表示）
+            </button>
+            <button
+              type="button"
+              className={ui.btnLink}
+              onClick={() => {
+                setEditing(false);
+                setText(current);
+                setError("");
+              }}
+            >
+              やめる
+            </button>
+          </div>
+        </form>
+      ) : (
+        <>
+          <p className="mt-2 whitespace-pre-wrap break-words">
+            {current.trim() ? current : "まだ貼っていません"}
+          </p>
+          <button
+            type="button"
+            className={`${ui.btnSecondary} mt-2`}
+            disabled={disabled}
+            onClick={() => {
+              setText(current);
+              setEditing(true);
+            }}
+          >
+            {current.trim() ? "依頼文を直す" : "依頼文を貼る"}
+          </button>
+        </>
+      )}
+      {error ? <p role="alert">{error}</p> : null}
+    </section>
   );
 }

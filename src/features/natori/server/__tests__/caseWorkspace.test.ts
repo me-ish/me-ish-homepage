@@ -22,7 +22,20 @@ export function mismatchedAgreement(record: CaseWorkspaceRecord): CaseWorkspaceR
 }
 
 describe("synthetic reader to case workspace", () => {
-  it.each(["incomplete", "read_failed", "unsupported", "not_requested"] as const)("keeps %s quote evidence visibly unknown and points to its records", reason => {
+  it("shows a saved estimate draft (unsupported quote evidence) as the quote being prepared, not as a read failure", () => {
+    const record = normal[0], quote = { state: "unavailable" as const, reason: "unsupported" as const };
+    const model = deriveCaseReadModel({ ...record.model.facts, quote,
+      projectId: record.id, snapshotId: record.model.snapshotId, asOf: record.model.checkedAt });
+    const guidance = deriveCaseGuidance({ ...record, model });
+    expect(guidance.status).toBe("見積の準備中");
+    expect(guidance.primary.section).toBe("transaction");
+    expect(guidance.waits.some(wait => wait.key === "quote-unconfirmed")).toBe(false);
+    expect(guidance.waits).toContainEqual(expect.objectContaining({ who: "staff", text: "見積の下書きを仕上げて送る" }));
+    expect(guidance.facts).toContainEqual({ label: "見積", value: "下書き" });
+    expect(guidance.unknown.some(line => line.startsWith("見積："))).toBe(false);
+    expect(model.actions.filter(action => action.execution !== "read_only").every(action => !action.available)).toBe(true);
+  });
+  it.each(["incomplete", "read_failed", "not_requested"] as const)("keeps %s quote evidence visibly unknown and points to its records", reason => {
     const record = normal[0], quote = reason === "not_requested" ? { state: "not_requested" as const }
       : { state: "unavailable" as const, reason };
     const model = deriveCaseReadModel({ ...record.model.facts, quote,
