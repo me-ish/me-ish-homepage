@@ -41,7 +41,7 @@ describe("PortfolioPricing", () => {
     expect(screen.getAllByText("応相談")).toHaveLength(2);
   });
 
-  it("uses compact mobile selection rows and labels common conditions as normal-illustration only", () => {
+  it("puts the price table right under the heading and the common conditions below it", () => {
     render(<PortfolioPricing content={defaultPortfolioContent} />);
 
     const pricing = document.getElementById("pricing") as HTMLElement;
@@ -53,10 +53,13 @@ describe("PortfolioPricing", () => {
       expect(screen.getByRole("link", { name: `${plan.name}を選ぶ` })).toBeTruthy();
     }
 
-    const commonNote = screen.getByText("通常イラスト共通").parentElement as HTMLElement;
-    expect(commonNote.className.split(/\s+/)).not.toContain("border");
-    expect(commonNote.style.borderColor).toBe("");
-    expect(screen.getByText(/リテイク2回まで、簡単な小物・簡易背景/)).toBeTruthy();
+    expect(screen.queryByText(/通常イラスト/)).toBeNull();
+    // 見出しの次は料金表（スマホ）、共通の補足は PC の料金表より後ろ
+    const heading = screen.getByRole("heading", { level: 2, name: "コミッション料金" });
+    expect(heading.nextElementSibling?.getAttribute("aria-label")).toBe("料金表（スマホ）");
+    const note = screen.getByText(/表示価格には、リテイク2回まで、簡単な小物・簡易背景が含まれます/);
+    const table = screen.getByRole("list", { name: "料金表" });
+    expect(table.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("does not add an undecided-plan hint under the heading", () => {
@@ -136,20 +139,20 @@ describe("PortfolioPricing", () => {
     }));
     render(<PortfolioPricing content={{ ...defaultPortfolioContent, works, plans }} />);
 
-    // スマホの見比べ用と PC のカードで1枚ずつ
+    // スマホと PC の料金表の行に1枚ずつ
     expect(screen.getAllByRole("img", { name: "SDキャラの作例「SDの作品」" })).toHaveLength(2);
     expect(screen.queryByRole("img", { name: /非公開の作品|画像なし/ })).toBeNull();
-    const strip = screen.getByRole("group", { name: "通常イラストの作例" });
-    expect(strip.className).toContain("sm:hidden");
-    expect(within(strip).getAllByRole("img")).toHaveLength(1);
-    // 作例のないプランは空枠を出さず、幅だけ取って位置をそろえる
+    const mobileTable = screen.getByRole("list", { name: "料金表（スマホ）" });
+    expect(within(mobileTable).getAllByRole("img")).toHaveLength(1);
+    // 作例のないプランは空枠を出さず、幅だけ取って位置をそろえる（スマホ3行 + PC3行）
     expect(screen.queryByText("作例は準備中です")).toBeNull();
-    expect(document.querySelectorAll("[data-plan-sample-spacer]")).toHaveLength(3);
+    expect(document.querySelectorAll("[data-plan-sample-spacer]")).toHaveLength(6);
   });
 
   it("adds no plan sample area until a sample is chosen", () => {
     render(<PortfolioPricing content={defaultPortfolioContent} />);
-    expect(screen.queryByRole("group", { name: "通常イラストの作例" })).toBeNull();
+    expect(screen.queryAllByRole("img")).toHaveLength(0);
+    expect(document.querySelectorAll("[data-plan-sample-spacer]")).toHaveLength(0);
     expect(screen.queryByText("作例は準備中です")).toBeNull();
   });
 

@@ -1,7 +1,7 @@
 "use client";
 
 // features/natori/components/portfolio/PortfolioPricing.tsx
-// コミッション料金。通常プランはスマホでも説明を確認しつつ比較しやすい密度で表示し、
+// コミッション料金。見出しのすぐ下に料金表を置き、作例は表の行に添える。共通の補足は表の下。
 // CTA からフォームへスクロールしつつ依頼種別 / 制作範囲を自動で合わせる。
 import { ChevronDown } from "lucide-react";
 import { PORTFOLIO_OPTION_IDS, planChoiceLabel, portfolioColors as c } from "@/features/natori/constants/portfolioContent";
@@ -56,61 +56,13 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
         <span className="pf-marker">コミッション料金</span>
       </h2>
 
-      <p className="mb-2 text-sm font-black sm:mb-3">通常イラスト</p>
-
-      {/* プランの違いは描く範囲と料金だけなので、全プラン共通で含まれるものはカードの前に1回だけ出す */}
-      {commonFeatures.length > 0 && (
-        <div
-          className="mx-auto mb-2 flex max-w-3xl items-start gap-2 rounded-xl px-3 py-2 sm:mb-3 sm:items-center sm:gap-3 sm:px-4 sm:py-3"
-          style={{ background: c.surfaceSubtle }}
-        >
-          <span
-            className="shrink-0 rounded-full px-2 py-0.5 text-sm font-bold sm:px-2.5 sm:py-1"
-            style={{ background: c.surface, color: c.actionTextSmall }}
-          >
-            通常イラスト共通
-          </span>
-          <p className="text-sm font-medium leading-5 sm:text-sm sm:leading-relaxed" style={{ color: c.textSoft }}>
-            表示価格には、{includedFeatures}が含まれます。
-          </p>
-        </div>
-      )}
-
-
-      {/* スマホ: 作例は一覧の上に並べ、描く範囲の違いを見比べられるようにする */}
-      {hasPlanSamples ? (
-        <div role="group" aria-label="通常イラストの作例" className="mb-3 flex flex-wrap justify-center gap-2 sm:hidden">
-          {content.plans.map((plan, index) => {
-            const sample = planSamples[index];
-            return sample ? (
-              <figure key={plan.id ?? `legacy-sample-${index}`} className="w-[calc(25%-0.375rem)] min-w-0">
-                {/* アップロード画像は公開Storage URLなので next/image のhost設定に依存させない */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={sample.image}
-                  alt={`${plan.name}の作例「${sample.title}」`}
-                  loading="lazy"
-                  className="aspect-[4/5] w-full rounded-lg border object-contain"
-                  style={{ borderColor: c.borderSubtle, background: c.surfaceSubtle }}
-                />
-                <figcaption
-                  className="mt-1 text-center text-sm font-bold leading-tight [overflow-wrap:anywhere]"
-                  style={{ color: c.textSoft }}
-                >
-                  {plan.name}
-                </figcaption>
-              </figure>
-            ) : null;
-          })}
-        </div>
-      ) : null}
-
-      {/* スマホ: 2段構成で説明を残しつつ、複数プランを比較しやすい密度にする */}
+      {/* スマホ: 作例を行の左に添え、説明を残しつつ複数プランを比較しやすい密度にする */}
       <ul
-        aria-label="通常イラスト料金（スマホ）"
+        aria-label="料金表（スマホ）"
         className="pf-sketch overflow-hidden sm:hidden"
       >
         {content.plans.map((plan, index) => {
+          const sample = planSamples[index];
           const planSpecificFeatures = plan.features.filter(
             (feature) => !commonFeatures.includes(feature)
           );
@@ -118,9 +70,25 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
           return (
             <li
               key={plan.id ?? `legacy-mobile-plan-${index}`}
-              className="border-b px-4 py-2 last:border-b-0"
+              className={`border-b px-4 py-2 last:border-b-0${hasPlanSamples ? " flex items-start gap-3" : ""}`}
               style={{ borderColor: c.borderSubtle }}
             >
+              {hasPlanSamples ? (
+                sample ? (
+                  // アップロード画像は公開Storage URLなので next/image のhost設定に依存させない
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={sample.image}
+                    alt={`${plan.name}の作例「${sample.title}」`}
+                    loading="lazy"
+                    className="aspect-[4/5] w-16 shrink-0 rounded-lg border object-contain"
+                    style={{ borderColor: c.borderSubtle, background: c.surfaceSubtle }}
+                  />
+                ) : (
+                  <span aria-hidden="true" data-plan-sample-spacer className="w-16 shrink-0" />
+                )
+              ) : null}
+              <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-3">
                 <h3 className="min-w-0 font-bold">{plan.name}</h3>
                 <span className="shrink-0 font-bold" style={{ color: c.text }}>
@@ -160,6 +128,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                   このプランで相談
                 </a>
               </div>
+              </div>
             </li>
           );
         })}
@@ -167,7 +136,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
 
       {/* タブレット / PC: カードを並べず、1枚の「お品書き」として縦に読む。作例は行の左に小さく添える。 */}
       <ul
-        aria-label="通常イラスト料金"
+        aria-label="料金表"
         className="pf-sketch mx-auto hidden max-w-3xl divide-y divide-[#F2D9E0] sm:block"
       >
         {content.plans.map((plan, index) => {
@@ -229,6 +198,13 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
           );
         })}
       </ul>
+
+      {/* 全プラン共通で含まれるもの（リテイク回数など）は、料金表の下に1回だけ添える */}
+      {commonFeatures.length > 0 && (
+        <p data-plan-common-note className="mx-auto mt-3 max-w-3xl px-1 text-sm leading-6" style={{ color: c.textSoft }}>
+          ※表示価格には、{includedFeatures}が含まれます。
+        </p>
+      )}
 
       {/* 受付停止中は説明や作例を出さず、1行だけで知らせる */}
       {content.massProductionIllustrationOpen ? (
