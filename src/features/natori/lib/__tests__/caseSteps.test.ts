@@ -45,3 +45,29 @@ it("opens the current step for a shared area, otherwise the latest finished one"
   expect(caseStepForSection(paying, "history")).toBeNull();
   expect(caseStepForSection(paying, "overview")).toBeNull();
 });
+
+const externalCase = (patch: Record<string, unknown> = {}, extra: (r: CaseWorkspaceRecord) => CaseWorkspaceRecord = r => r): CaseWorkspaceRecord => {
+  const base = records[4], project = base.model.facts.project;
+  if (project.state !== "ready") throw Error("project fixture required");
+  const absent = { state: "absent" as const, snapshotId: base.model.snapshotId, observedAt: base.model.checkedAt, revision: "absent" };
+  return extra({ ...base, model: { ...base.model, facts: { ...base.model.facts, quote: absent, link: absent,
+    project: { ...project, value: { ...project.value, origin: "external" as const, administrativeAmount: null, ...patch } } } } });
+};
+
+it("gives orders taken outside the site their own steps without quote or 受け取り", () => {
+  const steps = deriveCaseSteps(externalCase());
+  expect(steps.map(step => step.label)).toEqual(["依頼", "金額・入金", "制作", "納品", "完了"]);
+  expect(steps.map(step => step.state)).toEqual(["done", "current", "upcoming", "upcoming", "upcoming"]);
+  expect(steps.find(step => step.key === "quote")?.summary).toBe("金額はまだ");
+  const priced = deriveCaseSteps(externalCase({ administrativeAmount: { amount: 8000, currency: "JPY" } }));
+  expect(priced.find(step => step.key === "quote")?.summary).toBe("￥8,000・入金はまだ");
+  const done = deriveCaseSteps(externalCase({ rawStatus: "completed" }));
+  expect(done.every(step => step.state === "done")).toBe(true);
+  const delivered = deriveCaseSteps(externalCase({ rawStatus: "delivered" }));
+  expect(delivered.find(step => step.state === "current")?.key).toBe("receipt");
+});
+
+it("goes back to the site's steps once a hand-registered case has a quote", () => {
+  const withQuote = externalCase({}, r => ({ ...r, model: { ...r.model, facts: { ...r.model.facts, quote: records[0].model.facts.quote } } }));
+  expect(deriveCaseSteps(withQuote).map(step => step.label)).toEqual(["相談", "見積", "支払い", "制作", "納品", "受取"]);
+});

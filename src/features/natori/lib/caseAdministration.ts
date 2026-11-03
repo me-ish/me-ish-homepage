@@ -28,7 +28,7 @@ export const caseRegistration = z.strictObject({
   amount: money,
   deliveryPlan: z.enum(["normal", "rush_14_days", "rush_7_days"]),
   startDate: z.iso.date(),
-  dueDate: z.iso.date(),
+  dueDate: z.iso.date().nullable(),
   note: z.string().max(10000),
 });
 export const caseAdminAction = z.discriminatedUnion("command", [
