@@ -1,5 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { loadCaseContext } from "../../data/supabaseCaseScreen";
+import { submitCaseAdministration } from "../../data/supabaseCaseAdministration";
+import { normalizeNatoriReferenceUrl } from "../../lib/referenceLinks";
 import { useCaseDraft } from "./useCaseDraft";
 import { useCaseAdminOperation } from "./useCaseAdminOperation";
 import { CaseAdminConfirmation } from "./CaseAdministrationPanel";
@@ -8,6 +11,9 @@ import { calculateDueDate } from "../../lib/deliveryPlans";
 import { Plus } from "lucide-react";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
 import { workspaceLook as look } from "../../constants/workspaceLook";
+/** Where an order taken outside the site came from. Kept in the request text and as the trade page link's name. */
+const TYPE_LABELS: Record<string, string> = { icon: "アイコン", sd: "SD", standing: "立ち絵", illustration: "イラスト" };
+const PLACES = ["つなぐ", "ココナラ", "Skeb", "X", "メール", "その他"] as const;
 export function CaseRegistration({
   today,
   onChanged,
@@ -42,12 +48,32 @@ export function CaseRegistration({
       startDate: today,
       dueDate: calculateDueDate(today, "normal"),
       note: "",
+      place: "つなぐ",
+      tradeUrl: "",
+      externalType: "",
+      externalAmount: "",
+      externalDue: "",
     },
     setFormDirty,
   );
   // Both the tab draft and frozen command participate in the workspace leaving guard.
   // Callback identities are stable state setters supplied by the workspace.
   const dirty = opDirty || formDirty;
+  // The trade page link is saved right after the case exists, as its first 参考リンク.
+  const [linkNote, setLinkNote] = useState("");
+  const linkSent = useRef<string | null>(null);
+  const pendingLink = useRef<{ url: string; label: string } | null>(null);
+  useEffect(() => {
+    const id = operation.done ? operation.projectId : null, link = pendingLink.current;
+    if (!id || !link || linkSent.current === id) return;
+    linkSent.current = id;
+    pendingLink.current = null;
+    void loadCaseContext(id)
+      .then(context => submitCaseAdministration({ operationId: crypto.randomUUID(), projectId: id, revision: context.revision,
+        action: { command: "reference-link", mode: "add", linkId: null, url: link.url, label: link.label } }))
+      .then(result => setLinkNote(["applied", "unchanged"].includes(result.result) ? "" : "取引ページのリンクは保存できませんでした。相談の参考リンクから足してください。"))
+      .catch(() => setLinkNote("取引ページのリンクは保存できたか分かりません。相談の参考リンクを見てください。"));
+  }, [operation.done, operation.projectId]);
   // Closed, only the small button sits at the end of the heading row; open, the form takes the full width below it.
   const wide = open || !!operation.saved || operation.blocked;
   return (
@@ -66,6 +92,7 @@ export function CaseRegistration({
         案件を登録
       </button>
       <CaseAdminConfirmation operation={operation} />
+      {linkNote ? <p role="alert" className="text-sm">{linkNote}</p> : null}
       {operation.done && operation.projectId ? (
         <button
           className={ui.btnSecondary}
@@ -78,7 +105,12 @@ export function CaseRegistration({
               clientName: "",
               clientEmail: "",
               note: "",
+              tradeUrl: "",
+              externalType: "",
+              externalAmount: "",
+              externalDue: "",
             });
+            setLinkNote("");
             onOpen(id);
           }}
         >
@@ -91,10 +123,25 @@ export function CaseRegistration({
           onSubmit={(e) => {
             e.preventDefault();
             try {
-              const data = caseRegistration.parse({
-                ...form,
-                amount: Number(form.amount),
-              });
+              const external = form.mode === "external";
+              const decided = external && form.externalType !== "" && form.externalAmount !== "";
+              if (external && !decided && (form.externalType !== "" || form.externalAmount !== "" || form.externalDue !== "")) {
+                setError("種類と金額は、両方入れるか両方空にしてください。");
+                return;
+              }
+              if (external && form.tradeUrl.trim() && !normalizeNatoriReferenceUrl(form.tradeUrl.trim())) {
+                setError("取引ページは https:// で始まるURLを入れてください。");
+                return;
+              }
+              const { place, tradeUrl, externalType, externalAmount, externalDue, ...fields } = form;
+              const note = external ? `受けた場所：${place}${fields.note.trim() ? `\n\n${fields.note}` : ""}` : fields.note;
+              const data = caseRegistration.parse(decided ? {
+                ...fields, mode: "manual", type: externalType, amount: Number(externalAmount), status: "inquiry",
+                deliveryPlan: "normal", startDate: today, dueDate: externalDue || null, note,
+              } : { ...fields, amount: Number(fields.amount), note });
+              pendingLink.current = external && tradeUrl.trim() ? { url: tradeUrl.trim(), label: `${place}の取引ページ` } : null;
+              linkSent.current = null;
+              setLinkNote("");
               operation.prepare(
                 {
                   operationId: crypto.randomUUID(),
@@ -103,12 +150,14 @@ export function CaseRegistration({
                   action: { command: "create", data },
                 },
                 [
-                  `登録のしかた：${data.mode === "external" ? "サイトの外で受けた相談（金額や納期はあとで決める）" : "決まっている案件を登録"}`,
+                  `登録のしかた：${external ? `サイトの外で受けた依頼（${place}）` : "決まっている案件を登録"}`,
                   `案件：${data.title} / お客さん：${data.clientName}`,
                   `メール：${data.clientEmail || "なし"}`,
+                  ...(external && tradeUrl.trim() ? [`取引ページ：${tradeUrl.trim()}`] : []),
                   data.mode === "manual"
-                    ? `種類：${data.type} / 金額：${Number(data.amount).toLocaleString("ja-JP")}円 / 納期：${data.dueDate} / いまの段階：${data.status}`
-                    : "案件だけを登録します。お客さんにメールは送りません。",
+                    ? `種類：${TYPE_LABELS[data.type]} / 金額：${Number(data.amount).toLocaleString("ja-JP")}円 / 納期：${data.dueDate ?? "なし"}${external ? "" : ` / いまの段階：${data.status}`}`
+                    : "金額と種類はあとで決めます。",
+                  "お客さんにメールは送りません。",
                   `依頼文：${data.note || "なし"}`,
                 ],
               );
@@ -131,7 +180,7 @@ export function CaseRegistration({
                   setForm((v) => ({ ...v, mode: e.target.value }))
                 }
               >
-                <option value="external">サイトの外で受けた相談</option>
+                <option value="external">サイトの外で受けた依頼（つなぐ・SNS・メールなど）</option>
                 <option value="manual">決まっている案件</option>
               </select>
             </label>
@@ -154,6 +203,38 @@ export function CaseRegistration({
                 />
               </label>
             ))}
+            {form.mode === "external" ? (
+              <>
+                <label className="block text-sm">
+                  受けた場所
+                  <select className={ui.input} value={form.place} onChange={(e) => setForm((v) => ({ ...v, place: e.target.value }))}>
+                    {PLACES.map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </label>
+                <label className="block text-sm">
+                  取引ページのURL（あれば）
+                  <input className={ui.input} type="url" inputMode="url" value={form.tradeUrl} onChange={(e) => setForm((v) => ({ ...v, tradeUrl: e.target.value }))} />
+                </label>
+                <fieldset className="space-y-3 rounded-xl border border-zinc-200 p-3">
+                  <legend className="px-1 text-sm">決まっていれば（あとでも入れられます）</legend>
+                  <label className="block text-sm">
+                    依頼の種類
+                    <select className={ui.input} value={form.externalType} onChange={(e) => setForm((v) => ({ ...v, externalType: e.target.value }))}>
+                      <option value="">まだ</option>
+                      {Object.entries(TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  </label>
+                  <label className="block text-sm">
+                    金額（円）
+                    <input type="number" min={0} className={ui.input} value={form.externalAmount} onChange={(e) => setForm((v) => ({ ...v, externalAmount: e.target.value }))} />
+                  </label>
+                  <label className="block text-sm">
+                    納期
+                    <input type="date" className={ui.input} value={form.externalDue} onChange={(e) => setForm((v) => ({ ...v, externalDue: e.target.value }))} />
+                  </label>
+                </fieldset>
+              </>
+            ) : null}
             {form.mode === "manual" ? (
               <>
                 <label className="block text-sm">
