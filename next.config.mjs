@@ -9,6 +9,19 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_HOST = SUPABASE_URL ? new URL(SUPABASE_URL).hostname : '';
 
+// 依頼フォームの作り直し中は、本番の依頼フォームの入口を外部サービス「つなぐ」のナトリのページへ一時的に送る。
+// ポートフォリオの「相談・見積もり」「このプランで相談」などはすべて /natori/portfolio/contact を指しているので、
+// ここで転送すればボタン側は触らずに済む。プレビューとローカル・CI ではフォームがそのまま開く（作り直しの確認用）。
+// 元に戻すときは null にする。
+const NATORI_TEMPORARY_INTAKE_URL = 'https://tsunagu.cloud/users/natonato_o';
+
+function natoriTemporaryIntakeRedirects() {
+  if (!NATORI_TEMPORARY_INTAKE_URL || process.env.VERCEL_ENV !== 'production') return [];
+  return ['/natori/portfolio/contact', '/ja/natori/portfolio/contact', '/en/natori/portfolio/contact'].map(
+    (source) => ({ source, destination: NATORI_TEMPORARY_INTAKE_URL, permanent: false })
+  );
+}
+
 function isEphemeralTestApp() {
   return Object.entries(process.env).some(
     ([key, value]) => /^PHASE_[A-Z0-9]+_BROWSER$/.test(key) && value === 'ephemeral'
@@ -45,6 +58,7 @@ const nextConfig = {
       { source: '/natori/works/:slug', destination: '/natori/portfolio', permanent: true },
       { source: '/ja/natori/works/:slug', destination: '/natori/portfolio', permanent: true },
       { source: '/en/natori/works/:slug', destination: '/en/natori/portfolio', permanent: true },
+      ...natoriTemporaryIntakeRedirects(),
     ];
   },
 
