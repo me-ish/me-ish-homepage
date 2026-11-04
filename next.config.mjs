@@ -15,8 +15,10 @@ const SUPABASE_HOST = SUPABASE_URL ? new URL(SUPABASE_URL).hostname : '';
 // 元に戻すときは null にする。
 const NATORI_TEMPORARY_INTAKE_URL = 'https://tsunagu.cloud/users/natonato_o';
 
+const natoriTemporaryIntakeActive = Boolean(NATORI_TEMPORARY_INTAKE_URL) && process.env.VERCEL_ENV === 'production';
+
 function natoriTemporaryIntakeRedirects() {
-  if (!NATORI_TEMPORARY_INTAKE_URL || process.env.VERCEL_ENV !== 'production') return [];
+  if (!natoriTemporaryIntakeActive) return [];
   return ['/natori/portfolio/contact', '/ja/natori/portfolio/contact', '/en/natori/portfolio/contact'].map(
     (source) => ({ source, destination: NATORI_TEMPORARY_INTAKE_URL, permanent: false })
   );
@@ -29,6 +31,8 @@ function isEphemeralTestApp() {
 }
 
 const nextConfig = {
+  // 転送中だけポートフォリオの依頼欄に「つなぐで受け付けています」の一文を出すため、ページ側へ渡す。
+  env: { NATORI_TEMPORARY_INTAKE_ACTIVE: natoriTemporaryIntakeActive ? '1' : '' },
   // The image ceiling remains 10 MiB; middleware also buffers multipart headers.
   // A bounded extra MiB prevents truncating a valid file at that exact ceiling.
   experimental: { middlewareClientMaxBodySize: '11mb' },
