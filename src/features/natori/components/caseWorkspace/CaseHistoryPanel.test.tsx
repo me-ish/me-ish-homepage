@@ -27,3 +27,12 @@ it("discards an obsolete in-flight read after the target panel unmounts",async()
  const fresh=first();fresh.total=0;fresh.rows=[];fresh.next=null;fresh.counts={};fresh.financial=null;m.load.mockResolvedValue(fresh);
  render(panel(1,'new'));await screen.findByText(/0件中 0〜0件/);await act(async()=>finish(first()));expect(screen.queryByText(/51件中/)).toBeNull();
 });
+it("drops the settle warning only when the payment is known to be absent",async()=>{
+ const none=first();none.financial={gross:null,legacyRecordedAmount:null,method:null,confirmedAt:null,refunded:null,net:null,pendingCount:0,reviewCount:0,state:'unverified',paymentAbsent:true};
+ m.load.mockResolvedValue(none);render(panel());await screen.findByText("入金の記録はありません");
+ expect(screen.queryByText(/差し引きの金額はまだ決まっていません/)).toBeNull();
+ cleanup();
+ const unread=first();unread.financial={...none.financial!,paymentAbsent:false};
+ m.load.mockResolvedValue(unread);render(panel(1,'two'));await screen.findByText("入金の記録はありません");
+ expect(screen.getByText(/差し引きの金額はまだ決まっていません/)).not.toBeNull();
+});

@@ -26,7 +26,7 @@ export async function readCaseHistory(projectId:string,offset:number,revision:st
   const valid=refund.success&&refund.data.originalMapped&&fact.model.facts.financialReview.state==="ready"&&fact.model.facts.financialReview.value.length===0&&refund.data.pendingCount===0&&refund.data.reviewCount===0&&gross!==null&&refund.data.confirmedAmount!==null&&refund.data.confirmedAmount<=gross;
   const refunded=valid&&refund.success?refund.data.confirmedAmount:null;
   financial={gross,legacyRecordedAmount:payment.state==="ready"&&payment.value.method==="unclassified"?payment.value.money?.amount??null:null,method:payment.state==="ready"?payment.value.method:null,confirmedAt:payment.state==="ready"?payment.value.confirmedAt:null,
-   refunded,net:gross===null||refunded===null?null:gross-refunded,pendingCount:refund.success?refund.data.pendingCount:null,reviewCount:refund.success?refund.data.reviewCount:null,state:valid?"verified":"unverified"};
+   refunded,net:gross===null||refunded===null?null:gross-refunded,pendingCount:refund.success?refund.data.pendingCount:null,reviewCount:refund.success?refund.data.reviewCount:null,state:valid?"verified":"unverified",paymentAbsent:payment.state==="absent"};
  }
  const {ownerId:_owner,snapshot:_snapshot,refundSummary:_refund,legacyEntries,...page}=raw;
  return {state:"ready",view:{...page,financial,legacyLogs:offset===0?legacyEntries:[]}};
