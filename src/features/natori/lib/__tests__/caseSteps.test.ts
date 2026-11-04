@@ -71,3 +71,9 @@ it("goes back to the site's steps once a hand-registered case has a quote", () =
   const withQuote = externalCase({}, r => ({ ...r, model: { ...r.model, facts: { ...r.model.facts, quote: records[0].model.facts.quote } } }));
   expect(deriveCaseSteps(withQuote).map(step => step.label)).toEqual(["相談", "見積", "支払い", "制作", "納品", "受取"]);
 });
+
+it("keeps the outside-order steps while the quote is only an unsent draft", () => {
+  const draft = externalCase({}, r => ({ ...r, model: { ...r.model, facts: { ...r.model.facts,
+    quote: { state: "unavailable" as const, reason: "unsupported" as const, snapshotId: r.model.snapshotId, observedAt: r.model.checkedAt } } } }));
+  expect(deriveCaseSteps(draft).map(step => step.label)).toEqual(["依頼", "金額・入金", "制作", "納品", "完了"]);
+});

@@ -38,7 +38,7 @@ export function CaseWorkspaceSections({ record, section,step=null,application=fa
   if (section === "transaction") return <div className="space-y-4">
     {externalSteps && step === "quote" ? <><Rows rows={[["金額", caseKnown(m.facts.project)?.administrativeAmount ? caseMoney(caseKnown(m.facts.project)!.administrativeAmount) : "まだ決めていません"],
         ["入金", payment ? `入金済み · ${caseTime(payment.confirmedAt)}` : "まだ記録していません"]]} />
-      <p className="mb-4 text-sm leading-6 text-zinc-600">金額は「その他 → 案件の情報を直す」で入れられます。</p></>
+</>
     : step === "quote" ? <Rows rows={[["見積", quote ? `第${quote.version}版` : caseQuoteDraftOnly(m.facts.quote) ? "下書き（まだ送っていません）" : observationLabel(m.facts.quote, "まだありません")], ["金額", quote ? caseMoney(quote.money) : "—"], ["お客さんの返事", quote ? quoteReply : "—"]]} />
       : <Rows rows={[["金額", agreed ? caseMoney(agreed.money) : quote ? `${caseMoney(quote.money)}（OK前）` : "—"], ["宛先", `${record.clientLabel}さん（登録メール）`],
         ["入金", payment ? `入金済み · ${caseTime(payment.confirmedAt)}` : "まだ"], ["支払いリンク", caseKnown(m.facts.link) ? "作成済み" : observationLabel(m.facts.link, "まだ")]]} />}
