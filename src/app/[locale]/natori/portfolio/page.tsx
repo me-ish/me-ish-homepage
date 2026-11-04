@@ -43,6 +43,8 @@ export default async function Page() {
     <PortfolioLanding
       content={content}
       structuredIntake={isPublicStructuredIntakeEnabled()}
+      // 依頼フォームの作り直し中、本番で入口を つなぐ へ転送している間だけ true（next.config.mjs）。
+      temporaryIntakeNotice={process.env.NATORI_TEMPORARY_INTAKE_ACTIVE === "1"}
     />
   );
 }

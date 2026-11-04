@@ -25,6 +25,7 @@ export default function PortfolioLanding({
   demoContact,
   flatPlaceholders,
   structuredIntake,
+  temporaryIntakeNotice,
 }: {
   content: PortfolioContent;
   variant?: PortfolioVariant;
@@ -34,6 +35,8 @@ export default function PortfolioLanding({
   flatPlaceholders?: boolean;
   /** P1-06 構造化受付の rollout guard。server component から渡す */
   structuredIntake?: boolean;
+  /** 依頼の入口を一時的に つなぐ へ転送している間だけ true。依頼欄に一文添える */
+  temporaryIntakeNotice?: boolean;
 }) {
   const showcase = variant === "showcase";
   const contactPath = demoContact ? "/etorie/demo/app/portfolio/contact" : "/natori/portfolio/contact";
@@ -82,6 +85,11 @@ export default function PortfolioLanding({
             <p className="mt-3 leading-relaxed" style={{ color: c.textSoft }}>
               {content.commissionOpen ? "まずはお気軽にご相談ください。" : "現在コミッションは停止中です。再開まで今しばらくお待ちください。"}
             </p>
+            {content.commissionOpen && temporaryIntakeNotice ? (
+              <p className="mt-2 text-sm leading-relaxed" style={{ color: c.textSoft }}>
+                依頼フォームは改修中のため、ただいまは「つなぐ」で受け付けています。
+              </p>
+            ) : null}
             {/* 入口はほかの主ボタンと同じ「相談・見積もり」1つにし、相談か見積もりかはフォームの中で選んでもらう。 */}
             {content.commissionOpen && <div className="mt-6 flex justify-center">
               <a href={directContactPath} className={`${natoriSoftActionClassName} pf-btn pf-cute-focus inline-flex min-h-12 items-center justify-center px-8 py-2 font-bold`}>相談・見積もり<span aria-hidden="true" className="pf-btn-arrow">→</span></a>
