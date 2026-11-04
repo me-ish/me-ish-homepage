@@ -198,7 +198,10 @@ export async function renewClientConsultationLink(token: string): Promise<"ok" |
   // refused send never leaves an unsent token or a 10-minute throttle behind.
   // The renewal mail uses the current sender gate (same as other client notices),
   // not the legacy direct transport that the case release fences off.
-  if (!process.env.RESEND_API_KEY || !notificationSendingEnabled()) return "mail-error";
+  // A production-mail connection only accepts job-bound notices, which this
+  // direct renewal mail is not, so refuse it here rather than after the writes.
+  if (!process.env.RESEND_API_KEY || !notificationSendingEnabled()
+    || process.env.NATORI_CASE_PRODUCTION_MAIL_CONNECTION) return "mail-error";
   try {
     assertAcceptanceLegacyMailDisabled();
     await assertCaseSystemAdmission("sender", project.user_id);

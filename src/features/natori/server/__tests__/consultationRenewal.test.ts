@@ -72,6 +72,13 @@ describe("consultation link renewal with the case release on", () => {
     expect(m.fetch).not.toHaveBeenCalled();
   });
 
+  it("writes nothing when a production-mail connection requires job-bound notices", async () => {
+    vi.stubEnv("NATORI_CASE_PRODUCTION_MAIL_CONNECTION", "conn");
+    expect(await renewClientConsultationLink(token)).toBe("mail-error");
+    expect(m.writes).toEqual([]);
+    expect(m.fetch).not.toHaveBeenCalled();
+  });
+
   it("writes nothing when sending is switched off", async () => {
     vi.stubEnv("NATORI_NOTIFICATION_SENDING_ENABLED", "0");
     expect(await renewClientConsultationLink(token)).toBe("mail-error");
