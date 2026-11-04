@@ -19,7 +19,7 @@ export default function NatoriPrivacyPage() {
           当方は、ご相談、ご依頼、お見積もり、制作、決済および納品等に際して、氏名または活動名、メールアドレス、ご依頼内容、制作範囲、使用目的、商用利用の有無、予算、希望納期、公開条件、メッセージ、キャラクター資料、参考画像、参考URLその他利用者から提供された情報を取得する場合があります。
         </p>
         <p>
-          ご依頼後は、ご相談ページでやりとりするメッセージおよび添付ファイル、お見積もりの承諾、お支払いの状況、納品データの受け取り確認の記録を取得します。
+          ご依頼後は、ご相談ページでやりとりするメッセージおよび添付ファイル（画像、PDF、音声など）、お見積もりの承諾、お支払いの状況、納品データの受け取り確認の記録を取得します。
         </p>
         <p>
           また、不正利用、スパムその他のセキュリティ上の問題への対策のため、IPアドレスその他の技術情報を処理する場合があります。
@@ -55,6 +55,10 @@ export default function NatoriPrivacyPage() {
           <div>
             <h3 className="font-black" style={{ color: "inherit" }}>Resend</h3>
             <p>ご依頼受付、お見積もり、支払い案内、制作および納品等に関する電子メールの送信に利用します。</p>
+          </div>
+          <div>
+            <h3 className="font-black" style={{ color: "inherit" }}>Gmail（Google）</h3>
+            <p>ご依頼に関する電子メールの受信および返信に利用します。当方からのメールにご返信いただいた内容は、Gmail で受信します。</p>
           </div>
           <div>
             <h3 className="font-black" style={{ color: "inherit" }}>Stripe</h3>
@@ -137,7 +141,7 @@ export default function NatoriPrivacyPage() {
         <p>重要な変更を行う場合は、本ウェブサイト上への掲載その他適切な方法でお知らせします。</p>
       </LegalSection>
 
-      <p className="text-xs font-bold">制定日：2026年9月13日<br />最終改定日：2026年10月11日</p>
+      <p className="text-xs font-bold">制定日：2026年9月13日<br />最終改定日：2026年11月1日</p>
     </NatoriLegalPage>
   );
 }
