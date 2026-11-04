@@ -64,7 +64,8 @@ export function CaseWorkspaceSections({ record, section,step=null,application=fa
       {roughs?.length ? <Rows rows={roughs.map((rough, index): [string, ReactNode] => [`ラフ${index + 1}`, rough.clientOkAt ? `お客さんOK · ${caseTime(rough.clientOkAt)}${rough.acknowledgedAt ? "（確認済み）" : ""}` : "お客さんの返事待ち"])} />
         : <p className="mb-4 text-sm text-zinc-600">{observationLabel(m.facts.roughs, "ラフはまだ出していません")}</p>}
       <div className="mb-2"><p className="mb-2 text-sm font-semibold">工程{tasks?.length ? <span className="ml-2 font-normal text-zinc-500">{tasks.filter(t => t.done).length}/{tasks.length} 完了</span> : null}</p>
-        {tasks?.length ? <ul aria-label="制作の工程" className="flex flex-wrap gap-2">{tasks.map(task => <li key={task.id} className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${task.done ? "border-[#BE185D] bg-[#BE185D] text-white" : "border-black/10 bg-white text-[#3C3C43]"}`}>{task.done ? "✓ " : ""}{stages[task.stage]}<span className="sr-only">{task.done ? "（完了）" : "（まだ）"}</span></li>)}</ul>
+        {/* In the live workspace the 工程を進める buttons below are the one place to see and press the tasks. */}
+        {tasks?.length && application && !readOnly ? null : tasks?.length ? <ul aria-label="制作の工程" className="flex flex-wrap gap-2">{tasks.map(task => <li key={task.id} className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${task.done ? "border-[#BE185D] bg-[#BE185D] text-white" : "border-black/10 bg-white text-[#3C3C43]"}`}>{task.done ? "✓ " : ""}{stages[task.stage]}<span className="sr-only">{task.done ? "（完了）" : "（まだ）"}</span></li>)}</ul>
           : <p className="text-sm text-zinc-600">{observationLabel(d.tasks, "工程はまだ登録されていません")}</p>}</div>
     </>}
     <Records title="ラフ・納品・受取の記録">

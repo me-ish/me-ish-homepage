@@ -249,7 +249,15 @@ export function CaseAdministrationPanel({
             入金を記録する（前に内容を表示）
           </button>
         </section>
-        <QuoteMailSection folded={externalOrder && !view.quote}>
+        <QuoteMailSection
+          folded={
+            externalOrder && !view.quote
+              ? "external"
+              : view.quote?.acceptedAt || view.acceptance.at || paymentRecorded
+                ? "settled"
+                : null
+          }
+        >
           <EstimateJourney
             key={projectId}
             project={{
@@ -329,8 +337,9 @@ export function CaseAdministrationPanel({
 /**
  * The quote form mails the client. Orders taken outside the site rarely need it,
  * so for them it starts folded. Saving a draft keeps the external steps; sending switches to the site's steps.
+ * Once the client said OK or the payment is in, the form is only a record, so it is folded too.
  */
-function QuoteMailSection({ folded, children }: { folded: boolean; children: ReactNode }) {
+function QuoteMailSection({ folded, children }: { folded: "external" | "settled" | null; children: ReactNode }) {
   if (!folded)
     return (
       <section className={card}>
@@ -340,11 +349,15 @@ function QuoteMailSection({ folded, children }: { folded: boolean; children: Rea
     );
   return (
     <details className={look.cardPadded}>
-      <summary className="cursor-pointer font-semibold">見積をメールで送る</summary>
+      <summary className="cursor-pointer font-semibold">
+        {folded === "external" ? "見積をメールで送る" : "見積の控え"}
+      </summary>
       <div className="mt-3 space-y-3">
-        <p className="text-sm text-zinc-600">
-          サイトの外で決まった案件では使いません。見積を送ると、サイトの流れ（見積→支払い）に切り替わります。
-        </p>
+        {folded === "external" ? (
+          <p className="text-sm text-zinc-600">
+            サイトの外で決まった案件では使いません。見積を送ると、サイトの流れ（見積→支払い）に切り替わります。
+          </p>
+        ) : null}
         {children}
       </div>
     </details>
