@@ -2,10 +2,10 @@ import "server-only";
 import {assertCaseSystemAdmission} from "./caseSystemHold";
 import {acceptanceProjectAllowed} from "./caseAcceptance";
 import { assertAcceptanceLegacyMailDisabled } from "@/lib/caseAcceptanceEnvironment";
+import { notificationSendingEnabled, sendAcceptanceNotification } from "./acceptanceNotifications";
 
 
 import { createHash, randomBytes } from "crypto";
-import { Resend } from "resend";
 import { getSiteUrl } from "@/lib/constants";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
@@ -194,10 +194,26 @@ export async function renewClientConsultationLink(token: string): Promise<"ok" |
   const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   if (oldLink.renewed_at && oldLink.renewed_at > cutoff) return "throttled";
   try { await assertCaseSystemAdmission("command",project.user_id); } catch { return "mail-error"; }
+  // Check that the mail can actually go out before writing anything, so a
+  // refused send never leaves an unsent token or a 10-minute throttle behind.
+  // The renewal mail uses the current sender gate (same as other client notices),
+  // not the legacy direct transport that the case release fences off.
+  // A production-mail connection only accepts job-bound notices, which this
+  // direct renewal mail is not, so refuse it here rather than after the writes.
+  if (!process.env.RESEND_API_KEY || !notificationSendingEnabled()
+    || process.env.NATORI_CASE_PRODUCTION_MAIL_CONNECTION) return "mail-error";
+  try {
+    assertAcceptanceLegacyMailDisabled();
+    await assertCaseSystemAdmission("sender", project.user_id);
+  } catch (gateError) {
+    console.error("[natori-consultation] renewal email unavailable", gateError);
+    return "mail-error";
+  }
   // The conditional update ensures concurrent requests for the same link do
   // not send multiple emails. No conversation content is returned here.
+  const renewedAt = new Date().toISOString();
   let claim = admin.from("natori_consultation_access")
-    .update({ renewed_at: new Date().toISOString() }).eq("id", oldLink.id);
+    .update({ renewed_at: renewedAt }).eq("id", oldLink.id);
   claim = oldLink.renewed_at ? claim.eq("renewed_at", oldLink.renewed_at) : claim.is("renewed_at", null);
   const { data: claimed, error: claimError } = await claim.select("id").maybeSingle();
   if (claimError || !claimed) return "throttled";
@@ -211,17 +227,14 @@ export async function renewClientConsultationLink(token: string): Promise<"ok" |
     console.error("[natori-consultation] renewal insert failed", insertError);
     return "mail-error";
   }
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return "mail-error";
   try {
-    assertAcceptanceLegacyMailDisabled();
-    await assertCaseSystemAdmission("legacy-sender");
-    const { error: mailError } = await new Resend(key).emails.send({
-      from: FROM, to: [clientEmail], replyTo: REPLY_TO,
+    const result = await sendAcceptanceNotification({
+      from: FROM, to: [clientEmail], reply_to: REPLY_TO,
       subject: "【ナトリ】相談ページの新しいリンク",
       text: `${project.client_name} 様\n\n相談ページの新しいリンクをお送りします。\n${getSiteUrl()}/natori/consult/${newToken}\n\nこのリンクの有効期間は30日です。`,
-    });
-    if (mailError) throw mailError;
+      headers: { "X-Meish-Template": "natori-consultation-renewal" },
+    }, `natori-consult-renew/${oldLink.id}/${renewedAt}`);
+    if (result.status !== "sent") throw Error(result.errorCode);
   } catch (mailError) {
     console.error("[natori-consultation] renewal email failed", mailError);
     return "mail-error";
