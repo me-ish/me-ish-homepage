@@ -5,7 +5,7 @@ import "server-only";
 // 見積・支払い・納品・案件本体（natori_projects）の行は一切書き換えない。
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
-import { nextCaseItemPosition, type CaseItemFields, type CaseItemPublicationFacts } from "@/features/natori/lib/caseItems";
+import { gateWorksByCaseItems, nextCaseItemPosition, tokyoDateISO, type CaseItemFields, type CaseItemPublicationFacts } from "@/features/natori/lib/caseItems";
 import type { NatoriCaseItem, NatoriLinkableCaseItem } from "@/features/natori/types/caseItems";
 import type { NatoriConcreteProjectType } from "@/features/natori/types/projects";
 
@@ -244,4 +244,19 @@ export async function listLinkableCaseItems(): Promise<NatoriLinkableCaseItem[] 
       publicationAllowedFrom: row.publication_allowed_from,
     };
   });
+}
+
+/**
+ * ポートフォリオの公開の境目。品目に結んだ作品は、品目の公開条件を満たすまで非公開として扱う。
+ * 公開ページ・公開 API・画像の配信のすべてがこれを通ってから公開の判定をする。
+ */
+export async function gatePortfolioByCaseItems<C extends { works: { caseItemId?: string | null; published: boolean }[] }>(
+  content: C,
+  now: Date = new Date(),
+): Promise<C> {
+  const ids = content.works.flatMap((work) => (work.published && work.caseItemId ? [work.caseItemId] : []));
+  if (ids.length === 0) return content;
+  let items: Map<string, CaseItemPublicationFacts> | null = null;
+  try { items = await readCaseItemPublication(ids); } catch { items = null; }
+  return { ...content, works: gateWorksByCaseItems(content.works, items, tokyoDateISO(now)) };
 }

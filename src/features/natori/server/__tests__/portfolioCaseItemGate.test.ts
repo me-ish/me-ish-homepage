@@ -9,14 +9,22 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/supabaseAdmin", () => ({
   supabaseAdmin: () => ({
-    from: () => {
+    from: (table: string) => {
+      if (table === "natori_case_items") {
+        return {
+          select: () => ({
+            in: async (_column: string, ids: string[]) => {
+              state.asked.push(ids);
+              if (!state.publication) return { data: null, error: { message: "down" } };
+              return { data: [...state.publication].map(([id, f]) => ({ id, publication_policy: f.publicationPolicy, publication_allowed_from: f.publicationAllowedFrom })), error: null };
+            },
+          }),
+        };
+      }
       const builder = { select: () => builder, eq: () => builder, maybeSingle: () => Promise.resolve({ data: { content: state.content }, error: null }) };
       return builder;
     },
   }),
-}));
-vi.mock("../caseItemsService", () => ({
-  readCaseItemPublication: async (ids: string[]) => { state.asked.push(ids); return state.publication; },
 }));
 vi.mock("../caseSystemHold", () => ({ assertCaseSystemAdmission: vi.fn() }));
 vi.mock("../requireNatoriAdmin", () => ({ canUseNatoriManagement: async () => false }));
