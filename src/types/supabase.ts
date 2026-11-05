@@ -941,6 +941,62 @@ export type Database = {
         }
         Relationships: []
       }
+      natori_case_items: {
+        Row: {
+          id: string
+          project_id: string
+          position: number
+          title: string
+          project_type: string | null
+          amount: number | null
+          due_date: string | null
+          progress: string
+          publication_policy: string
+          publication_allowed_from: string | null
+          note: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          position: number
+          title: string
+          project_type?: string | null
+          amount?: number | null
+          due_date?: string | null
+          progress?: string
+          publication_policy?: string
+          publication_allowed_from?: string | null
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          position?: number
+          title?: string
+          project_type?: string | null
+          amount?: number | null
+          due_date?: string | null
+          progress?: string
+          publication_policy?: string
+          publication_allowed_from?: string | null
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "natori_case_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "natori_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       natori_consultation_access: {
         Row: { id: string; project_id: string; token_hash: string; expires_at: string; created_at: string; renewed_at: string | null }
         Insert: { id?: string; project_id: string; token_hash: string; expires_at: string; created_at?: string; renewed_at?: string | null }

@@ -1,0 +1,29 @@
+// 案件の品目（1つのご依頼の中の1点ずつ）の表示用の型。
+// 見積・支払い・納品は案件単位のままで、品目はそれらを持たない。
+import type { NatoriConcreteProjectType } from "./projects";
+
+export type NatoriCaseItemProgress = "not_started" | "in_progress" | "done";
+
+/** サイトの依頼フォームの publicationPolicy と同じ値。 */
+export type NatoriCaseItemPublicationPolicy =
+  | "allowed"
+  | "delayed"
+  | "work_private"
+  | "fully_private"
+  | "unknown";
+
+export type NatoriCaseItem = {
+  id: string;
+  projectId: string;
+  position: number;
+  title: string;
+  projectType: NatoriConcreteProjectType | null;
+  amount: number | null;
+  dueDate: string | null;
+  progress: NatoriCaseItemProgress;
+  publicationPolicy: NatoriCaseItemPublicationPolicy;
+  /** delayed のときだけ入る（YYYY-MM-DD）。 */
+  publicationAllowedFrom: string | null;
+  note: string | null;
+  updatedAt: string;
+};
