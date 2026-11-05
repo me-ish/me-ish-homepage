@@ -1,18 +1,20 @@
 "use client";
 // 案件の品目（1つのご依頼の中の1点ずつ）。一覧と、1つずつの追加・編集。
 // 見積・支払い・納品は案件単位のままで、ここからは変えない。
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CASE_ITEM_PROGRESS_LABELS,
   CASE_ITEM_PUBLICATION_LABELS,
   CASE_ITEM_TYPE_LABELS,
   caseItemFields,
+  caseItemToFields,
   caseItemsTotal,
   nextCaseItemPosition,
   type CaseItemFields,
 } from "../../lib/caseItems";
 import { caseDate } from "../../lib/caseWorkspacePresentation";
-import { addCaseItem, deleteCaseItem, loadCaseItems, updateCaseItem, type CaseItemsWrite } from "../../data/supabaseCaseItems";
+import { addCaseItem, deleteCaseItem, updateCaseItem } from "../../data/supabaseCaseItems";
+import type { CaseItemsStore } from "./useCaseItems";
 import type { NatoriCaseItem } from "../../types/caseItems";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
 import { workspaceLook as look } from "../../constants/workspaceLook";
@@ -34,26 +36,13 @@ const fromDraft = (d: Draft) =>
     publicationAllowedFrom: d.publicationPolicy === "delayed" ? d.publicationAllowedFrom || null : null, note: d.note || null,
   });
 
-export function CaseItemsPanel({ projectId, disabled, onDraftChange }: { projectId: string; disabled: boolean; onDraftChange: (dirty: boolean) => void }) {
-  const [items, setItems] = useState<NatoriCaseItem[] | null>(null);
-  const [unavailable, setUnavailable] = useState(false);
+export function CaseItemsPanel({ projectId, store, disabled, onDraftChange }: { projectId: string; store: CaseItemsStore; disabled: boolean; onDraftChange: (dirty: boolean) => void }) {
+  const { items, unavailable, busy, message, clearMessage, reload } = store;
   const [editing, setEditing] = useState<string | "new" | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-
-  const reload = useCallback(async () => {
-    const result = await loadCaseItems(projectId);
-    if (result.kind === "ok") { setItems(result.items); setUnavailable(false); } else { setItems([]); setUnavailable(true); }
-  }, [projectId]);
-  useEffect(() => { void reload(); }, [reload]);
   useEffect(() => { onDraftChange(editing !== null); return () => onDraftChange(false); }, [editing, onDraftChange]);
 
-  const run = async (action: () => Promise<CaseItemsWrite>) => {
-    setBusy(true); setMessage("");
-    const result = await action();
-    setBusy(false);
-    if (result.kind === "ok") { setItems(result.items); setEditing(null); return; }
-    setMessage(result.message);
+  const run = async (action: Parameters<CaseItemsStore["run"]>[0]) => {
+    if (await store.run(action)) setEditing(null);
   };
 
   if (items === null) return <section className={look.cardPadded}><p role="status" className="text-sm">品目を読み込み中…</p></section>;
@@ -75,7 +64,7 @@ export function CaseItemsPanel({ projectId, disabled, onDraftChange }: { project
                 // A reload after a conflict brings a newer updatedAt; remount so the form shows those values.
                 key={item.updatedAt}
                 initial={toDraft(item)} busy={busy} submitLabel="保存する"
-                onCancel={() => { setEditing(null); setMessage(""); }}
+                onCancel={() => { setEditing(null); clearMessage(); }}
                 onSubmit={(fields) => void run(() => updateCaseItem(projectId, item, fields))}
                 onDelete={() => void run(() => deleteCaseItem(projectId, item))}
               />
@@ -98,11 +87,48 @@ export function CaseItemsPanel({ projectId, disabled, onDraftChange }: { project
       </ul>
       {editing === "new" ? (
         <div className="rounded-xl border border-zinc-200/80">
-          <ItemForm initial={EMPTY} busy={busy} submitLabel="足す" onCancel={() => { setEditing(null); setMessage(""); }} onSubmit={(fields) => void run(() => addCaseItem(projectId, fields))} />
+          <ItemForm initial={EMPTY} busy={busy} submitLabel="足す" onCancel={() => { setEditing(null); clearMessage(); }} onSubmit={(fields) => void run(() => addCaseItem(projectId, fields))} />
         </div>
       ) : nextCaseItemPosition(items) !== null ? (
         <button type="button" className={ui.btnSecondary} disabled={disabled || busy || editing !== null} onClick={() => setEditing("new")}>＋ 品目を足す</button>
       ) : null}
+      {message ? <p role="alert" className="text-sm text-amber-900">{message} <button type="button" className="underline" onClick={() => void reload()}>読み込み直す</button></p> : null}
+    </section>
+  );
+}
+
+/** 制作タブ：品目ごとの進みだけを押して変える。品目が無ければ何も出さない。 */
+export function CaseItemsProgress({ projectId, store, disabled }: { projectId: string; store: CaseItemsStore; disabled: boolean }) {
+  const { items, unavailable, busy, message, reload } = store;
+  if (!items || unavailable || items.length === 0) return null;
+  const done = items.filter((item) => item.progress === "done").length;
+  return (
+    <section className={`${look.cardPadded} space-y-3`} aria-label="品目の進み">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="font-semibold">品目の進み</h3>
+        <p className="text-sm text-zinc-600">{done}/{items.length} 完成</p>
+      </div>
+      <ul className="space-y-2">
+        {items.map((item) => (
+          <li key={item.id} className="flex flex-wrap items-center justify-between gap-2">
+            <span className="min-w-0 font-semibold">{circled(item.position)} {item.title}</span>
+            <span role="group" aria-label={`${item.title}の進み`} className="flex gap-1">
+              {(Object.keys(CASE_ITEM_PROGRESS_LABELS) as (keyof typeof CASE_ITEM_PROGRESS_LABELS)[]).map((progress) => (
+                <button
+                  key={progress}
+                  type="button"
+                  aria-pressed={item.progress === progress}
+                  disabled={disabled || busy || item.progress === progress}
+                  onClick={() => void store.run(() => updateCaseItem(projectId, item, { ...caseItemToFields(item), progress }))}
+                  className={`min-h-11 rounded-full px-3 text-sm font-semibold ${ui.focusRing} ${item.progress === progress ? "bg-[#BE185D] text-white" : "bg-zinc-100 text-zinc-700"}`}
+                >
+                  {CASE_ITEM_PROGRESS_LABELS[progress]}
+                </button>
+              ))}
+            </span>
+          </li>
+        ))}
+      </ul>
       {message ? <p role="alert" className="text-sm text-amber-900">{message} <button type="button" className="underline" onClick={() => void reload()}>読み込み直す</button></p> : null}
     </section>
   );

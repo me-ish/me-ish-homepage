@@ -1,7 +1,8 @@
 "use client";
 import { useCallback,useEffect,useRef,useState } from "react";
 import {CaseAdministrationPanel} from "./CaseAdministrationPanel";
-import {CaseItemsPanel} from "./CaseItemsPanel";
+import {CaseItemsPanel,CaseItemsProgress} from "./CaseItemsPanel";
+import {useCaseItems} from "./useCaseItems";
 import {useCaseDraft} from "./useCaseDraft";
 import ConsultationThread from "../consultation/ConsultationThread";
 import DeliveryFilesManager from "../dashboard/DeliveryFilesManager";
@@ -19,6 +20,7 @@ const fileTime=(value:string|null|undefined)=>value?caseTime(value):"—";
 export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selectedNotificationId,overviewPart=null,talkEvents}:{talkEvents?:ReadonlyArray<{at:string;text:string}>;selectedNotificationId?:string;projectId:string;section:CaseSection;onChanged:()=>void;onDraftChange:(value:boolean)=>void;overviewPart?:CaseOverviewPart|null}){
  const [view,setView]=useState<CaseWorkView|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState("");
  const [draft,setDraft]=useState(false),[deliveryDraft,setDeliveryDraft]=useState(false);
+ const caseItems=useCaseItems(projectId);
  const [adminDraft,setAdminDraft]=useState(false),[recordDraft,setRecordDraft]=useState(false),[revisionDraft,setRevisionDraft]=useState(false),[itemsDraft,setItemsDraft]=useState(false);
  const gate=useRef(false),alive=useRef(true);
  const load=useCallback(async(operationId?:string)=>{const next=await fetchCaseWork(projectId,operationId);if(alive.current)setView(next);return next;},[projectId]);
@@ -44,10 +46,11 @@ export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selecte
     <WorkRecordForm view={view} disabled={busy||inactive} save={command} onDirty={setRecordDraft}/></section>
   </div>
   <div hidden={section!=="consultation"} className="space-y-4">
-   <CaseItemsPanel key={`${projectId}/items`} projectId={projectId} disabled={inactive} onDraftChange={setItemsDraft}/>
+   <CaseItemsPanel key={`${projectId}/items`} projectId={projectId} store={caseItems} disabled={inactive} onDraftChange={setItemsDraft}/>
    <ConsultationThread key={projectId} mode="staff" projectId={projectId} clientEmail={p.clientEmail??undefined} closed={inactive} events={talkEvents} readOnlyLookup workspaceExpected={{title:p.title,clientName:p.clientName,email:p.clientEmail}} onChanged={()=>{void refresh();}} onDraftChange={setDraft}/>
   </div>
   <div hidden={section!=="production"} className="space-y-4">
+   <CaseItemsProgress projectId={projectId} store={caseItems} disabled={busy||inactive}/>
    <section className={card}><h3 className="font-semibold">工程を進める</h3><p className="text-sm text-zinc-600">終わった工程を押してください。</p>
     {p.tasks.filter(t=>t.stage!=="material").map(t=><button key={t.id} aria-pressed={t.done||(t.stage==="delivery"&&deliveredStatus)} disabled={busy||inactive} className={`${ui.btnSecondary} mr-2`} onClick={()=>void command({command:"task",projectId,revision:view.revision,taskKey:t.id,done:!t.done})}>{t.done||(t.stage==="delivery"&&deliveredStatus)?"✓ ":""}{t.label}</button>)}
     {p.type==="undecided"?<label className="block">依頼の種類（選ぶと工程ができます）<select defaultValue="" className={ui.input} disabled={busy||inactive} onChange={e=>{if(e.target.value)void command({command:"confirm_type",projectId,revision:view.revision,projectType:e.target.value});}}><option value="">選択してください</option><option value="icon">アイコン</option><option value="sd">SD</option><option value="standing">立ち絵</option><option value="illustration">イラスト</option></select></label>:null}</section>

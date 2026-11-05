@@ -6,6 +6,7 @@ import type {
   NatoriCaseItemProgress,
   NatoriCaseItemPublicationPolicy,
 } from "../types/caseItems";
+import type { NatoriQuoteSnapshotItemV1 } from "../types/quoteSnapshot";
 
 export const NATORI_CASE_ITEM_MAX = 20;
 export const NATORI_CASE_ITEM_AMOUNT_MAX = 10_000_000;
@@ -102,4 +103,44 @@ export function caseItemPublicationOpen(
   if (item.publicationPolicy === "allowed") return true;
   if (item.publicationPolicy === "delayed") return !!item.publicationAllowedFrom && item.publicationAllowedFrom <= today;
   return false;
+}
+
+/** 品目をそのまま保存し直すための値（進みだけ変えるときなど）。 */
+export function caseItemToFields(item: NatoriCaseItem): CaseItemFields {
+  return {
+    title: item.title,
+    projectType: item.projectType,
+    amount: item.amount,
+    dueDate: item.dueDate,
+    progress: item.progress,
+    publicationPolicy: item.publicationPolicy,
+    publicationAllowedFrom: item.publicationPolicy === "delayed" ? item.publicationAllowedFrom : null,
+    note: item.note,
+  };
+}
+
+/**
+ * 見積の明細を品目から作る。1品目＝1行（数量1・単価＝品目の金額）。
+ * 金額の入っていない品目があるときは null（先に品目の金額を決める）。
+ */
+export function caseItemsToEstimateLines(
+  items: readonly NatoriCaseItem[],
+  newId: () => string,
+): NatoriQuoteSnapshotItemV1[] | null {
+  if (items.length === 0 || items.some((item) => item.amount === null)) return null;
+  return [...items]
+    .sort((a, b) => a.position - b.position)
+    .map((item) => ({
+      id: newId(),
+      presetItemId: null,
+      kind: "manual" as const,
+      labelSnapshot: item.title,
+      quantity: 1,
+      unitAmount: item.amount as number,
+      amount: item.amount as number,
+      automatic: false,
+      sourceFields: [],
+      ruleId: null,
+      note: null,
+    }));
 }
