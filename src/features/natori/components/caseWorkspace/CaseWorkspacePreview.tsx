@@ -13,6 +13,7 @@ import { CaseWorkspaceLoadError } from "../../types/caseWorkspaceLoad";
 import { CaseMonthPicker } from "./CaseMonthPicker";
 import {CasePersonalSchedule} from "./CasePersonalSchedule";
 import {loadCaseNoticeIndex,loadCasePersonalEvents,loadCaseTalkPreviews} from "../../data/supabaseCaseEntries";
+import {loadCaseItemCounts} from "../../data/supabaseCaseItems";
 import {fetchOwnNatoriProfile} from "../../data/supabaseProfile";
 import type {CaseTalkPreview,CaseNoticeIndex,CasePersonalEvent} from "../../types/caseEntryIndex";
 import {notificationPurposeName} from "../../lib/notificationLabels";
@@ -65,6 +66,7 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
   const [personalEvents,setPersonalEvents]=useState<readonly CasePersonalEvent[]|null>(null),[eventsReady,setEventsReady]=useState(false);
   const [noticeIndex,setNoticeIndex]=useState<CaseNoticeIndex|null>(null),[noticesReady,setNoticesReady]=useState(false);
   const [talkPreviews,setTalkPreviews]=useState<ReadonlyMap<string,CaseTalkPreview>>(new Map());
+  const [itemCounts,setItemCounts]=useState<Readonly<Record<string,number>>>({});
   const [brand,setBrand]=useState<string|null>(null);
   // The header shows the artist's own name once it is known; the product mark is only a fallback.
   useEffect(()=>{if(!application||!entryTools)return;let live=true;void fetchOwnNatoriProfile().then(p=>{if(live)setBrand(p?.displayName?.trim()||null);}).catch(()=>{});return()=>{live=false;};},[application,entryTools]);
@@ -121,6 +123,13 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
     loadCaseTalkPreviews(controller.signal).then(items=>setTalkPreviews(new Map(items.map(item=>[item.projectId,item]))),()=>{});
     return()=>controller.abort();
   },[talkEntry,reload]);
+  // 「3点」のような品目の数。読めなければ数を出さないだけ。
+  useEffect(()=>{
+    if(!application||!entryTools)return;
+    const controller=new AbortController();
+    void loadCaseItemCounts(controller.signal).then(setItemCounts);
+    return()=>controller.abort();
+  },[application,entryTools,reload,nav.projectId]);
   useEffect(()=>{
     if(!loadDetail||!nav.projectId){setDetail(null);return;}
     const id=nav.projectId,controller=new AbortController(),epoch=accessEpoch.current;
@@ -200,11 +209,12 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
     return days<0?<span className="inline-block rounded-full bg-[#FF3B30]/10 px-2 py-0.5 text-[11px] font-semibold text-[#D70015]">納期を{-days}日過ぎています</span>
       :days<=3?<span className="inline-block rounded-full bg-[#FF9500]/15 px-2 py-0.5 text-[11px] font-semibold text-[#C93400]">{days===0?"今日が納期":`納期まであと${days}日`}</span>:null;
   };
+  const itemBadge=(row:CaseWorkspaceRecord)=>(itemCounts[row.id]??0)>1?<span className="inline-block rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-800">{itemCounts[row.id]}点</span>:null;
   const chevron=<ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[#C7C7CC]" strokeWidth={2.5}/>;
   const caseCard=(row:CaseWorkspaceRecord)=>{const g=deriveCaseGuidance(row),active=nav.projectId===row.id,step=deriveCaseSteps(row).find(s=>s.state==="current"),due=dueBadge(row);return link(open(row.id),<>
             <CaseStageIcon stage={step?.key??null}/>
             <span className="min-w-0 flex-1">
-            <span className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className={`text-[16px] leading-6 ${look.title}`}>{row.title}</span>{due}</span>
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className={`text-[16px] leading-6 ${look.title}`}>{row.title}</span>{itemBadge(row)}{due}</span>
             <span className={`mt-0.5 block text-xs ${look.muted}`}>{step?.label??g.status} · {row.clientLabel} · {row.registeredDueDate?`納期の目安 ${caseDate(row.registeredDueDate,today)}`:"納期なし"}</span>
             {g.waits[0]?<span className={`mt-0.5 block text-[13px] leading-5 ${caseTurn(g)==="staff"?"font-semibold text-pink-700":look.muted}`}>{caseWaitLine(g.waits[0])}</span>:<span className={`mt-0.5 block text-[13px] ${look.muted}`}>{g.status}</span>}
             {nav.sort==="priority"?<span className="mt-1.5 block text-xs">優先理由：{casePriority(row,plansReady?plans:null,today)?.reasons.join(" / ")??"理由は分かりません"}</span>:null}
@@ -212,7 +222,7 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
             {active||row.id===nav.selectedId?<span className="mt-1.5 block text-xs font-semibold text-pink-700">{active?"選択中":"さっき開いた案件"}</span>:null}
             </span>{chevron}
           </>,`${look.groupRow} items-start ${active?"!bg-pink-50":""} ${ui.focusRing}`,{key:row.id,id:`case-${row.id}`,"aria-current":active?"page":undefined});};
-  const caseRow=(row:CaseWorkspaceRecord)=>{const g=deriveCaseGuidance(row),active=nav.projectId===row.id,due=dueBadge(row),step=deriveCaseSteps(row).find(s=>s.state==="current");return link(open(row.id),<><CaseStageIcon stage={step?.key??null} size="sm"/><span className="min-w-0 flex-1 truncate text-[15px]">{row.title}<span className="sr-only"> · {row.clientLabel}</span></span><span className={`flex shrink-0 items-center gap-1.5 text-xs ${look.muted}`}>{due}{g.waits[0]?.text??g.status}</span>{chevron}</>,
+  const caseRow=(row:CaseWorkspaceRecord)=>{const g=deriveCaseGuidance(row),active=nav.projectId===row.id,due=dueBadge(row),step=deriveCaseSteps(row).find(s=>s.state==="current");return link(open(row.id),<><CaseStageIcon stage={step?.key??null} size="sm"/><span className="min-w-0 flex-1 truncate text-[15px]">{row.title}<span className="sr-only"> · {row.clientLabel}</span></span><span className={`flex shrink-0 items-center gap-1.5 text-xs ${look.muted}`}>{itemBadge(row)}{due}{g.waits[0]?.text??g.status}</span>{chevron}</>,
     `${look.groupRow} min-h-12 py-2.5 ${active?"!bg-pink-50":""} ${ui.focusRing}`,{key:row.id,id:`case-${row.id}`,"aria-current":active?"page":undefined});};
   // トーク tab: one line per case; who wrote last and when. Opening it shows only the talk.
   const talkRow=(row:CaseWorkspaceRecord)=>{const talk=talkOf(row),sentAt=caseQuoteSentAt(row),quoteSent=sentAt&&(!talk||sentAt>talk.latestAt)?sentAt:null,active=nav.projectId===row.id,theirs=!quoteSent&&talk?.latestSender==="client";return link({...open(row.id),section:"consultation"},<>

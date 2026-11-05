@@ -26,6 +26,19 @@ export async function loadCaseItems(projectId: string): Promise<CaseItemsLoad> {
   }
 }
 
+const countsResponse = z.object({ counts: z.record(z.string(), z.number().int().nonnegative()) });
+
+/** 一覧の「N点」用。読めなければ空（数を出さないだけ）。 */
+export async function loadCaseItemCounts(signal?: AbortSignal): Promise<Record<string, number>> {
+  try {
+    const response = await fetch("/api/natori/admin/case-items?counts=1", { cache: "no-store", signal });
+    if (!response.ok) return {};
+    return countsResponse.parse(await response.json()).counts;
+  } catch {
+    return {};
+  }
+}
+
 export type CaseItemsWrite = { kind: "ok"; items: NatoriCaseItem[] } | { kind: "error"; message: string };
 
 const messages: Record<string, string> = {

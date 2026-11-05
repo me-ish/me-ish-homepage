@@ -9,6 +9,7 @@ import { checkSameOrigin } from "@/lib/auth/origin";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
 import {
   addNatoriCaseItem,
+  countNatoriCaseItemsByProject,
   deleteNatoriCaseItem,
   listNatoriCaseItems,
   updateNatoriCaseItem,
@@ -61,7 +62,13 @@ export const GET = withNatoriManagement("case-items.GET", false, async function 
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401, headers: noStore });
   }
-  const projectId = z.uuid().safeParse(new URL(request.url).searchParams.get("projectId"));
+  const params = new URL(request.url).searchParams;
+  if (params.get("counts") === "1") {
+    const counts = await countNatoriCaseItemsByProject();
+    if (!counts) return NextResponse.json({ error: "temporarily_unavailable" }, { status: 503, headers: noStore });
+    return NextResponse.json({ counts }, { headers: noStore });
+  }
+  const projectId = z.uuid().safeParse(params.get("projectId"));
   if (!projectId.success) return invalid();
   return respond(await listNatoriCaseItems(projectId.data));
 });

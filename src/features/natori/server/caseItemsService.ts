@@ -174,3 +174,20 @@ export async function deleteNatoriCaseItem(
   if (!data?.length) return { kind: "conflict" };
   return readItems(projectId);
 }
+
+/** 一覧の「N点」用。持ち主の案件ごとの品目の数。読めないときは null（一覧は数なしで出す）。 */
+export async function countNatoriCaseItemsByProject(): Promise<Record<string, number> | null> {
+  const ownerId = await resolveNatoriOwnerId();
+  if (!ownerId) return null;
+  const { data, error } = await supabaseAdmin()
+    .from("natori_case_items")
+    .select("project_id, natori_projects!inner(user_id)")
+    .eq("natori_projects.user_id", ownerId);
+  if (error) {
+    console.error("[natori-case-items] count failed");
+    return null;
+  }
+  const counts: Record<string, number> = {};
+  for (const row of (data ?? []) as { project_id: string }[]) counts[row.project_id] = (counts[row.project_id] ?? 0) + 1;
+  return counts;
+}

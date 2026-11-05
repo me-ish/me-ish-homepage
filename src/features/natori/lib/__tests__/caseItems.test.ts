@@ -3,9 +3,11 @@ import {
   caseItemFields,
   caseItemPublicationOpen,
   caseItemsEarliestDue,
+  caseItemsToEstimateLines,
   caseItemsTotal,
   nextCaseItemPosition,
 } from "../caseItems";
+import { estimateDraftItemSchema } from "../estimateDraft";
 
 const base = {
   title: "クリスマス等身",
@@ -56,5 +58,25 @@ describe("item helpers", () => {
     expect(caseItemPublicationOpen({ publicationPolicy: "delayed", publicationAllowedFrom: "2026-12-26" }, "2026-12-26")).toBe(true);
     for (const policy of ["work_private", "fully_private", "unknown"] as const)
       expect(caseItemPublicationOpen({ publicationPolicy: policy, publicationAllowedFrom: null }, "2030-01-01")).toBe(false);
+  });
+});
+
+describe("caseItemsToEstimateLines", () => {
+  const base = { projectId: "p", projectType: null, dueDate: null, progress: "not_started" as const, publicationPolicy: "unknown" as const, publicationAllowedFrom: null, note: null, updatedAt: "t" };
+  it("makes one line per item in position order", () => {
+    let n = 0;
+    const lines = caseItemsToEstimateLines([
+      { ...base, id: "b", position: 2, title: "正月等身", amount: 15000 },
+      { ...base, id: "a", position: 1, title: "クリスマス等身", amount: 12000 },
+    ], () => `id${++n}`);
+    expect(lines?.map((l) => [l.labelSnapshot, l.quantity, l.unitAmount, l.amount, l.kind])).toEqual([
+      ["クリスマス等身", 1, 12000, 12000, "manual"],
+      ["正月等身", 1, 15000, 15000, "manual"],
+    ]);
+    expect(lines?.every((l) => estimateDraftItemSchema.safeParse(l).success)).toBe(true);
+  });
+  it("waits until every item has an amount", () => {
+    expect(caseItemsToEstimateLines([{ ...base, id: "a", position: 1, title: "SD", amount: null }], () => "x")).toBeNull();
+    expect(caseItemsToEstimateLines([], () => "x")).toBeNull();
   });
 });

@@ -40,7 +40,7 @@ vi.mock("@/lib/supabaseAdmin", () => ({
   }),
 }));
 
-import { addNatoriCaseItem, deleteNatoriCaseItem, listNatoriCaseItems, updateNatoriCaseItem } from "../caseItemsService";
+import { addNatoriCaseItem, countNatoriCaseItemsByProject, deleteNatoriCaseItem, listNatoriCaseItems, updateNatoriCaseItem } from "../caseItemsService";
 
 const fields = {
   title: "SD", projectType: "sd" as const, amount: 5000, dueDate: null, progress: "not_started" as const,
@@ -89,5 +89,17 @@ describe("caseItemsService", () => {
     state.changed = [];
     expect(await updateNatoriCaseItem("p", "i1", "old", fields)).toEqual({ kind: "conflict" });
     expect(await deleteNatoriCaseItem("p", "i1", "old")).toEqual({ kind: "conflict" });
+  });
+});
+
+describe("countNatoriCaseItemsByProject", () => {
+  it("counts items per case for the owner only", async () => {
+    state.changed = [{ project_id: "p" }, { project_id: "p" }, { project_id: "q" }] as unknown as { id: string }[];
+    expect(await countNatoriCaseItemsByProject()).toEqual({ p: 2, q: 1 });
+    expect(state.writes.at(-1)?.filters).toEqual([["natori_projects.user_id", "owner"]]);
+  });
+  it("returns nothing without an owner", async () => {
+    state.owner = null;
+    expect(await countNatoriCaseItemsByProject()).toBeNull();
   });
 });

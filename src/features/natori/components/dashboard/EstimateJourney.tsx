@@ -21,6 +21,9 @@ import { validateNatoriQuoteIssuePayloadV1 } from "@/features/natori/lib/quoteSn
 import { createStructuredQuoteOperationAttempt, validateStructuredQuoteDeliveryAttempt } from "@/features/natori/lib/structuredQuoteAttempt";
 import { formatYen } from "@/features/natori/lib/pricing";
 import {mutateCaseWork} from "@/features/natori/data/supabaseCaseWork";
+import { loadCaseItems } from "@/features/natori/data/supabaseCaseItems";
+import { caseItemsToEstimateLines } from "@/features/natori/lib/caseItems";
+import type { NatoriCaseItem } from "@/features/natori/types/caseItems";
 import { confirmNatoriProjectType } from "@/features/natori/data/supabaseProjects";
 import { NATORI_CONCRETE_PROJECT_TYPES, NATORI_PROJECT_TYPE_LABELS } from "@/features/natori/lib/projectReadModel";
 import type { NatoriConcreteProjectType, NatoriProject } from "@/features/natori/types/projects";
@@ -72,6 +75,14 @@ export default function EstimateJourney({ project, portfolioContent,workspace }:
   const [acknowledged, setAcknowledged] = useState(false);
   const [issued, setIssued] = useState<{ quoteId: string; version: number; notificationId?: string; notificationStatus?: string } | null>(null);
   const attemptRef = useRef<Record<string, unknown> | null>(null);
+  // 案件画面では、品目（①クリスマス等身 など）から明細を作れる。金額の欄を開くたびに読み直す。
+  const [caseItems, setCaseItems] = useState<NatoriCaseItem[]>([]);
+  useEffect(() => {
+    if (!inWorkspace || step !== 2) return;
+    let live = true;
+    void loadCaseItems(project.id).then((result) => { if (live) setCaseItems(result.kind === "ok" ? result.items : []); });
+    return () => { live = false; };
+  }, [inWorkspace, step, project.id]);
   const [workspaceEdited,setWorkspaceEdited]=useState(false);
   const localDraft=useRef(false),invalidLocalDraft=useRef(false);
   const latestWorkspaceInput=useRef("");
@@ -214,6 +225,27 @@ export default function EstimateJourney({ project, portfolioContent,workspace }:
     else if (mail.body !== templateBody) setReplacementBody(mail.body);
     setAcknowledged(false);
     setStep(3); window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const fromCaseItems = async () => {
+    // 押した時点の品目を読み直す（相談タブで直したばかりの名前や金額を使うため）。
+    const latest = await loadCaseItems(project.id);
+    const fresh = latest.kind === "ok" ? latest.items : [];
+    setCaseItems(fresh);
+    const lines = caseItemsToEstimateLines(fresh, () => crypto.randomUUID());
+    if (!lines) { setError(latest.kind === "ok" ? "品目すべてに金額を入れてから、もう一度押してください。" : "品目を読み込めませんでした。少し待ってから、もう一度押してください。"); return; }
+    if (draft.items.length > 0) {
+      const confirmed = await confirm({
+        title: "品目で置き換えますか？",
+        description: "いまの明細を、品目ごとの行に置き換えます。",
+        confirmLabel: "置き換える",
+        tone: "primary",
+      });
+      if (!confirmed) return;
+    }
+    attemptRef.current = null;
+    if (workspace) setWorkspaceEdited(true);
+    setDraft((previous) => ({ ...previous, items: lines }));
   };
 
   const suggest = async () => {
@@ -420,6 +452,7 @@ export default function EstimateJourney({ project, portfolioContent,workspace }:
         <section className={`space-y-5 rounded-2xl ${natoriAdminUi.surface} p-4 sm:p-6`}>
           <div><h2 className="text-lg font-bold tracking-tight">今回の金額を決める</h2><p className="mt-1 text-sm text-zinc-600">この案件だけの金額です。公開ポートフォリオの料金は変更されません。</p></div>
           {request.success && pricingConfig ? <button type="button" onClick={suggest} className={`${natoriAdminUi.btnSecondary} w-full`}>公開料金から参考明細を入れる</button> : <p className="rounded-xl bg-zinc-50 p-3 text-sm text-zinc-600">明細を手動で追加できます。</p>}
+          {caseItems.length ? (caseItemsToEstimateLines(caseItems, () => "") ? <button type="button" onClick={() => void fromCaseItems()} className={`${natoriAdminUi.btnSecondary} w-full`}>品目{caseItems.length}点から明細を作る</button> : <p className="rounded-xl bg-zinc-50 p-3 text-sm text-zinc-600">品目すべてに金額を入れると、品目から明細を作れます。</p>) : null}
           {draft.items.map((item) => <div key={item.id} className="space-y-2 rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-3">
             <div className="flex gap-2"><input aria-label="明細名" className={field} value={item.labelSnapshot} onChange={(event) => updateItem(item.id, "labelSnapshot", event.target.value)} /><button type="button" aria-label={`${item.labelSnapshot}を削除`} onClick={() => {if(workspace)setWorkspaceEdited(true);setDraft((previous) => ({ ...previous, items: previous.items.filter((entry) => entry.id !== item.id) }));}} className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-red-600 transition-colors hover:bg-red-50"><Trash2 className="h-5 w-5" /></button></div>
             <div className="grid grid-cols-2 gap-2"><label className="text-xs font-semibold text-zinc-600">数量<input aria-label={`${item.labelSnapshot}の数量`} type="number" min={1} max={100} className={`${field} mt-1`} value={item.quantity} onChange={(event) => updateItem(item.id, "quantity", event.target.value)} /></label><label className="text-xs font-semibold text-zinc-600">単価（円）<input aria-label={`${item.labelSnapshot}の単価`} type="number" min={0} className={`${field} mt-1`} value={item.unitAmount} onChange={(event) => updateItem(item.id, "unitAmount", event.target.value)} /></label></div>
