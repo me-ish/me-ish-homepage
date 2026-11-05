@@ -53,6 +53,11 @@ export type PortfolioWork = {
   featured: boolean;
   /** false の作品は保存したまま公開ギャラリーから外す */
   published: boolean;
+  /**
+   * 結んだ案件の品目（natori_case_items.id）。品目の公開条件と「公開してよい日」を満たすまで
+   * 公開ギャラリーに出さない。未設定なら今まで通り published だけで決まる。
+   */
+  caseItemId?: string | null;
 };
 
 export type PortfolioPlan = {

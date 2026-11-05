@@ -16,6 +16,7 @@ import { projectPortfolioPublicContent } from "@/features/natori/lib/portfolioPu
 import {normalizePortfolioAssetReferences,storePrivatePortfolioImage,validatePortfolioAssetReferences} from "./portfolioAssetsService";
 import {resolveNatoriOwnerId} from "./natoriOwner";
 import {readPortfolioSavedState} from "./portfolioContentStore";
+import { gatePortfolioByCaseItems } from "./caseItemsService";
 
 const TABLE = "natori_portfolio_content";
 const REFERENCE_BUCKET = "natori-inquiry-refs";
@@ -61,8 +62,9 @@ async function readPortfolioContent(): Promise<PortfolioDisplayContent> {
 
 /** Public callers receive the same filtered projection, including fallback content. */
 export async function loadPortfolioContent(): Promise<PortfolioDisplayContent> {
-  return projectPortfolioPublicContent(await readPortfolioContent());
+  return projectPortfolioPublicContent(await gatePortfolioByCaseItems(await readPortfolioContent()));
 }
+
 
 /** Guarded editor reads fail on errors so a fallback cannot overwrite saved drafts. */
 export async function loadPortfolioEditorContent(): Promise<PortfolioDisplayContent> {

@@ -11,6 +11,7 @@ import {
   portfolioAssetUrl,
 } from "../lib/portfolioAssetUrl";
 import { projectPortfolioPublicContent } from "../lib/portfolioPublicContent";
+import { gatePortfolioByCaseItems } from "./caseItemsService";
 import { readPortfolioSavedState } from "./portfolioContentStore";
 import type { PortfolioContent } from "../types/portfolio";
 
@@ -305,13 +306,14 @@ export async function finalizePrivatePortfolioVideo(id: string): Promise<boolean
   );
 }
 
-function isPublished(
+async function isPublished(
   content: PortfolioContent,
   id: string,
   kind: Kind,
-): boolean {
+): Promise<boolean> {
+  // 品目の「公開してよい日」前の作品の画像は、URL を知っていても配信しない。
   return portfolioContentAssetReferences(
-    projectPortfolioPublicContent(content),
+    projectPortfolioPublicContent(await gatePortfolioByCaseItems(content)),
   ).some((ref) => {
     const asset = parsePortfolioAssetUrl(ref.url);
     return asset?.id === id && asset.kind === kind && ref.kind === kind;
@@ -330,7 +332,7 @@ export async function readPortfolioAsset(
   const ownerId = management ? await resolveNatoriOwnerId() : owner.ownerId;
   if (
     !management &&
-    !isPublished((await readPortfolioSavedState()).content, id, kind)
+    !(await isPublished((await readPortfolioSavedState()).content, id, kind))
   )
     return null;
   const { data, error } = await supabaseAdmin()
@@ -382,7 +384,7 @@ export async function readPortfolioAsset(
   }
   if (!management) {
     try {
-      if (!isPublished((await readPortfolioSavedState()).content, id, kind)) {
+      if (!(await isPublished((await readPortfolioSavedState()).content, id, kind))) {
         await downloaded.body.cancel();
         return null;
       }

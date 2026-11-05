@@ -415,3 +415,26 @@ it("rejects nonlocal reserved asset references before ownership metadata lookup"
   ).toBe(false);
   expect(mocks.from).not.toHaveBeenCalled();
 });
+
+describe("case item embargo on direct asset URLs", () => {
+  const item = "00000000-0000-4000-8000-000000000033";
+  const linked = (policy: string, from: string | null) => {
+    mocks.saved.mockResolvedValue({ content: { ...content, works: [{ ...content.works[0], caseItemId: item }] }, revision: 3 });
+    mocks.from.mockImplementation((table: string) =>
+      table === "natori_case_items"
+        ? { select: () => ({ in: async () => ({ data: [{ id: item, publication_policy: policy, publication_allowed_from: from }], error: null }) }) }
+        : query(),
+    );
+  };
+  it("does not serve the image of a work whose item date has not come", async () => {
+    linked("delayed", "2999-01-01");
+    expect(await readPortfolioAsset(new Request("http://local.invalid"), id, "image", false)).toBeNull();
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+  it("serves it once the item allows publication, and management still sees it", async () => {
+    linked("delayed", "2000-01-01");
+    expect((await readPortfolioAsset(new Request("http://local.invalid"), id, "image", false))?.status).toBe(200);
+    linked("work_private", null);
+    expect((await readPortfolioAsset(new Request("http://local.invalid"), id, "image", true))?.status).toBe(200);
+  });
+});

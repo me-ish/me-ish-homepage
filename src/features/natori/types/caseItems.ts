@@ -27,3 +27,13 @@ export type NatoriCaseItem = {
   note: string | null;
   updatedAt: string;
 };
+
+/** ポートフォリオの作品に結ぶ候補（案件名つき）。 */
+export type NatoriLinkableCaseItem = {
+  id: string;
+  caseTitle: string;
+  position: number;
+  title: string;
+  publicationPolicy: NatoriCaseItemPublicationPolicy;
+  publicationAllowedFrom: string | null;
+};

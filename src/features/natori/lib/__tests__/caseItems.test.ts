@@ -4,6 +4,9 @@ import {
   caseItemPublicationOpen,
   caseItemsEarliestDue,
   caseItemsToEstimateLines,
+  caseItemPublicationNote,
+  gateWorksByCaseItems,
+  tokyoDateISO,
   caseItemsTotal,
   nextCaseItemPosition,
 } from "../caseItems";
@@ -78,5 +81,31 @@ describe("caseItemsToEstimateLines", () => {
   it("waits until every item has an amount", () => {
     expect(caseItemsToEstimateLines([{ ...base, id: "a", position: 1, title: "SD", amount: null }], () => "x")).toBeNull();
     expect(caseItemsToEstimateLines([], () => "x")).toBeNull();
+  });
+});
+
+describe("portfolio gate", () => {
+  const facts = (publicationPolicy: "allowed" | "delayed" | "work_private" | "fully_private" | "unknown", publicationAllowedFrom: string | null = null) => ({ publicationPolicy, publicationAllowedFrom });
+  it("reads today in Japan time", () => {
+    expect(tokyoDateISO(new Date("2026-12-25T14:59:59Z"))).toBe("2026-12-25");
+    expect(tokyoDateISO(new Date("2026-12-25T15:00:00Z"))).toBe("2026-12-26");
+  });
+  it("only gates published works that are linked", () => {
+    const works = [
+      { id: "a", published: true },
+      { id: "b", published: true, caseItemId: "x" },
+      { id: "c", published: false, caseItemId: "y" },
+      { id: "d", published: true, caseItemId: "z" },
+    ];
+    const items = new Map([["x", facts("delayed", "2026-12-26")], ["z", facts("allowed")]]);
+    expect(gateWorksByCaseItems(works, items, "2026-12-25").map((w) => [w.id, w.published])).toEqual([["a", true], ["b", false], ["c", false], ["d", true]]);
+    expect(gateWorksByCaseItems(works, items, "2026-12-26").map((w) => w.published)).toEqual([true, true, false, true]);
+    expect(gateWorksByCaseItems(works, null, "2026-12-26").map((w) => w.published)).toEqual([true, false, false, false]);
+  });
+  it("explains why a linked work is out", () => {
+    expect(caseItemPublicationNote(facts("delayed", "2026-12-26"), "2026-12-01").text).toBe("12月26日から自動でサイトに出ます。それまでは出ません。");
+    expect(caseItemPublicationNote(facts("allowed"), "2026-12-01").open).toBe(true);
+    expect(caseItemPublicationNote(facts("work_private"), "2026-12-01").open).toBe(false);
+    expect(caseItemPublicationNote(null, "2026-12-01").text).toMatch(/見つかりません/);
   });
 });

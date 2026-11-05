@@ -5,8 +5,8 @@ import "server-only";
 // 見積・支払い・納品・案件本体（natori_projects）の行は一切書き換えない。
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
-import { nextCaseItemPosition, type CaseItemFields } from "@/features/natori/lib/caseItems";
-import type { NatoriCaseItem } from "@/features/natori/types/caseItems";
+import { gateWorksByCaseItems, nextCaseItemPosition, tokyoDateISO, type CaseItemFields, type CaseItemPublicationFacts } from "@/features/natori/lib/caseItems";
+import type { NatoriCaseItem, NatoriLinkableCaseItem } from "@/features/natori/types/caseItems";
 import type { NatoriConcreteProjectType } from "@/features/natori/types/projects";
 
 const COLUMNS =
@@ -190,4 +190,73 @@ export async function countNatoriCaseItemsByProject(): Promise<Record<string, nu
   const counts: Record<string, number> = {};
   for (const row of (data ?? []) as { project_id: string }[]) counts[row.project_id] = (counts[row.project_id] ?? 0) + 1;
   return counts;
+}
+
+/**
+ * ポートフォリオの公開判定用。品目IDごとの公開条件。読めないときは null（結んだ作品は出さない）。
+ * 公開ページから呼ぶので所有者は見ない（出す作品を減らす向きにしか使わない）。
+ */
+export async function readCaseItemPublication(
+  ids: readonly string[],
+): Promise<Map<string, CaseItemPublicationFacts> | null> {
+  if (ids.length === 0) return new Map();
+  const { data, error } = await supabaseAdmin()
+    .from("natori_case_items")
+    .select("id, publication_policy, publication_allowed_from")
+    .in("id", [...new Set(ids)]);
+  if (error) {
+    console.error("[natori-case-items] publication read failed");
+    return null;
+  }
+  const map = new Map<string, CaseItemPublicationFacts>();
+  for (const row of (data ?? []) as Pick<ItemRow, "id" | "publication_policy" | "publication_allowed_from">[]) {
+    map.set(row.id, { publicationPolicy: row.publication_policy, publicationAllowedFrom: row.publication_allowed_from });
+  }
+  return map;
+}
+
+/** ポートフォリオ編集で作品に結ぶ候補。持ち主の、しまっていない案件の品目だけ。 */
+export async function listLinkableCaseItems(): Promise<NatoriLinkableCaseItem[] | null> {
+  const ownerId = await resolveNatoriOwnerId();
+  if (!ownerId) return null;
+  const { data, error } = await supabaseAdmin()
+    .from("natori_case_items")
+    .select("id, position, title, publication_policy, publication_allowed_from, natori_projects!inner(title, user_id, deleted_at)")
+    .eq("natori_projects.user_id", ownerId)
+    .is("natori_projects.deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) {
+    console.error("[natori-case-items] linkable read failed");
+    return null;
+  }
+  type Row = Pick<ItemRow, "id" | "position" | "title" | "publication_policy" | "publication_allowed_from"> & {
+    natori_projects: { title: string | null } | { title: string | null }[] | null;
+  };
+  return ((data ?? []) as unknown as Row[]).map((row) => {
+    const project = Array.isArray(row.natori_projects) ? row.natori_projects[0] : row.natori_projects;
+    return {
+      id: row.id,
+      caseTitle: project?.title?.trim() || "案件名なし",
+      position: row.position,
+      title: row.title,
+      publicationPolicy: row.publication_policy,
+      publicationAllowedFrom: row.publication_allowed_from,
+    };
+  });
+}
+
+/**
+ * ポートフォリオの公開の境目。品目に結んだ作品は、品目の公開条件を満たすまで非公開として扱う。
+ * 公開ページ・公開 API・画像の配信のすべてがこれを通ってから公開の判定をする。
+ */
+export async function gatePortfolioByCaseItems<C extends { works: { caseItemId?: string | null; published: boolean }[] }>(
+  content: C,
+  now: Date = new Date(),
+): Promise<C> {
+  const ids = content.works.flatMap((work) => (work.published && work.caseItemId ? [work.caseItemId] : []));
+  if (ids.length === 0) return content;
+  let items: Map<string, CaseItemPublicationFacts> | null = null;
+  try { items = await readCaseItemPublication(ids); } catch { items = null; }
+  return { ...content, works: gateWorksByCaseItems(content.works, items, tokyoDateISO(now)) };
 }
