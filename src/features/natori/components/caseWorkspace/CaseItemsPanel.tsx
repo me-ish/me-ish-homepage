@@ -6,9 +6,9 @@ import {
   CASE_ITEM_PROGRESS_LABELS,
   CASE_ITEM_PUBLICATION_LABELS,
   CASE_ITEM_TYPE_LABELS,
-  NATORI_CASE_ITEM_MAX,
   caseItemFields,
   caseItemsTotal,
+  nextCaseItemPosition,
   type CaseItemFields,
 } from "../../lib/caseItems";
 import { caseDate } from "../../lib/caseWorkspacePresentation";
@@ -72,6 +72,8 @@ export function CaseItemsPanel({ projectId, disabled, onDraftChange }: { project
           <li key={item.id} className="rounded-xl border border-zinc-200/80">
             {editing === item.id ? (
               <ItemForm
+                // A reload after a conflict brings a newer updatedAt; remount so the form shows those values.
+                key={item.updatedAt}
                 initial={toDraft(item)} busy={busy} submitLabel="保存する"
                 onCancel={() => { setEditing(null); setMessage(""); }}
                 onSubmit={(fields) => void run(() => updateCaseItem(projectId, item, fields))}
@@ -98,7 +100,7 @@ export function CaseItemsPanel({ projectId, disabled, onDraftChange }: { project
         <div className="rounded-xl border border-zinc-200/80">
           <ItemForm initial={EMPTY} busy={busy} submitLabel="足す" onCancel={() => { setEditing(null); setMessage(""); }} onSubmit={(fields) => void run(() => addCaseItem(projectId, fields))} />
         </div>
-      ) : items.length < NATORI_CASE_ITEM_MAX ? (
+      ) : nextCaseItemPosition(items) !== null ? (
         <button type="button" className={ui.btnSecondary} disabled={disabled || busy || editing !== null} onClick={() => setEditing("new")}>＋ 品目を足す</button>
       ) : null}
       {message ? <p role="alert" className="text-sm text-amber-900">{message} <button type="button" className="underline" onClick={() => void reload()}>読み込み直す</button></p> : null}

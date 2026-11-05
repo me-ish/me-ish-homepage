@@ -59,3 +59,22 @@ it("keeps the form open and explains a conflict", async () => {
   expect(await screen.findByText(/ほかの画面で品目が変わりました。/)).not.toBeNull();
   expect(screen.getByRole("button", { name: "保存する" })).not.toBeNull();
 });
+
+it("shows the other screen's values after reloading a conflict", async () => {
+  m.load.mockResolvedValueOnce({ kind: "ok", items: [item(1)] });
+  m.update.mockResolvedValue({ kind: "error", message: "ほかの画面で品目が変わりました。" });
+  render(<CaseItemsPanel projectId={PID} disabled={false} onDraftChange={draft} />);
+  fireEvent.click(await screen.findByRole("button", { name: /品目1/ }));
+  fireEvent.change(screen.getByLabelText("名前"), { target: { value: "古い下書き" } });
+  fireEvent.click(screen.getByRole("button", { name: "保存する" }));
+  m.load.mockResolvedValueOnce({ kind: "ok", items: [item(1, { title: "別の画面で直した名前", updatedAt: "t2" })] });
+  fireEvent.click(await screen.findByRole("button", { name: "読み込み直す" }));
+  await waitFor(() => expect((screen.getByLabelText("名前") as HTMLInputElement).value).toBe("別の画面で直した名前"));
+});
+
+it("hides adding when the last number is already used", async () => {
+  m.load.mockResolvedValue({ kind: "ok", items: [item(1), item(20)] });
+  render(<CaseItemsPanel projectId={PID} disabled={false} onDraftChange={draft} />);
+  expect(await screen.findByText("2点")).not.toBeNull();
+  expect(screen.queryByRole("button", { name: "＋ 品目を足す" })).toBeNull();
+});
