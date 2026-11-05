@@ -10,7 +10,7 @@ import type { NatoriCaseItem, NatoriLinkableCaseItem } from "@/features/natori/t
 import type { NatoriConcreteProjectType } from "@/features/natori/types/projects";
 
 const COLUMNS =
-  "id, project_id, position, title, project_type, amount, due_date, progress, publication_policy, publication_allowed_from, note, updated_at";
+  "id, project_id, position, title, project_type, amount, due_date, progress, publication_policy, publication_allowed_from, note, handed_over_at, updated_at";
 
 type ItemRow = {
   id: string;
@@ -24,6 +24,7 @@ type ItemRow = {
   publication_policy: NatoriCaseItem["publicationPolicy"];
   publication_allowed_from: string | null;
   note: string | null;
+  handed_over_at: string | null;
   updated_at: string;
 };
 
@@ -50,6 +51,7 @@ function toItem(row: ItemRow): NatoriCaseItem {
     publicationPolicy: row.publication_policy,
     publicationAllowedFrom: row.publication_allowed_from,
     note: row.note,
+    handedOverAt: row.handed_over_at,
     updatedAt: row.updated_at,
   };
 }
@@ -64,6 +66,7 @@ function toRow(fields: CaseItemFields) {
     publication_policy: fields.publicationPolicy,
     publication_allowed_from: fields.publicationAllowedFrom,
     note: fields.note,
+    handed_over_at: fields.handedOverAt,
   };
 }
 

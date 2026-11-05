@@ -44,11 +44,11 @@ import { addNatoriCaseItem, countNatoriCaseItemsByProject, deleteNatoriCaseItem,
 
 const fields = {
   title: "SD", projectType: "sd" as const, amount: 5000, dueDate: null, progress: "not_started" as const,
-  publicationPolicy: "unknown" as const, publicationAllowedFrom: null, note: null,
+  publicationPolicy: "unknown" as const, publicationAllowedFrom: null, note: null, handedOverAt: null,
 };
 const row = (position: number) => ({
   id: `i${position}`, project_id: "p", position, title: `品目${position}`, project_type: "poster", amount: null, due_date: null,
-  progress: "not_started", publication_policy: "unknown", publication_allowed_from: null, note: null, updated_at: "t",
+  progress: "not_started", publication_policy: "unknown", publication_allowed_from: null, note: null, handed_over_at: null, updated_at: "t",
 });
 
 beforeEach(() => {

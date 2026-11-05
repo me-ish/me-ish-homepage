@@ -10,6 +10,10 @@ import { caseRegistration } from "../../lib/caseAdministration";
 import { calculateDueDate } from "../../lib/deliveryPlans";
 import { Plus } from "lucide-react";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
+import { addCaseItem } from "../../data/supabaseCaseItems";
+import { caseItemDraftToFields, caseItemFields, NATORI_CASE_ITEM_MAX, readCaseItemDraft, type CaseItemFields } from "../../lib/caseItems";
+import { z } from "zod";
+import { emptyRegistrationItems, RegistrationItemRows } from "./RegistrationItemRows";
 import { workspaceLook as look } from "../../constants/workspaceLook";
 /** Where an order taken outside the site came from. Kept in the request text and as the trade page link's name. */
 const TYPE_LABELS: Record<string, string> = { icon: "アイコン", sd: "SD", standing: "立ち絵", illustration: "イラスト" };
@@ -53,6 +57,8 @@ export function CaseRegistration({
       externalType: "",
       externalAmount: "",
       externalDue: "",
+      externalMulti: "",
+      externalItems: "",
     },
     setFormDirty,
   );
@@ -74,6 +80,31 @@ export function CaseRegistration({
       .then(result => setLinkNote(["applied", "unchanged"].includes(result.result) ? "" : "取引ページのリンクは保存できませんでした。相談の参考リンクから足してください。"))
       .catch(() => setLinkNote("取引ページのリンクは保存できたか分かりません。相談の参考リンクを見てください。"));
   }, [operation.done, operation.projectId]);
+  // 2点以上の依頼は、案件ができたあとに品目を1つずつ足す（案件本体には触らない）。
+  const [itemsNote, setItemsNote] = useState("");
+  const itemsSent = useRef<string | null>(null);
+  const pendingItems = useRef<CaseItemFields[] | null>(null);
+  const savedOperationId = operation.saved?.request.operationId ?? null;
+  useEffect(() => {
+    const id = operation.done ? operation.projectId : null;
+    // 読み込み直しで登録を確かめ直したときは、保存しておいた品目の予定から続ける。
+    const items = pendingItems.current ?? readPendingItems(savedOperationId);
+    if (!id || !items?.length || itemsSent.current === id) return;
+    itemsSent.current = id;
+    pendingItems.current = null;
+    // 先に予定を消す。途中で読み込み直しても同じ品目を二重に足さない。
+    writePendingItems(null);
+    void (async () => {
+      for (const [index, item] of items.entries()) {
+        const result = await addCaseItem(id, item);
+        if (result.kind !== "ok") {
+          setItemsNote(`品目は${index}点まで保存できました。残りは案件画面の「品目」から足してください。`);
+          return;
+        }
+      }
+      setItemsNote("");
+    })();
+  }, [operation.done, operation.projectId, savedOperationId]);
   // Closed, only the small button sits at the end of the heading row; open, the form takes the full width below it.
   const wide = open || !!operation.saved || operation.blocked;
   return (
@@ -93,6 +124,7 @@ export function CaseRegistration({
       </button>
       <CaseAdminConfirmation operation={operation} />
       {linkNote ? <p role="alert" className="text-sm">{linkNote}</p> : null}
+      {itemsNote ? <p role="alert" className="text-sm">{itemsNote}</p> : null}
       {operation.done && operation.projectId ? (
         <button
           className={ui.btnSecondary}
@@ -109,8 +141,11 @@ export function CaseRegistration({
               externalType: "",
               externalAmount: "",
               externalDue: "",
+              externalMulti: "",
+              externalItems: "",
             });
             setLinkNote("");
+            setItemsNote("");
             onOpen(id);
           }}
         >
@@ -124,8 +159,19 @@ export function CaseRegistration({
             e.preventDefault();
             try {
               const external = form.mode === "external";
-              const decided = external && form.externalType !== "" && form.externalAmount !== "";
-              if (external && !decided && (form.externalType !== "" || form.externalAmount !== "" || form.externalDue !== "")) {
+              const multi = external && form.externalMulti === "1";
+              const drafted = multi ? caseItemDraftToFields(readCaseItemDraft(form.externalItems)) : null;
+              if (drafted?.kind === "error") {
+                setError(drafted.message);
+                return;
+              }
+              const itemPlan = drafted?.kind === "ok" ? drafted : null;
+              if (multi && !itemPlan?.items.length) {
+                setError("品目の名前を1つ以上入れてください。");
+                return;
+              }
+              const decided = itemPlan ? itemPlan.type !== null : external && form.externalType !== "" && form.externalAmount !== "";
+              if (external && !multi && !decided && (form.externalType !== "" || form.externalAmount !== "" || form.externalDue !== "")) {
                 setError("種類と金額は、両方入れるか両方空にしてください。");
                 return;
               }
@@ -133,18 +179,26 @@ export function CaseRegistration({
                 setError("取引ページは https:// で始まるURLを入れてください。");
                 return;
               }
-              const { place, tradeUrl, externalType, externalAmount, externalDue, ...fields } = form;
+              const { place, tradeUrl, externalType, externalAmount, externalDue, externalMulti: _multi, externalItems: _items, ...fields } = form;
+              void _multi; void _items;
               const note = external ? `受けた場所：${place}${fields.note.trim() ? `\n\n${fields.note}` : ""}` : fields.note;
               const data = caseRegistration.parse(decided ? {
-                ...fields, mode: "manual", type: externalType, amount: Number(externalAmount), status: "inquiry",
-                deliveryPlan: "normal", startDate: today, dueDate: externalDue || null, note,
+                ...fields, mode: "manual",
+                type: itemPlan ? itemPlan.type : externalType,
+                amount: itemPlan ? itemPlan.amount : Number(externalAmount), status: "inquiry",
+                deliveryPlan: "normal", startDate: today, dueDate: (itemPlan ? itemPlan.dueDate : externalDue) || null, note,
               } : { ...fields, amount: Number(fields.amount), note });
+              pendingItems.current = itemPlan ? itemPlan.items : null;
+              itemsSent.current = null;
+              const operationId = crypto.randomUUID();
+              writePendingItems(itemPlan ? { operationId, items: itemPlan.items } : null);
+              setItemsNote("");
               pendingLink.current = external && tradeUrl.trim() ? { url: tradeUrl.trim(), label: `${place}の取引ページ` } : null;
               linkSent.current = null;
               setLinkNote("");
               operation.prepare(
                 {
-                  operationId: crypto.randomUUID(),
+                  operationId,
                   projectId: null,
                   revision: null,
                   action: { command: "create", data },
@@ -157,6 +211,7 @@ export function CaseRegistration({
                   data.mode === "manual"
                     ? `種類：${TYPE_LABELS[data.type]} / 金額：${Number(data.amount).toLocaleString("ja-JP")}円 / 納期：${data.dueDate ?? "なし"}${external ? "" : ` / いまの段階：${data.status}`}`
                     : "金額と種類はあとで決めます。",
+                  ...(itemPlan ? [`品目：${itemPlan.items.length}点（${itemPlan.items.map((item) => item.title).join("、")}）`] : []),
                   "お客さんにメールは送りません。",
                   `依頼文：${data.note || "なし"}`,
                 ],
@@ -215,6 +270,25 @@ export function CaseRegistration({
                   取引ページのURL（あれば）
                   <input className={ui.input} type="url" inputMode="url" value={form.tradeUrl} onChange={(e) => setForm((v) => ({ ...v, tradeUrl: e.target.value }))} />
                 </label>
+                <label className="flex min-h-11 items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="size-5"
+                    checked={form.externalMulti === "1"}
+                    onChange={(e) => setForm((v) => ({
+                      ...v,
+                      externalMulti: e.target.checked ? "1" : "",
+                      externalItems: e.target.checked && !v.externalItems ? JSON.stringify(emptyRegistrationItems()) : v.externalItems,
+                    }))}
+                  />
+                  1つの依頼で2点以上ある
+                </label>
+                {form.externalMulti === "1" ? (
+                  <RegistrationItemRows
+                    rows={readCaseItemDraft(form.externalItems)}
+                    onChange={(rows) => setForm((v) => ({ ...v, externalItems: JSON.stringify(rows) }))}
+                  />
+                ) : (
                 <fieldset className="space-y-3 rounded-xl border border-zinc-200 p-3">
                   <legend className="px-1 text-sm">決まっていれば（あとでも入れられます）</legend>
                   <label className="block text-sm">
@@ -233,6 +307,7 @@ export function CaseRegistration({
                     <input type="date" className={ui.input} value={form.externalDue} onChange={(e) => setForm((v) => ({ ...v, externalDue: e.target.value }))} />
                   </label>
                 </fieldset>
+                )}
               </>
             ) : null}
             {form.mode === "manual" ? (
@@ -343,6 +418,29 @@ export function CaseRegistration({
     </section>
   );
 }
+const PENDING_ITEMS_KEY = "natori-case-admin/new-items";
+const pendingItemsSchema = z.object({ operationId: z.string().min(1), items: z.array(caseItemFields).min(1).max(NATORI_CASE_ITEM_MAX) });
+
+/** 登録の操作と同じ ID で、あとから足す品目の予定をタブに残す（読み込み直しても続けられるように）。 */
+function writePendingItems(plan: z.infer<typeof pendingItemsSchema> | null) {
+  try {
+    if (plan) sessionStorage.setItem(PENDING_ITEMS_KEY, JSON.stringify(plan));
+    else sessionStorage.removeItem(PENDING_ITEMS_KEY);
+  } catch {
+    /* 残せなくても、この画面のあいだは ref で足せる。 */
+  }
+}
+
+function readPendingItems(operationId: string | null): CaseItemFields[] | null {
+  if (!operationId) return null;
+  try {
+    const parsed = pendingItemsSchema.safeParse(JSON.parse(sessionStorage.getItem(PENDING_ITEMS_KEY) ?? "null"));
+    return parsed.success && parsed.data.operationId === operationId ? parsed.data.items : null;
+  } catch {
+    return null;
+  }
+}
+
 function RegistrationDirty({
   dirty,
   onChange,

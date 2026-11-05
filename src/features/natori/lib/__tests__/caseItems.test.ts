@@ -21,6 +21,7 @@ const base = {
   publicationPolicy: "delayed" as const,
   publicationAllowedFrom: "2026-12-26",
   note: null,
+  handedOverAt: null,
 };
 
 describe("caseItemFields", () => {
@@ -65,7 +66,7 @@ describe("item helpers", () => {
 });
 
 describe("caseItemsToEstimateLines", () => {
-  const base = { projectId: "p", projectType: null, dueDate: null, progress: "not_started" as const, publicationPolicy: "unknown" as const, publicationAllowedFrom: null, note: null, updatedAt: "t" };
+  const base = { projectId: "p", projectType: null, dueDate: null, progress: "not_started" as const, publicationPolicy: "unknown" as const, publicationAllowedFrom: null, note: null, handedOverAt: null, updatedAt: "t" };
   it("makes one line per item in position order", () => {
     let n = 0;
     const lines = caseItemsToEstimateLines([
@@ -107,5 +108,13 @@ describe("portfolio gate", () => {
     expect(caseItemPublicationNote(facts("allowed"), "2026-12-01").open).toBe(true);
     expect(caseItemPublicationNote(facts("work_private"), "2026-12-01").open).toBe(false);
     expect(caseItemPublicationNote(null, "2026-12-01").text).toMatch(/見つかりません/);
+  });
+});
+
+describe("先渡し（分納）", () => {
+  it("完成の品目だけが先渡しの日付を持てる", () => {
+    expect(caseItemFields.safeParse({ ...base, progress: "done", handedOverAt: "2026-12-18" }).success).toBe(true);
+    expect(caseItemFields.safeParse({ ...base, progress: "in_progress", handedOverAt: "2026-12-18" }).success).toBe(false);
+    expect(caseItemFields.safeParse({ ...base, progress: "done", handedOverAt: "2026-13-01" }).success).toBe(false);
   });
 });

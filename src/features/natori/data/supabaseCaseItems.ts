@@ -9,7 +9,8 @@ const item = z.object({
   projectType: z.enum(["icon", "sd", "standing", "illustration"]).nullable(), amount: z.number().nullable(),
   dueDate: z.string().nullable(), progress: z.enum(["not_started", "in_progress", "done"]),
   publicationPolicy: z.enum(["allowed", "delayed", "work_private", "fully_private", "unknown"]),
-  publicationAllowedFrom: z.string().nullable(), note: z.string().nullable(), updatedAt: z.string(),
+  publicationAllowedFrom: z.string().nullable(), note: z.string().nullable(),
+  handedOverAt: z.string().nullable(), updatedAt: z.string(),
 });
 const listResponse = z.object({ items: z.array(item) });
 

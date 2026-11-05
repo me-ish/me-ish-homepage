@@ -308,6 +308,7 @@ natori_case_items,title,string,NO,natori_case_itemsのデータ管理,タイト�
 natori_case_items,project_type,string | null,YES,natori_case_itemsのデータ管理,project_type（natori_case_items）
 natori_case_items,amount,number | null,YES,natori_case_itemsのデータ管理,amount（natori_case_items）
 natori_case_items,due_date,string | null,YES,natori_case_itemsのデータ管理,due_date（natori_case_items）
+natori_case_items,handed_over_at,string | null,YES,natori_case_itemsのデータ管理,handed_over_at（natori_case_items）
 natori_case_items,progress,string,NO,natori_case_itemsのデータ管理,progress（natori_case_items）
 natori_case_items,publication_policy,string,NO,natori_case_itemsのデータ管理,publication_policy（natori_case_items）
 natori_case_items,publication_allowed_from,string | null,YES,natori_case_itemsのデータ管理,publication_allowed_from（natori_case_items）

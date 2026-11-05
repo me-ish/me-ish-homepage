@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Synthetic PostgreSQL check for 20261105120000_natori_case_items.sql.
+# Synthetic PostgreSQL check for 20261105120000_natori_case_items.sql and 20261106100000_natori_case_items_handover.sql.
 # Usage: PSQL_BASE="psql -h <socket dir> -U postgres" scripts/natori-case-items/verify-sql.sh
 # Creates a throwaway database, applies every active migration, seeds fictional
 # rows only, and checks the item constraints and that only service_role can reach the table.
@@ -43,6 +43,13 @@ rejects "date without delayed" "$(ins "4,'x',null,null,null,'allowed','2026-12-0
 rejects "unknown progress" "update public.natori_case_items set progress='paused' where position=3"
 q "update public.natori_case_items set progress='in_progress' where project_id='$CASE' and position=3"
 ok "progress can move" "$(q "select progress from public.natori_case_items where position=3")" "in_progress"
+ok "handover starts empty" "$(q "select count(*) from public.natori_case_items where handed_over_at is not null")" "0"
+rejects "handover on unfinished item" "update public.natori_case_items set handed_over_at='2026-12-01' where project_id='$CASE' and position=3"
+q "update public.natori_case_items set progress='done', handed_over_at='2026-12-01' where project_id='$CASE' and position=3"
+ok "finished item can be handed over" "$(q "select handed_over_at from public.natori_case_items where position=3")" "2026-12-01"
+rejects "handed-over item cannot go back without clearing" "update public.natori_case_items set progress='in_progress' where project_id='$CASE' and position=3"
+q "update public.natori_case_items set progress='in_progress', handed_over_at=null where project_id='$CASE' and position=3"
+ok "clearing handover lets progress move back" "$(q "select progress from public.natori_case_items where position=3")" "in_progress"
 q "begin; set constraints natori_case_items_project_position_key deferred; update public.natori_case_items set position=case position when 1 then 2 when 2 then 1 else position end where project_id='$CASE'; commit;"
 ok "positions can be swapped in one transaction" "$(q "select title from public.natori_case_items where position=1")" "正月等身"
 ok "rls enabled" "$(q "select relrowsecurity from pg_class where relname='natori_case_items'")" "t"
