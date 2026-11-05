@@ -12,6 +12,8 @@ import EstimateJourney from "@/features/natori/components/dashboard/EstimateJour
 import { estimateDraftSchema } from "@/features/natori/lib/estimateDraft";
 import type { NatoriProject } from "@/features/natori/types/projects";
 
+const caseItemsMock = vi.hoisted(() => ({ load: vi.fn() }));
+vi.mock("@/features/natori/data/supabaseCaseItems", () => ({ loadCaseItems: caseItemsMock.load }));
 vi.mock("@/features/natori/data/supabaseProjects", () => ({
   confirmNatoriProjectType: vi.fn(),
 }));
@@ -49,6 +51,8 @@ beforeEach(() => {
         : { draft: null },
   }));
   vi.stubGlobal("fetch", fetchMock);
+  caseItemsMock.load.mockReset();
+  caseItemsMock.load.mockResolvedValue({ kind: "ok", items: [] });
   vi.stubGlobal("scrollTo", vi.fn());
 });
 afterEach(() => {
@@ -181,4 +185,19 @@ describe('current flow unresolved quote result',()=>{
   expect((screen.getByRole('button',{name:'第1版を同じ内容で再通知'}) as HTMLButtonElement).disabled).toBe(true);
   expect(screen.queryByText('新しい版の作成を確認')).toBeNull();sessionStorage.clear();
  });
+
+  it("builds quote lines from the case items as they are when the button is pressed", async () => {
+    const caseItem = (title: string, amount: number | null) => ({
+      id: title, projectId: project.id, position: 1, title, projectType: null, amount, dueDate: null,
+      progress: "not_started", publicationPolicy: "unknown", publicationAllowedFrom: null, note: null, updatedAt: "t",
+    });
+    caseItemsMock.load
+      .mockResolvedValueOnce({ kind: "ok", items: [caseItem("古い名前", 1000)] })
+      .mockResolvedValue({ kind: "ok", items: [caseItem("クリスマス等身", 12000)] });
+    render(<EstimateJourney project={project} portfolioContent={null} workspace={{ revision: "a".repeat(64), onChanged: vi.fn(), onDirty: vi.fn() }} />);
+    await userEvent.click(await screen.findByRole("button", { name: /条件を保存して金額へ/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "品目1点から明細を作る" }));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "明細名" })).toHaveProperty("value", "クリスマス等身"));
+    expect(screen.getByRole("spinbutton", { name: /単価/ })).toHaveProperty("value", "12000");
+  });
 });

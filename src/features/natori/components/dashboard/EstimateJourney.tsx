@@ -228,8 +228,12 @@ export default function EstimateJourney({ project, portfolioContent,workspace }:
   };
 
   const fromCaseItems = async () => {
-    const lines = caseItemsToEstimateLines(caseItems, () => crypto.randomUUID());
-    if (!lines) return;
+    // 押した時点の品目を読み直す（相談タブで直したばかりの名前や金額を使うため）。
+    const latest = await loadCaseItems(project.id);
+    const fresh = latest.kind === "ok" ? latest.items : [];
+    setCaseItems(fresh);
+    const lines = caseItemsToEstimateLines(fresh, () => crypto.randomUUID());
+    if (!lines) { setError(latest.kind === "ok" ? "品目すべてに金額を入れてから、もう一度押してください。" : "品目を読み込めませんでした。少し待ってから、もう一度押してください。"); return; }
     if (draft.items.length > 0) {
       const confirmed = await confirm({
         title: "品目で置き換えますか？",
