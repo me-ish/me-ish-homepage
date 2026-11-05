@@ -11,7 +11,8 @@ import { calculateDueDate } from "../../lib/deliveryPlans";
 import { Plus } from "lucide-react";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
 import { addCaseItem } from "../../data/supabaseCaseItems";
-import { caseItemDraftToFields, readCaseItemDraft, type CaseItemFields } from "../../lib/caseItems";
+import { caseItemDraftToFields, caseItemFields, NATORI_CASE_ITEM_MAX, readCaseItemDraft, type CaseItemFields } from "../../lib/caseItems";
+import { z } from "zod";
 import { emptyRegistrationItems, RegistrationItemRows } from "./RegistrationItemRows";
 import { workspaceLook as look } from "../../constants/workspaceLook";
 /** Where an order taken outside the site came from. Kept in the request text and as the trade page link's name. */
@@ -83,11 +84,16 @@ export function CaseRegistration({
   const [itemsNote, setItemsNote] = useState("");
   const itemsSent = useRef<string | null>(null);
   const pendingItems = useRef<CaseItemFields[] | null>(null);
+  const savedOperationId = operation.saved?.request.operationId ?? null;
   useEffect(() => {
-    const id = operation.done ? operation.projectId : null, items = pendingItems.current;
+    const id = operation.done ? operation.projectId : null;
+    // 読み込み直しで登録を確かめ直したときは、保存しておいた品目の予定から続ける。
+    const items = pendingItems.current ?? readPendingItems(savedOperationId);
     if (!id || !items?.length || itemsSent.current === id) return;
     itemsSent.current = id;
     pendingItems.current = null;
+    // 先に予定を消す。途中で読み込み直しても同じ品目を二重に足さない。
+    writePendingItems(null);
     void (async () => {
       for (const [index, item] of items.entries()) {
         const result = await addCaseItem(id, item);
@@ -98,7 +104,7 @@ export function CaseRegistration({
       }
       setItemsNote("");
     })();
-  }, [operation.done, operation.projectId]);
+  }, [operation.done, operation.projectId, savedOperationId]);
   // Closed, only the small button sits at the end of the heading row; open, the form takes the full width below it.
   const wide = open || !!operation.saved || operation.blocked;
   return (
@@ -184,13 +190,15 @@ export function CaseRegistration({
               } : { ...fields, amount: Number(fields.amount), note });
               pendingItems.current = itemPlan ? itemPlan.items : null;
               itemsSent.current = null;
+              const operationId = crypto.randomUUID();
+              writePendingItems(itemPlan ? { operationId, items: itemPlan.items } : null);
               setItemsNote("");
               pendingLink.current = external && tradeUrl.trim() ? { url: tradeUrl.trim(), label: `${place}の取引ページ` } : null;
               linkSent.current = null;
               setLinkNote("");
               operation.prepare(
                 {
-                  operationId: crypto.randomUUID(),
+                  operationId,
                   projectId: null,
                   revision: null,
                   action: { command: "create", data },
@@ -410,6 +418,29 @@ export function CaseRegistration({
     </section>
   );
 }
+const PENDING_ITEMS_KEY = "natori-case-admin/new-items";
+const pendingItemsSchema = z.object({ operationId: z.string().min(1), items: z.array(caseItemFields).min(1).max(NATORI_CASE_ITEM_MAX) });
+
+/** 登録の操作と同じ ID で、あとから足す品目の予定をタブに残す（読み込み直しても続けられるように）。 */
+function writePendingItems(plan: z.infer<typeof pendingItemsSchema> | null) {
+  try {
+    if (plan) sessionStorage.setItem(PENDING_ITEMS_KEY, JSON.stringify(plan));
+    else sessionStorage.removeItem(PENDING_ITEMS_KEY);
+  } catch {
+    /* 残せなくても、この画面のあいだは ref で足せる。 */
+  }
+}
+
+function readPendingItems(operationId: string | null): CaseItemFields[] | null {
+  if (!operationId) return null;
+  try {
+    const parsed = pendingItemsSchema.safeParse(JSON.parse(sessionStorage.getItem(PENDING_ITEMS_KEY) ?? "null"));
+    return parsed.success && parsed.data.operationId === operationId ? parsed.data.items : null;
+  } catch {
+    return null;
+  }
+}
+
 function RegistrationDirty({
   dirty,
   onChange,
