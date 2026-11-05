@@ -16,6 +16,8 @@ export const CASE_ITEM_PROGRESS_LABELS: Record<NatoriCaseItemProgress, string> =
   done: "完成",
 };
 
+export const CASE_ITEM_TYPE_LABELS = { icon: "アイコン", sd: "SD", standing: "立ち絵", illustration: "イラスト" } as const;
+
 export const CASE_ITEM_PUBLICATION_LABELS: Record<NatoriCaseItemPublicationPolicy, string> = {
   allowed: "公開してよい",
   delayed: "日付から公開してよい",
