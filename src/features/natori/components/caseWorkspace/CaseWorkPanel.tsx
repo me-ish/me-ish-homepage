@@ -1,6 +1,7 @@
 "use client";
 import { useCallback,useEffect,useRef,useState } from "react";
 import {CaseAdministrationPanel} from "./CaseAdministrationPanel";
+import {CaseItemsPanel} from "./CaseItemsPanel";
 import {useCaseDraft} from "./useCaseDraft";
 import ConsultationThread from "../consultation/ConsultationThread";
 import DeliveryFilesManager from "../dashboard/DeliveryFilesManager";
@@ -18,11 +19,11 @@ const fileTime=(value:string|null|undefined)=>value?caseTime(value):"—";
 export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selectedNotificationId,overviewPart=null,talkEvents}:{talkEvents?:ReadonlyArray<{at:string;text:string}>;selectedNotificationId?:string;projectId:string;section:CaseSection;onChanged:()=>void;onDraftChange:(value:boolean)=>void;overviewPart?:CaseOverviewPart|null}){
  const [view,setView]=useState<CaseWorkView|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState("");
  const [draft,setDraft]=useState(false),[deliveryDraft,setDeliveryDraft]=useState(false);
- const [adminDraft,setAdminDraft]=useState(false),[recordDraft,setRecordDraft]=useState(false),[revisionDraft,setRevisionDraft]=useState(false);
+ const [adminDraft,setAdminDraft]=useState(false),[recordDraft,setRecordDraft]=useState(false),[revisionDraft,setRevisionDraft]=useState(false),[itemsDraft,setItemsDraft]=useState(false);
  const gate=useRef(false),alive=useRef(true);
  const load=useCallback(async(operationId?:string)=>{const next=await fetchCaseWork(projectId,operationId);if(alive.current)setView(next);return next;},[projectId]);
  useEffect(()=>{alive.current=true;void load().catch(e=>setError(e.message));return()=>{alive.current=false;};},[load]);
- useEffect(()=>{onDraftChange(draft||deliveryDraft||adminDraft||recordDraft||revisionDraft);return()=>onDraftChange(false);},[draft,deliveryDraft,adminDraft,recordDraft,revisionDraft,onDraftChange]);
+ useEffect(()=>{onDraftChange(draft||deliveryDraft||adminDraft||recordDraft||revisionDraft||itemsDraft);return()=>onDraftChange(false);},[draft,deliveryDraft,adminDraft,recordDraft,revisionDraft,itemsDraft,onDraftChange]);
  const refresh=async()=>{setError("");try{await load();onChanged();}catch(e){setError(e instanceof Error?e.message:"読み込めませんでした。");setView(null);}};
  const command=async(input:unknown)=>{
   if(gate.current)return false;gate.current=true;setBusy(true);setError("");setResult("");
@@ -42,8 +43,8 @@ export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selecte
    <section className={`${card} mt-4`}><h3 className="font-semibold">サイトの外であったこと</h3><p className="text-sm text-zinc-600">{origin?`受けた場所：${caseOriginLabels[origin.data.origin??"unknown"]}`:"メールや SNS で決まったこと、手渡しした納品などを書き残せます。"}</p>
     <WorkRecordForm view={view} disabled={busy||inactive} save={command} onDirty={setRecordDraft}/></section>
   </div>
-  <div hidden={section!=="consultation"}>
-   
+  <div hidden={section!=="consultation"} className="space-y-4">
+   <CaseItemsPanel key={`${projectId}/items`} projectId={projectId} disabled={inactive} onDraftChange={setItemsDraft}/>
    <ConsultationThread key={projectId} mode="staff" projectId={projectId} clientEmail={p.clientEmail??undefined} closed={inactive} events={talkEvents} readOnlyLookup workspaceExpected={{title:p.title,clientName:p.clientName,email:p.clientEmail}} onChanged={()=>{void refresh();}} onDraftChange={setDraft}/>
   </div>
   <div hidden={section!=="production"} className="space-y-4">
