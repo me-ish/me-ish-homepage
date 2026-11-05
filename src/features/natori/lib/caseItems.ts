@@ -180,3 +180,62 @@ export function caseItemPublicationNote(item: CaseItemPublicationFacts | null, t
   if (item.publicationPolicy === "unknown") return { open: false, text: "品目の公開条件がまだ決まっていないので、サイトに出ません。" };
   return { open: false, text: "品目が「公開しない」なので、サイトに出ません。" };
 }
+
+/** 案件の登録フォームで書いた品目の1行（入力途中の文字列のまま）。 */
+export type CaseItemDraftRow = { title: string; projectType: string; amount: string; dueDate: string };
+
+export type CaseItemDraftResult =
+  | { kind: "ok"; items: CaseItemFields[]; type: "icon" | "sd" | "standing" | "illustration" | null; amount: number | null; dueDate: string | null }
+  | { kind: "error"; message: string };
+
+const draftType = z.enum(["icon", "sd", "standing", "illustration"]);
+
+/** 登録フォームの品目の下書きを読み取る。空の行は無視。保存する品目と、案件全体の種類・合計・納期を返す。 */
+export function readCaseItemDraft(raw: string): CaseItemDraftRow[] {
+  try {
+    const parsed: unknown = JSON.parse(raw || "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.slice(0, NATORI_CASE_ITEM_MAX).map((row) => {
+      const r = (row && typeof row === "object" ? row : {}) as Record<string, unknown>;
+      const s = (k: string) => (typeof r[k] === "string" ? (r[k] as string) : "");
+      return { title: s("title"), projectType: s("projectType"), amount: s("amount"), dueDate: s("dueDate") };
+    });
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 登録フォームの品目から、保存する品目と案件の値を決める。
+ * 案件の種類は1点目の種類、金額は全品目の合計（1つでも金額が空なら決めない）、納期はいちばん早い納期。
+ */
+export function caseItemDraftToFields(rows: readonly CaseItemDraftRow[]): CaseItemDraftResult {
+  const used = rows.filter((r) => r.title.trim() || r.projectType || r.amount.trim() || r.dueDate);
+  if (used.length > NATORI_CASE_ITEM_MAX) return { kind: "error", message: `品目は${NATORI_CASE_ITEM_MAX}個までです。` };
+  const items: CaseItemFields[] = [];
+  for (const [index, row] of used.entries()) {
+    if (!row.title.trim()) return { kind: "error", message: `${index + 1}つ目の品目に名前を入れてください。` };
+    const amount = row.amount.trim() === "" ? null : Number(row.amount);
+    const parsed = caseItemFields.safeParse({
+      title: row.title.trim(),
+      projectType: row.projectType ? row.projectType : null,
+      amount,
+      dueDate: row.dueDate || null,
+      progress: "not_started",
+      publicationPolicy: "unknown",
+      publicationAllowedFrom: null,
+      note: null,
+    });
+    if (!parsed.success) return { kind: "error", message: `${index + 1}つ目の品目の入力を見直してください。` };
+    items.push(parsed.data);
+  }
+  const first = items[0]?.projectType ?? null;
+  const decided = items.length > 0 && items.every((i) => i.projectType !== null && i.amount !== null);
+  return {
+    kind: "ok",
+    items,
+    type: decided ? draftType.parse(first) : null,
+    amount: decided ? caseItemsTotal(items) : null,
+    dueDate: caseItemsEarliestDue(items),
+  };
+}
