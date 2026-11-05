@@ -18,7 +18,12 @@ beforeEach(() => {
     status: 200,
     json: async () => ({ content: defaultPortfolioContent, revision: 7 }),
   });
-  vi.stubGlobal("fetch", fetchMock);
+  // 作品を結ぶ品目の読み込みは別の話なので、保存の順番を数える fetchMock には入れない。
+  vi.stubGlobal("fetch", (url: string, init?: RequestInit) =>
+    String(url).includes("/api/natori/admin/case-items")
+      ? Promise.resolve({ ok: false, status: 503, json: async () => ({}) })
+      : fetchMock(url, init),
+  );
   vi.stubGlobal("matchMedia", () => ({ matches: false }));
   Element.prototype.scrollIntoView = vi.fn();
 });

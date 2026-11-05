@@ -10,6 +10,7 @@ import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAd
 import {
   addNatoriCaseItem,
   countNatoriCaseItemsByProject,
+  listLinkableCaseItems,
   deleteNatoriCaseItem,
   listNatoriCaseItems,
   updateNatoriCaseItem,
@@ -63,6 +64,11 @@ export const GET = withNatoriManagement("case-items.GET", false, async function 
     return NextResponse.json({ error: "unauthorized" }, { status: 401, headers: noStore });
   }
   const params = new URL(request.url).searchParams;
+  if (params.get("linkable") === "1") {
+    const items = await listLinkableCaseItems();
+    if (!items) return NextResponse.json({ error: "temporarily_unavailable" }, { status: 503, headers: noStore });
+    return NextResponse.json({ items }, { headers: noStore });
+  }
   if (params.get("counts") === "1") {
     const counts = await countNatoriCaseItemsByProject();
     if (!counts) return NextResponse.json({ error: "temporarily_unavailable" }, { status: 503, headers: noStore });

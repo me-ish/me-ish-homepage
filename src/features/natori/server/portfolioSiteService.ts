@@ -16,6 +16,8 @@ import { projectPortfolioPublicContent } from "@/features/natori/lib/portfolioPu
 import {normalizePortfolioAssetReferences,storePrivatePortfolioImage,validatePortfolioAssetReferences} from "./portfolioAssetsService";
 import {resolveNatoriOwnerId} from "./natoriOwner";
 import {readPortfolioSavedState} from "./portfolioContentStore";
+import { readCaseItemPublication } from "./caseItemsService";
+import { gateWorksByCaseItems, tokyoDateISO } from "@/features/natori/lib/caseItems";
 
 const TABLE = "natori_portfolio_content";
 const REFERENCE_BUCKET = "natori-inquiry-refs";
@@ -61,7 +63,16 @@ async function readPortfolioContent(): Promise<PortfolioDisplayContent> {
 
 /** Public callers receive the same filtered projection, including fallback content. */
 export async function loadPortfolioContent(): Promise<PortfolioDisplayContent> {
-  return projectPortfolioPublicContent(await readPortfolioContent());
+  return projectPortfolioPublicContent(await gateByCaseItems(await readPortfolioContent()));
+}
+
+/** 品目に結んだ作品は、品目の「公開してよい日」までは非公開として扱う（画像も一緒に外れる）。 */
+async function gateByCaseItems(content: PortfolioDisplayContent): Promise<PortfolioDisplayContent> {
+  const ids = content.works.flatMap((work) => (work.published && work.caseItemId ? [work.caseItemId] : []));
+  if (ids.length === 0) return content;
+  let items: Awaited<ReturnType<typeof readCaseItemPublication>> = null;
+  try { items = await readCaseItemPublication(ids); } catch { items = null; }
+  return { ...content, works: gateWorksByCaseItems(content.works, items, tokyoDateISO(new Date())) };
 }
 
 /** Guarded editor reads fail on errors so a fallback cannot overwrite saved drafts. */

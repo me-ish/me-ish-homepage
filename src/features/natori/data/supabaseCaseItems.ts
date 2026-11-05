@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import type { CaseItemFields } from "../lib/caseItems";
-import type { NatoriCaseItem } from "../types/caseItems";
+import type { NatoriCaseItem, NatoriLinkableCaseItem } from "../types/caseItems";
 
 const item = z.object({
   id: z.string(), projectId: z.string(), position: z.number().int(), title: z.string(),
@@ -36,6 +36,24 @@ export async function loadCaseItemCounts(signal?: AbortSignal): Promise<Record<s
     return countsResponse.parse(await response.json()).counts;
   } catch {
     return {};
+  }
+}
+
+const linkableResponse = z.object({
+  items: z.array(z.object({
+    id: z.string(), caseTitle: z.string(), position: z.number().int(), title: z.string(),
+    publicationPolicy: item.shape.publicationPolicy, publicationAllowedFrom: z.string().nullable(),
+  })),
+});
+
+/** ポートフォリオの作品に結ぶ候補。読めなければ null。 */
+export async function loadLinkableCaseItems(): Promise<NatoriLinkableCaseItem[] | null> {
+  try {
+    const response = await fetch("/api/natori/admin/case-items?linkable=1", { cache: "no-store" });
+    if (!response.ok) return null;
+    return linkableResponse.parse(await response.json()).items;
+  } catch {
+    return null;
   }
 }
 

@@ -61,6 +61,7 @@ const workSchema = z
     collectionId: stableContentId.nullable().optional(),
     featured: z.boolean().optional(),
     published: z.boolean().optional(),
+    caseItemId: z.uuid().nullable().optional(),
   })
   .superRefine((work, ctx) => {
     const hasRelatedLinks =
@@ -74,7 +75,7 @@ const workSchema = z
     }
   })
   .transform(
-    ({ id, title, tag, tags, image, productionMonth, relatedLinks, collectionId, featured, published }) => ({
+    ({ id, title, tag, tags, image, productionMonth, relatedLinks, collectionId, featured, published, caseItemId }) => ({
       id,
       title,
       tags: (tags ?? (tag !== undefined ? [tag] : []))
@@ -96,6 +97,7 @@ const workSchema = z
       collectionId: collectionId ?? null,
       featured: featured ?? false,
       published: published ?? true,
+      ...(caseItemId ? { caseItemId } : {}),
     }),
   );
 

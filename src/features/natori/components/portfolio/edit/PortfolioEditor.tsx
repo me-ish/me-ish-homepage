@@ -10,6 +10,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Eye, ImagePlus, Loader2, Save } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
+import { loadLinkableCaseItems } from "@/features/natori/data/supabaseCaseItems";
+import { tokyoDateISO } from "@/features/natori/lib/caseItems";
+import type { NatoriLinkableCaseItem } from "@/features/natori/types/caseItems";
+import { PortfolioWorkCaseItemField } from "./PortfolioWorkCaseItemField";
 import { preparePortfolioDisplayPreview } from "@/features/natori/lib/portfolioDisplay";
 import {
   PORTFOLIO_PREVIEW_STORAGE_KEY,
@@ -108,6 +112,15 @@ export default function PortfolioEditor({
   // 動画ファイルのアップロード中は保存を止める（途中で保存すると、できあがった動画のURLが保存に入らない）
   const [videoUploading, setVideoUploading] = useState(false);
   const contentReady = content !== null;
+  // 作品を結べる案件の品目（見本の画面では読まない）。
+  const [caseItems, setCaseItems] = useState<NatoriLinkableCaseItem[] | null>(null);
+  const [today] = useState(() => tokyoDateISO(new Date()));
+  useEffect(() => {
+    if (demoContent) return;
+    let live = true;
+    void loadLinkableCaseItems().then((items) => { if (live) setCaseItems(items); });
+    return () => { live = false; };
+  }, [demoContent]);
 
   useEffect(() => {
     if (demoContent) {
@@ -932,6 +945,12 @@ export default function PortfolioEditor({
                         ))}
                       </select>
                     </label>
+                    <PortfolioWorkCaseItemField
+                      value={work.caseItemId ?? null}
+                      options={caseItems}
+                      today={today}
+                      onChange={(caseItemId) => patch({ works: updateItem(content.works, index, { caseItemId }) })}
+                    />
                     <div className="flex flex-wrap gap-x-5 gap-y-2 rounded-xl border border-zinc-200/80 bg-white px-3 py-2.5 text-xs font-semibold text-zinc-700">
                       <label className="flex cursor-pointer items-center gap-2">
                         <input

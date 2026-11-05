@@ -144,3 +144,39 @@ export function caseItemsToEstimateLines(
       note: null,
     }));
 }
+
+/** 日本時間の今日（YYYY-MM-DD）。公開してよい日との比べ合わせに使う。 */
+export function tokyoDateISO(now: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+}
+
+export type CaseItemPublicationFacts = Pick<NatoriCaseItem, "publicationPolicy" | "publicationAllowedFrom">;
+
+/**
+ * 品目に結ばれた作品を、品目の公開条件が満たされるまで非公開として扱う。
+ * items が null（読めなかった）や、結んだ品目が見つからないときも出さない（出しすぎない側に倒す）。
+ * 品目に結ばれていない作品は変えない。
+ */
+export function gateWorksByCaseItems<W extends { caseItemId?: string | null; published: boolean }>(
+  works: readonly W[],
+  items: ReadonlyMap<string, CaseItemPublicationFacts> | null,
+  today: string,
+): W[] {
+  return works.map((work) => {
+    if (!work.caseItemId || !work.published) return work;
+    const item = items?.get(work.caseItemId);
+    return item && caseItemPublicationOpen(item, today) ? work : { ...work, published: false };
+  });
+}
+
+/** ポートフォリオ編集で、結んだ品目のせいで作品がいま出るかどうかの一言。 */
+export function caseItemPublicationNote(item: CaseItemPublicationFacts | null, today: string): { open: boolean; text: string } {
+  if (!item) return { open: false, text: "結んだ品目が見つかりません。結び直すまで、この作品はサイトに出ません。" };
+  if (caseItemPublicationOpen(item, today)) return { open: true, text: "品目の公開条件を満たしています。" };
+  if (item.publicationPolicy === "delayed" && item.publicationAllowedFrom) {
+    const [, m, d] = item.publicationAllowedFrom.split("-");
+    return { open: false, text: `${Number(m)}月${Number(d)}日から自動でサイトに出ます。それまでは出ません。` };
+  }
+  if (item.publicationPolicy === "unknown") return { open: false, text: "品目の公開条件がまだ決まっていないので、サイトに出ません。" };
+  return { open: false, text: "品目が「公開しない」なので、サイトに出ません。" };
+}
