@@ -59,11 +59,12 @@ export function caseStepForSection(steps: readonly CaseStep[], section: CaseSect
 
 /**
  * A case registered by hand that has not used the site's quote or payment link.
- * Once a quote or a link exists, the site's own steps apply again.
+ * Once a quote is sent or a link exists, the site's own steps apply again.
+ * An unsent quote draft does not count: saving one must not switch the steps.
  */
 export function caseUsesExternalSteps(record: CaseWorkspaceRecord): boolean {
   const f = record.model.facts;
-  return caseKnown(f.project)?.origin === "external" && f.quote.state === "absent" && f.link.state === "absent";
+  return caseKnown(f.project)?.origin === "external" && (f.quote.state === "absent" || caseQuoteDraftOnly(f.quote)) && f.link.state === "absent";
 }
 /** Labels for orders taken outside the site (つなぐ, SNS, mail). Quote and payment happen there, so they are one step. */
 export const EXTERNAL_CASE_STEP_LABELS: Partial<Record<CaseStepKey, string>> = {

@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import EstimateJourney from "../dashboard/EstimateJourney";
 import { useCaseDraft } from "./useCaseDraft";
 import { useCaseAdminOperation } from "./useCaseAdminOperation";
@@ -92,7 +92,10 @@ export function CaseAdministrationPanel({
   onDraftChange,
   refreshKey,
   selectedNotificationId,
+  externalOrder = false,
 }: {
+  /** Taken outside the site (つなぐ etc.): the amount is entered here and the quote mail form stays folded. */
+  externalOrder?: boolean;
   selectedNotificationId?:string;
   refreshKey: string;
   projectId: string;
@@ -106,6 +109,7 @@ export function CaseAdministrationPanel({
     [formDirty, setFormDirty] = useState(false),
     [opDirty, setOpDirty] = useState(false),
     [quoteDirty, setQuoteDirty] = useState(false),
+    [amountDirty, setAmountDirty] = useState(false),
     [lifecycleDirty, setLifecycleDirty] = useState(false);
   const generation = useRef(0);
   const invalidate = useCallback(() => {
@@ -138,9 +142,9 @@ export function CaseAdministrationPanel({
     setOpDirty,
   );
   useEffect(() => {
-    onDraftChange(formDirty || opDirty || quoteDirty || lifecycleDirty);
+    onDraftChange(formDirty || opDirty || quoteDirty || lifecycleDirty || amountDirty);
     return () => onDraftChange(false);
-  }, [formDirty, opDirty, quoteDirty, lifecycleDirty, onDraftChange]);
+  }, [formDirty, opDirty, quoteDirty, lifecycleDirty, amountDirty, onDraftChange]);
   if (!view || (selectedNotificationId ? view.selectedNotice?.id!==selectedNotificationId : !!view.selectedNotice))
     return (
       <section className={card}>
@@ -201,19 +205,34 @@ export function CaseAdministrationPanel({
       </div>
       <div hidden={section !== "transaction"} className="space-y-4">
         <section className={card}>
-          <h3 className="font-semibold">振込などの入金を記録</h3>
-          <p>
-            金額：{p.amount === null ? "まだ決まっていません" : `${p.amount.toLocaleString("ja-JP")}円`} /{" "}
+          <h3 className="font-semibold">{externalOrder ? "金額と入金" : "振込などの入金を記録"}</h3>
+          {externalOrder && !paymentRecorded ? (
+            <ExternalAmount
+              key={`${projectId}/${view.revision}`}
+              view={view}
+              disabled={disabled || inactive}
+              onDirty={setAmountDirty}
+              prepare={(patch) =>
+                prepare({ command: "details", patch }, [
+                  `金額：${patch.amount === null ? "空欄" : `${patch.amount.toLocaleString("ja-JP")}円`}`,
+                ])
+              }
+            />
+          ) : null}
+          <p className={externalOrder ? "text-sm" : undefined}>
+            {externalOrder && !paymentRecorded ? "" : `金額：${p.amount === null ? "まだ決まっていません" : `${p.amount.toLocaleString("ja-JP")}円`} / `}
             {paymentRecorded
               ? `入金済み ${caseTime(p.paymentConfirmedAt ?? p.paidAt ?? "")}`
               : "入金はまだ"}
           </p>
-          <p className="text-sm">
-            カード決済ではなく、振込や外部サイト（つなぐ等）で受け取った時に使います。
-          </p>
+          {externalOrder ? null : (
+            <p className="text-sm">
+              カード決済ではなく、振込や外部サイト（つなぐ等）で受け取った時に使います。
+            </p>
+          )}
           {!paymentRecorded && (p.amount === null || p.type === "undecided") ? (
             <p className="text-sm text-amber-900">
-              記録する前に{[p.amount === null ? "金額（その他 → 案件の情報を直す）" : "", p.type === "undecided" ? "依頼の種類（制作）" : ""].filter(Boolean).join("と")}を決めてください。
+              記録する前に{[p.amount === null ? (externalOrder ? "金額（上の欄）" : "金額（その他 → 案件の情報を直す）") : "", p.type === "undecided" ? "依頼の種類（制作）" : ""].filter(Boolean).join("と")}を決めてください。
             </p>
           ) : null}
           <button
@@ -230,8 +249,15 @@ export function CaseAdministrationPanel({
             入金を記録する（前に内容を表示）
           </button>
         </section>
-        <section className={card}>
-          <h3 className="font-semibold">見積</h3>
+        <QuoteMailSection
+          folded={
+            externalOrder && !view.quote
+              ? "external"
+              : view.quote?.acceptedAt || view.acceptance.at || paymentRecorded
+                ? "settled"
+                : null
+          }
+        >
           <EstimateJourney
             key={projectId}
             project={{
@@ -251,7 +277,7 @@ export function CaseAdministrationPanel({
               quoteNotice: view.quote,
             }}
           />
-        </section>
+        </QuoteMailSection>
         <section className={card}>
           <h3 className="font-semibold">送ったメール</h3>
           {view.selectedNotice?<p role="status">選んだメールだけを表示しています。{view.selectedNotice.isLatest?"":"これより新しいメールがあるので、ここからは送り直せません。"}</p>:null}
@@ -306,6 +332,98 @@ export function CaseAdministrationPanel({
         </section>
       </div>
     </div>
+  );
+}
+/**
+ * The quote form mails the client. Orders taken outside the site rarely need it,
+ * so for them it starts folded. Saving a draft keeps the external steps; sending switches to the site's steps.
+ * Once the client said OK or the payment is in, the form is only a record, so it is folded too.
+ */
+function QuoteMailSection({ folded, children }: { folded: "external" | "settled" | null; children: ReactNode }) {
+  if (!folded)
+    return (
+      <section className={card}>
+        <h3 className="font-semibold">見積</h3>
+        {children}
+      </section>
+    );
+  return (
+    <details className={look.cardPadded}>
+      <summary className="cursor-pointer font-semibold">
+        {folded === "external" ? "見積をメールで送る" : "見積の控え"}
+      </summary>
+      <div className="mt-3 space-y-3">
+        {folded === "external" ? (
+          <p className="text-sm text-zinc-600">
+            サイトの外で決まった案件では使いません。見積を送ると、サイトの流れ（見積→支払い）に切り替わります。
+          </p>
+        ) : null}
+        {children}
+      </div>
+    </details>
+  );
+}
+/** Amount for an order taken outside the site. Saved with the same command as 案件の情報を直す. */
+function ExternalAmount({
+  view,
+  disabled,
+  prepare,
+  onDirty,
+}: {
+  view: CaseAdminView;
+  disabled: boolean;
+  prepare: (patch: ReturnType<typeof caseBasicDetails.parse>) => void;
+  onDirty: (v: boolean) => void;
+}) {
+  const p = view.project;
+  const saved = p.amount === null ? "" : String(p.amount);
+  const [amount, setAmount] = useState(saved);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    onDirty(amount !== saved);
+    return () => onDirty(false);
+  }, [amount, saved, onDirty]);
+  return (
+    <form
+      className="space-y-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        try {
+          const patch = caseBasicDetails.parse({
+            title: p.title,
+            client_name: p.clientName,
+            amount: amount === "" ? null : Number(amount),
+            delivery_plan: p.deliveryPlan,
+            start_date: p.startDate ?? null,
+            due_date: p.dueDate ?? null,
+            note: p.note ?? null,
+          });
+          setError("");
+          prepare(patch);
+        } catch {
+          setError("金額は0以上の整数（円）で入れてください。");
+        }
+      }}
+    >
+      <fieldset disabled={disabled} className="flex flex-wrap items-end gap-2">
+        <label className="block text-sm">
+          金額（円）
+          <input
+            className={ui.input}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+        </label>
+        <button className={ui.btnSecondary} disabled={amount === saved}>
+          金額を保存
+        </button>
+      </fieldset>
+      {error ? <p role="alert" className="text-sm">{error}</p> : null}
+    </form>
   );
 }
 function BasicDetails({

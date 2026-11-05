@@ -36,7 +36,7 @@ export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selecte
  return <div className="mt-4 space-y-4">
   {error?<p role="alert" className={ui.alert.warning}>{error}</p>:null}{result?<p role="status">{result}</p>:null}
   
-  <CaseAdministrationPanel selectedNotificationId={selectedNotificationId} projectId={projectId} section={section} overviewPart={overviewPart} refreshKey={view.revision} onChanged={()=>void refresh()} onDraftChange={setAdminDraft}/>
+  <CaseAdministrationPanel selectedNotificationId={selectedNotificationId} projectId={projectId} section={section} overviewPart={overviewPart} refreshKey={view.revision} onChanged={()=>void refresh()} onDraftChange={setAdminDraft} externalOrder={origin?.data.origin==="external"}/>
   {/* Orders taken outside the site record their agreement and delivery here, so it also sits under 制作・納品 for them. */}
   <div hidden={!(section==="overview"&&overviewPart==="outside")&&!(section==="production"&&(origin?.data.origin==="external"||origin?.data.origin==="manual"))}>
    <section className={`${card} mt-4`}><h3 className="font-semibold">サイトの外であったこと</h3><p className="text-sm text-zinc-600">{origin?`受けた場所：${caseOriginLabels[origin.data.origin??"unknown"]}`:"メールや SNS で決まったこと、手渡しした納品などを書き残せます。"}</p>

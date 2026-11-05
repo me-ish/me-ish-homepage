@@ -27,8 +27,10 @@ export type CaseHistoryRow=z.infer<typeof caseHistoryRow>;
 export type CaseFinancialDisplay={
  gross:number|null;legacyRecordedAmount:number|null;method:string|null;confirmedAt:string|null;refunded:number|null;net:number|null;
  pendingCount:number|null;reviewCount:number|null;state:"verified"|"unverified";
+ /** True only when the snapshot shows no payment at all (not when it could not be read). */
+ paymentAbsent?:boolean;
 };
-export const caseHistoryView=caseHistoryPage.extend({financial:z.object({legacyRecordedAmount:z.number().int().nonnegative().safe().nullable(),gross:z.number().int().nonnegative().safe().nullable(),method:text,confirmedAt:time.nullable(),refunded:z.number().int().nonnegative().safe().nullable(),net:z.number().int().nonnegative().safe().nullable(),pendingCount:z.number().int().nonnegative().safe().nullable(),reviewCount:z.number().int().nonnegative().safe().nullable(),state:z.enum(["verified","unverified"])}).nullable(),legacyLogs:z.array(z.object({dateISO:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),label:z.string().max(100)}).strict())});
+export const caseHistoryView=caseHistoryPage.extend({financial:z.object({legacyRecordedAmount:z.number().int().nonnegative().safe().nullable(),gross:z.number().int().nonnegative().safe().nullable(),method:text,confirmedAt:time.nullable(),refunded:z.number().int().nonnegative().safe().nullable(),net:z.number().int().nonnegative().safe().nullable(),pendingCount:z.number().int().nonnegative().safe().nullable(),reviewCount:z.number().int().nonnegative().safe().nullable(),state:z.enum(["verified","unverified"]),paymentAbsent:z.boolean().optional()}).nullable(),legacyLogs:z.array(z.object({dateISO:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),label:z.string().max(100)}).strict())});
 export type CaseHistoryView=z.infer<typeof caseHistoryView>;
 /** Per-page validity; changing or partial data can never claim a complete collection. */
 export function assertHistoryPage(page:CaseHistoryPage,projectId:string,offset:number,revision:string|null){
