@@ -1,7 +1,7 @@
 # Supabaseテーブル説明（public, 自動生成）
 
 - 生成元: `src/types/supabase.ts`
-- 生成日時: `2026-10-31T00:15:09.161Z`
+- 生成日時: `2026-11-05T03:42:19.558Z`
 - 型定義に載っているテーブルだけを並べています。DBにある全テーブルと最新の定義は `supabase/migrations/` を参照してください。
 - 作り直し: `npm run docs:supabase`
 
@@ -36,6 +36,7 @@
 | `natori_portfolio_content` | ナトリ: ポートフォリオページの内容 | 4 |
 | `natori_portfolio_assets` | ナトリ: ポートフォリオのアップロード素材 | 7 |
 | `natori_pricing_configs` | ナトリ: 料金表の設定 | 9 |
+| `natori_case_items` | natori_case_itemsのデータ管理 | 13 |
 | `natori_consultation_access` | ナトリ: 相談ページ（トーク）のアクセス鍵 | 6 |
 | `natori_consultation_files` | ナトリ: トークの添付ファイル | 8 |
 | `natori_consultation_messages` | ナトリ: トークのメッセージ | 10 |
@@ -545,6 +546,26 @@
 | `sort_order` | `number` | NO | 表示順 |
 | `updated_at` | `string` | NO | 更新日時 |
 | `user_id` | `string` | NO | ユーザーID |
+
+## natori_case_items
+
+- 役割: natori_case_itemsのデータ管理
+
+| カラム | TypeScript型 | NULL可 | 作用 |
+|---|---|---|---|
+| `id` | `string` | NO | 主キーID |
+| `project_id` | `string` | NO | project_id（natori_case_items） |
+| `position` | `number` | NO | position（natori_case_items） |
+| `title` | `string` | NO | タイトル |
+| `project_type` | `string | null` | YES | project_type（natori_case_items） |
+| `amount` | `number | null` | YES | amount（natori_case_items） |
+| `due_date` | `string | null` | YES | due_date（natori_case_items） |
+| `progress` | `string` | NO | progress（natori_case_items） |
+| `publication_policy` | `string` | NO | publication_policy（natori_case_items） |
+| `publication_allowed_from` | `string | null` | YES | publication_allowed_from（natori_case_items） |
+| `note` | `string | null` | YES | 備考 |
+| `created_at` | `string` | NO | 作成日時 |
+| `updated_at` | `string` | NO | 更新日時 |
 
 ## natori_consultation_access
 
