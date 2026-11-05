@@ -37,3 +37,11 @@ export type NatoriLinkableCaseItem = {
   publicationPolicy: NatoriCaseItemPublicationPolicy;
   publicationAllowedFrom: string | null;
 };
+
+/** お客さまの画面に出す品目。金額・メモ・公開条件は出さない（約束の金額は見積で示す）。 */
+export type NatoriClientCaseItem = {
+  position: number;
+  title: string;
+  progress: NatoriCaseItemProgress;
+  dueDate: string | null;
+};
