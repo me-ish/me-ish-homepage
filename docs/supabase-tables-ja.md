@@ -1,7 +1,7 @@
 # Supabaseテーブル説明（public, 自動生成）
 
 - 生成元: `src/types/supabase.ts`
-- 生成日時: `2026-11-05T03:42:19.558Z`
+- 生成日時: `2026-11-05T13:30:53.733Z`
 - 型定義に載っているテーブルだけを並べています。DBにある全テーブルと最新の定義は `supabase/migrations/` を参照してください。
 - 作り直し: `npm run docs:supabase`
 
@@ -36,7 +36,7 @@
 | `natori_portfolio_content` | ナトリ: ポートフォリオページの内容 | 4 |
 | `natori_portfolio_assets` | ナトリ: ポートフォリオのアップロード素材 | 7 |
 | `natori_pricing_configs` | ナトリ: 料金表の設定 | 9 |
-| `natori_case_items` | natori_case_itemsのデータ管理 | 13 |
+| `natori_case_items` | natori_case_itemsのデータ管理 | 14 |
 | `natori_consultation_access` | ナトリ: 相談ページ（トーク）のアクセス鍵 | 6 |
 | `natori_consultation_files` | ナトリ: トークの添付ファイル | 8 |
 | `natori_consultation_messages` | ナトリ: トークのメッセージ | 10 |
@@ -560,6 +560,7 @@
 | `project_type` | `string | null` | YES | project_type（natori_case_items） |
 | `amount` | `number | null` | YES | amount（natori_case_items） |
 | `due_date` | `string | null` | YES | due_date（natori_case_items） |
+| `handed_over_at` | `string | null` | YES | handed_over_at（natori_case_items） |
 | `progress` | `string` | NO | progress（natori_case_items） |
 | `publication_policy` | `string` | NO | publication_policy（natori_case_items） |
 | `publication_allowed_from` | `string | null` | YES | publication_allowed_from（natori_case_items） |

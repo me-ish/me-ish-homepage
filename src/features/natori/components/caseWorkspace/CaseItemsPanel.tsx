@@ -10,6 +10,7 @@ import {
   caseItemToFields,
   caseItemsTotal,
   nextCaseItemPosition,
+  tokyoDateISO,
   type CaseItemFields,
 } from "../../lib/caseItems";
 import { caseDate } from "../../lib/caseWorkspacePresentation";
@@ -23,17 +24,19 @@ const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x245f 
 const yen = (n: number) => `${n.toLocaleString("ja-JP")}円`;
 
 type Draft = { [K in keyof CaseItemFields]: string };
-const EMPTY: Draft = { title: "", projectType: "", amount: "", dueDate: "", progress: "not_started", publicationPolicy: "unknown", publicationAllowedFrom: "", note: "" };
+const EMPTY: Draft = { title: "", projectType: "", amount: "", dueDate: "", progress: "not_started", publicationPolicy: "unknown", publicationAllowedFrom: "", note: "", handedOverAt: "" };
 const toDraft = (item: NatoriCaseItem): Draft => ({
   title: item.title, projectType: item.projectType ?? "", amount: item.amount === null ? "" : String(item.amount),
   dueDate: item.dueDate ?? "", progress: item.progress, publicationPolicy: item.publicationPolicy,
-  publicationAllowedFrom: item.publicationAllowedFrom ?? "", note: item.note ?? "",
+  publicationAllowedFrom: item.publicationAllowedFrom ?? "", note: item.note ?? "", handedOverAt: item.handedOverAt ?? "",
 });
 const fromDraft = (d: Draft) =>
   caseItemFields.safeParse({
     title: d.title, projectType: d.projectType || null, amount: d.amount === "" ? null : Number(d.amount),
     dueDate: d.dueDate || null, progress: d.progress, publicationPolicy: d.publicationPolicy,
     publicationAllowedFrom: d.publicationPolicy === "delayed" ? d.publicationAllowedFrom || null : null, note: d.note || null,
+    // 先渡しの日付は制作タブで付け外しする。完成でなくした品目からは外す。
+    handedOverAt: d.progress === "done" ? d.handedOverAt || null : null,
   });
 
 export function CaseItemsPanel({ projectId, store, disabled, onDraftChange }: { projectId: string; store: CaseItemsStore; disabled: boolean; onDraftChange: (dirty: boolean) => void }) {
@@ -77,6 +80,7 @@ export function CaseItemsPanel({ projectId, store, disabled, onDraftChange }: { 
                 <span className="mt-1 block text-sm text-zinc-600">
                   {[item.projectType ? CASE_ITEM_TYPE_LABELS[item.projectType] : null, item.amount !== null ? yen(item.amount) : "金額まだ", item.dueDate ? `納期 ${caseDate(item.dueDate)}` : "納期なし"].filter(Boolean).join(" · ")}
                 </span>
+                {item.handedOverAt ? <span className="block text-sm text-zinc-600">先にお渡し済み（{caseDate(item.handedOverAt)}）</span> : null}
                 <span className="block text-sm text-zinc-600">
                   公開：{item.publicationPolicy === "delayed" && item.publicationAllowedFrom ? `${caseDate(item.publicationAllowedFrom)}から` : CASE_ITEM_PUBLICATION_LABELS[item.publicationPolicy]}
                 </span>
@@ -97,34 +101,71 @@ export function CaseItemsPanel({ projectId, store, disabled, onDraftChange }: { 
   );
 }
 
-/** 制作タブ：品目ごとの進みだけを押して変える。品目が無ければ何も出さない。 */
+/**
+ * 制作タブ：品目ごとの進みを押して変える。完成した品目は「先に渡した」を記録できる（分納）。
+ * データ自体はトークで送る。正式な納品・受け取り確認は案件に1回のまま。品目が無ければ何も出さない。
+ */
 export function CaseItemsProgress({ projectId, store, disabled }: { projectId: string; store: CaseItemsStore; disabled: boolean }) {
   const { items, unavailable, busy, message, reload } = store;
   if (!items || unavailable || items.length === 0) return null;
   const done = items.filter((item) => item.progress === "done").length;
+  const save = (item: NatoriCaseItem, patch: Partial<CaseItemFields>) => {
+    const next = { ...caseItemToFields(item), ...patch };
+    if (next.progress !== "done") next.handedOverAt = null;
+    return store.run(() => updateCaseItem(projectId, item, next));
+  };
   return (
     <section className={`${look.cardPadded} space-y-3`} aria-label="品目の進み">
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="font-semibold">品目の進み</h3>
         <p className="text-sm text-zinc-600">{done}/{items.length} 完成</p>
       </div>
+      {items.length > 1 ? (
+        <p className="text-xs text-zinc-600">
+          仕上がった品目から先に渡せます。トークでデータを送ったら「先に渡した」を押すと、お客さまの相談ページにも「お渡し済み」と出ます。正式な納品は全部そろってから1回です。
+        </p>
+      ) : null}
       <ul className="space-y-2">
         {items.map((item) => (
           <li key={item.id} className="flex flex-wrap items-center justify-between gap-2">
-            <span className="min-w-0 font-semibold">{circled(item.position)} {item.title}</span>
-            <span role="group" aria-label={`${item.title}の進み`} className="flex gap-1">
+            <span className="min-w-0">
+              <span className="font-semibold">{circled(item.position)} {item.title}</span>
+              {item.handedOverAt ? <span className="ml-2 text-sm text-zinc-600">{caseDate(item.handedOverAt)}にお渡し済み</span> : null}
+            </span>
+            <span role="group" aria-label={`${item.title}の進み`} className="flex flex-wrap gap-1">
               {(Object.keys(CASE_ITEM_PROGRESS_LABELS) as (keyof typeof CASE_ITEM_PROGRESS_LABELS)[]).map((progress) => (
                 <button
                   key={progress}
                   type="button"
                   aria-pressed={item.progress === progress}
                   disabled={disabled || busy || item.progress === progress}
-                  onClick={() => void store.run(() => updateCaseItem(projectId, item, { ...caseItemToFields(item), progress }))}
+                  onClick={() => void save(item, { progress })}
                   className={`min-h-11 rounded-full px-3 text-sm font-semibold ${ui.focusRing} ${item.progress === progress ? "bg-[#BE185D] text-white" : "bg-zinc-100 text-zinc-700"}`}
                 >
                   {CASE_ITEM_PROGRESS_LABELS[progress]}
                 </button>
               ))}
+              {item.progress === "done" && items.length > 1 ? (
+                item.handedOverAt ? (
+                  <button
+                    type="button"
+                    disabled={disabled || busy}
+                    onClick={() => void save(item, { handedOverAt: null })}
+                    className={`min-h-11 rounded-full px-3 text-sm font-semibold text-zinc-600 underline ${ui.focusRing}`}
+                  >
+                    お渡しを取り消す
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={disabled || busy}
+                    onClick={() => void save(item, { handedOverAt: tokyoDateISO(new Date()) })}
+                    className={`min-h-11 rounded-full border border-pink-300 bg-white px-3 text-sm font-semibold text-pink-900 ${ui.focusRing}`}
+                  >
+                    先に渡した
+                  </button>
+                )
+              ) : null}
             </span>
           </li>
         ))}

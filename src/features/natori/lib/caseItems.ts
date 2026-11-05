@@ -46,8 +46,13 @@ export const caseItemFields = z
     publicationPolicy: z.enum(["allowed", "delayed", "work_private", "fully_private", "unknown"]),
     publicationAllowedFrom: isoDate.nullable(),
     note: z.string().max(2000).nullable(),
+    /** 先にお渡しした日（分納）。完成の品目だけが持てる。 */
+    handedOverAt: isoDate.nullable(),
   })
   .superRefine((value, ctx) => {
+    if (value.handedOverAt !== null && value.progress !== "done") {
+      ctx.addIssue({ code: "custom", path: ["handedOverAt"], message: "handover_requires_done" });
+    }
     if ((value.publicationPolicy === "delayed") !== (value.publicationAllowedFrom !== null)) {
       ctx.addIssue({
         code: "custom",
@@ -116,6 +121,7 @@ export function caseItemToFields(item: NatoriCaseItem): CaseItemFields {
     publicationPolicy: item.publicationPolicy,
     publicationAllowedFrom: item.publicationPolicy === "delayed" ? item.publicationAllowedFrom : null,
     note: item.note,
+    handedOverAt: item.progress === "done" ? item.handedOverAt : null,
   };
 }
 
@@ -225,6 +231,7 @@ export function caseItemDraftToFields(rows: readonly CaseItemDraftRow[]): CaseIt
       publicationPolicy: "unknown",
       publicationAllowedFrom: null,
       note: null,
+      handedOverAt: null,
     });
     if (!parsed.success) return { kind: "error", message: `${index + 1}つ目の品目の入力を見直してください。` };
     items.push(parsed.data);

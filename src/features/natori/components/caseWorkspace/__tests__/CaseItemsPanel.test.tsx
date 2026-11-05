@@ -11,7 +11,7 @@ import { useCaseItems } from "../useCaseItems";
 const PID = "11111111-1111-4111-8111-111111111111";
 const item = (position: number, patch: Partial<NatoriCaseItem> = {}): NatoriCaseItem => ({
   id: `i${position}`, projectId: PID, position, title: `品目${position}`, projectType: "standing", amount: 12000, dueDate: "2026-12-20",
-  progress: "not_started", publicationPolicy: "unknown", publicationAllowedFrom: null, note: null, updatedAt: "t", ...patch,
+  progress: "not_started", publicationPolicy: "unknown", publicationAllowedFrom: null, note: null, handedOverAt: null, updatedAt: "t", ...patch,
 });
 const draft = vi.fn();
 function Harness({ progress = false }: { progress?: boolean }) {
@@ -100,4 +100,24 @@ it("shows no progress card when the case has no items", async () => {
   const { container } = render(<Harness progress />);
   await waitFor(() => expect(m.load).toHaveBeenCalled());
   expect(container.textContent).toBe("");
+});
+
+it("records an early handover for a finished item and clears it when the item goes back", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-12-18T15:30:00Z")); // 日本時間 12/19 0:30
+  try {
+    m.load.mockResolvedValue({ kind: "ok", items: [item(1, { title: "クリスマス等身", progress: "done" }), item(2, { title: "SD" })] });
+    m.update.mockResolvedValueOnce({ kind: "ok", items: [item(1, { title: "クリスマス等身", progress: "done", handedOverAt: "2026-12-19", updatedAt: "t2" }), item(2, { title: "SD" })] });
+    render(<Harness progress />);
+    const group = await screen.findByRole("group", { name: "クリスマス等身の進み" });
+    expect(within(screen.getByRole("group", { name: "SDの進み" })).queryByRole("button", { name: "先に渡した" })).toBeNull();
+    fireEvent.click(within(group).getByRole("button", { name: "先に渡した" }));
+    await waitFor(() => expect(m.update).toHaveBeenLastCalledWith(PID, expect.objectContaining({ id: "i1" }), expect.objectContaining({ progress: "done", handedOverAt: "2026-12-19" })));
+    expect(await screen.findByText(/12\/19.*にお渡し済み/)).not.toBeNull();
+    m.update.mockResolvedValueOnce({ kind: "ok", items: [item(1, { title: "クリスマス等身", progress: "in_progress" }), item(2, { title: "SD" })] });
+    fireEvent.click(within(group).getByRole("button", { name: "制作中" }));
+    await waitFor(() => expect(m.update).toHaveBeenLastCalledWith(PID, expect.anything(), expect.objectContaining({ progress: "in_progress", handedOverAt: null })));
+  } finally {
+    vi.useRealTimers();
+  }
 });

@@ -13,16 +13,17 @@ export async function getClientCaseItems(token: string): Promise<NatoriClientCas
     if (!project || project.deleted_at) return null;
     const { data, error } = await supabaseAdmin()
       .from("natori_case_items")
-      .select("position, title, progress, due_date")
+      .select("position, title, progress, due_date, handed_over_at")
       .eq("project_id", project.id)
       .order("position", { ascending: true });
     if (error) {
       console.error("[natori-case-items] client read failed");
       return null;
     }
-    return ((data ?? []) as { position: number; title: string; progress: NatoriClientCaseItem["progress"]; due_date: string | null }[]).map(
-      (row) => ({ position: row.position, title: row.title, progress: row.progress, dueDate: row.due_date }),
-    );
+    type Row = { position: number; title: string; progress: NatoriClientCaseItem["progress"]; due_date: string | null; handed_over_at: string | null };
+    return ((data ?? []) as Row[]).map((row) => ({
+      position: row.position, title: row.title, progress: row.progress, dueDate: row.due_date, handedOverAt: row.handed_over_at,
+    }));
   } catch {
     return null;
   }

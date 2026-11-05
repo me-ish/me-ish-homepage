@@ -1,5 +1,5 @@
 // 案件の品目（1つのご依頼の中の1点ずつ）の表示用の型。
-// 見積・支払い・納品は案件単位のままで、品目はそれらを持たない。
+// 見積・支払い・納品は案件単位のままで、品目はそれらを持たない（先渡しの日付だけ持つ）。
 import type { NatoriConcreteProjectType } from "./projects";
 
 export type NatoriCaseItemProgress = "not_started" | "in_progress" | "done";
@@ -25,6 +25,8 @@ export type NatoriCaseItem = {
   /** delayed のときだけ入る（YYYY-MM-DD）。 */
   publicationAllowedFrom: string | null;
   note: string | null;
+  /** 先にお渡しした日（YYYY-MM-DD、分納）。正式な納品は案件単位のまま。 */
+  handedOverAt: string | null;
   updatedAt: string;
 };
 
@@ -44,4 +46,6 @@ export type NatoriClientCaseItem = {
   title: string;
   progress: NatoriCaseItemProgress;
   dueDate: string | null;
+  /** 先にお渡しした日（分納）。 */
+  handedOverAt: string | null;
 };

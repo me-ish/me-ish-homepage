@@ -950,6 +950,7 @@ export type Database = {
           project_type: string | null
           amount: number | null
           due_date: string | null
+          handed_over_at: string | null
           progress: string
           publication_policy: string
           publication_allowed_from: string | null
@@ -965,6 +966,7 @@ export type Database = {
           project_type?: string | null
           amount?: number | null
           due_date?: string | null
+          handed_over_at?: string | null
           progress?: string
           publication_policy?: string
           publication_allowed_from?: string | null
@@ -980,6 +982,7 @@ export type Database = {
           project_type?: string | null
           amount?: number | null
           due_date?: string | null
+          handed_over_at?: string | null
           progress?: string
           publication_policy?: string
           publication_allowed_from?: string | null
