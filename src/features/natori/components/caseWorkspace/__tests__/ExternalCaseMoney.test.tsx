@@ -23,3 +23,7 @@ it("shows a recorded payment",()=>{
  expect(screen.getByText("入金済み")).toBeTruthy();
  expect(screen.queryByRole("button")).toBeNull();
 });
+it("also checks a single item against the case amount",()=>{
+ render(<ExternalCaseMoney amount={8000} payment={null} items={items(10000)} onOpen={()=>{}}/>);
+ expect(screen.getByText("品目の合計（10,000円）と違います。")).toBeTruthy();
+});

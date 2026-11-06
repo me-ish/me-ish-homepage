@@ -15,7 +15,7 @@ export function ExternalCaseMoney({ amount, payment, items, onOpen }: {
   items: readonly Pick<NatoriCaseItem, "amount">[] | null;
   onOpen?: () => void;
 }) {
-  const total = items && items.length > 1 ? caseItemsTotal(items) : null;
+  const total = items && items.length > 0 ? caseItemsTotal(items) : null;
   const differs = total !== null && amount !== null && total !== amount;
   return (
     <section className={`${look.cardPadded} space-y-2`} aria-label="金額と入金">
