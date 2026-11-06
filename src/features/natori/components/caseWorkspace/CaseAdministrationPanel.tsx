@@ -292,7 +292,8 @@ export function CaseAdministrationPanel({
             }}
           />
         </QuoteMailSection>
-        <section className={card}>
+        {/* Orders taken outside the site send no mail from here until they switch to the site flow. */}
+        <section hidden={externalOrder && !view.notices.length && !view.selectedNotice} className={card}>
           <h3 className="font-semibold">送ったメール</h3>
           {view.selectedNotice?<p role="status">選んだメールだけを表示しています。{view.selectedNotice.isLatest?"":"これより新しいメールがあるので、ここからは送り直せません。"}</p>:null}
           {!view.complete&&!view.selectedNotice ? (

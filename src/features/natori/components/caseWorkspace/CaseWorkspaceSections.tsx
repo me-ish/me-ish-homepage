@@ -36,7 +36,8 @@ export function CaseWorkspaceSections({ record, section,step=null,application=fa
   const agreed = quote?.acceptance && m.agreement === "accepted" ? quote.acceptance : null;
   const quoteReply = m.agreement === "accepted" ? `OK · ${caseTime(quote!.acceptance!.acceptedAt)}` : m.agreement === "needs_review" ? "要確認" : "まだ";
   if (section === "transaction") return <div className="space-y-4">
-    {externalSteps && step === "quote" ? <><Rows rows={[["金額", caseKnown(m.facts.project)?.administrativeAmount ? caseMoney(caseKnown(m.facts.project)!.administrativeAmount) : "まだ決めていません"],
+    {/* In the app the 金額と入金 card below shows the same thing, so the summary rows are only for the read-only views. */}
+    {externalSteps && step === "quote" ? application && !readOnly ? null : <><Rows rows={[["金額", caseKnown(m.facts.project)?.administrativeAmount ? caseMoney(caseKnown(m.facts.project)!.administrativeAmount) : "まだ決めていません"],
         ["入金", payment ? `入金済み · ${caseTime(payment.confirmedAt)}` : "まだ記録していません"]]} />
 </>
     : step === "quote" ? <Rows rows={[["見積", quote ? `第${quote.version}版` : caseQuoteDraftOnly(m.facts.quote) ? "下書き（まだ送っていません）" : observationLabel(m.facts.quote, "まだありません")], ["金額", quote ? caseMoney(quote.money) : "—"], ["お客さんの返事", quote ? quoteReply : "—"]]} />
@@ -46,7 +47,7 @@ export function CaseWorkspaceSections({ record, section,step=null,application=fa
       ? <p className="text-sm leading-6 text-zinc-600">入金が済んだので、Stripe の管理画面でこの支払いリンクが「無効」になっているか見てください。有効のままなら、そこで無効にしてください。</p> : null}
     {application&&!readOnly&&!(external&&(m.facts.operations.state==="absent"||(m.facts.operations.state==="ready"&&m.facts.operations.value.length===0)))?<CaseReconciliationPanel selectedNotificationId={selectedNotificationId} key={`reconciliation-${record.id}`} projectId={record.id} onChanged={onChanged}/>:null}
     {external&&m.facts.link.state==="absent"?null:application&&!readOnly?<CasePaymentPanel key={record.id} projectId={record.id} onChanged={onChanged}/>:<p className="rounded-xl bg-pink-50 p-4 text-sm text-pink-950">{readOnly?"いまは見るだけなので、支払いリンクは送れません。":"見本の画面なので、見積や支払いリンクは送れません。"}</p>}
-    <Records title="見積・入金・メールの記録">
+    {externalSteps ? null : <Records title="見積・入金・メールの記録">
     <div className="grid gap-4 sm:grid-cols-2"><Card title="見積">{quote ? <><p className="font-semibold">第{quote.version}版 · {caseMoney(quote.money)}</p>
       <p className="mt-2 text-sm">{m.agreement === "accepted" ? `OKをもらった日時：${caseTime(quote.acceptance!.acceptedAt)}` : m.agreement === "needs_review" ? "要確認：OKの内容がこの見積と合っているか見てください" : "まだOKをもらっていません"}</p></>
       : <p>{caseQuoteDraftOnly(m.facts.quote) ? "下書きがあります（まだ送っていません）" : observationLabel(m.facts.quote, "見積はまだありません")}</p>}</Card>
@@ -55,7 +56,7 @@ export function CaseWorkspaceSections({ record, section,step=null,application=fa
         : <p>{observationLabel(m.facts.payment, "まだ入金はありません")}</p>}</Card></div>
     <Card title="支払いリンクとメール"><p>{caseKnown(m.facts.link) ? "支払いリンクは作ってあります。送ったメールは下にあります。" : observationLabel(m.facts.link,"支払いリンクはまだ作っていません")}</p>
       <div className="mt-4 border-t border-zinc-100 pt-4"><NotificationRows record={record} /></div></Card>
-    </Records>
+    </Records>}
   </div>;
   const deliveryRows: [string, ReactNode][] = [["納品", delivery ? `納品済み · ${caseTime(delivery.recordedAt)}` : observationLabel(m.facts.delivery, "まだ")],
     ["納品ページの期限", delivery?.expiresAt ? caseTime(delivery.expiresAt) : "—"], ["受け取り", receipt ? caseTime(receipt.acceptedAt) : observationLabel(d.receipt, "まだ")]];

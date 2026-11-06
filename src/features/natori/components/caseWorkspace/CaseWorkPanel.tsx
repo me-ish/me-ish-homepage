@@ -2,6 +2,7 @@
 import { useCallback,useEffect,useRef,useState } from "react";
 import {CaseAdministrationPanel} from "./CaseAdministrationPanel";
 import {CaseItemsPanel,CaseItemsProgress} from "./CaseItemsPanel";
+import {ExternalCaseMoney} from "./ExternalCaseMoney";
 import {useCaseItems} from "./useCaseItems";
 import {useCaseDraft} from "./useCaseDraft";
 import ConsultationThread from "../consultation/ConsultationThread";
@@ -17,7 +18,7 @@ import type { CaseOverviewPart, CaseSection } from "../../types/caseWorkspace";
 
 const card=`space-y-4 ${look.cardPadded}`;
 const fileTime=(value:string|null|undefined)=>value?caseTime(value):"—";
-export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selectedNotificationId,overviewPart=null,talkEvents}:{talkEvents?:ReadonlyArray<{at:string;text:string}>;selectedNotificationId?:string;projectId:string;section:CaseSection;onChanged:()=>void;onDraftChange:(value:boolean)=>void;overviewPart?:CaseOverviewPart|null}){
+export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selectedNotificationId,overviewPart=null,talkEvents,onOpenTransaction}:{onOpenTransaction?:()=>void;talkEvents?:ReadonlyArray<{at:string;text:string}>;selectedNotificationId?:string;projectId:string;section:CaseSection;onChanged:()=>void;onDraftChange:(value:boolean)=>void;overviewPart?:CaseOverviewPart|null}){
  const [view,setView]=useState<CaseWorkView|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState("");
  const [draft,setDraft]=useState(false),[deliveryDraft,setDeliveryDraft]=useState(false);
  const caseItems=useCaseItems(projectId);
@@ -36,18 +37,21 @@ export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selecte
  };
  if(!view)return <section className={card}><p role={error?"alert":"status"}>{error||"読み込み中…"}</p><button className={ui.btnSecondary} onClick={()=>void refresh()}>再読み込み</button></section>;
  const p=view.project,inactive=!!p.deletedAt||p.status==="closed",deliveredStatus=p.status==="delivered"||p.status==="completed",origin=view.records.find(r=>r.kind==="origin");
+ // Both つなぐ/SNS orders and cases registered by hand were agreed outside the site (the steps treat them alike).
+ const outside=origin?.data.origin==="external"||origin?.data.origin==="manual";
  return <div className="mt-4 space-y-4">
   {error?<p role="alert" className={ui.alert.warning}>{error}</p>:null}{result?<p role="status">{result}</p>:null}
   
-  <CaseAdministrationPanel selectedNotificationId={selectedNotificationId} projectId={projectId} section={section} overviewPart={overviewPart} refreshKey={view.revision} onChanged={()=>void refresh()} onDraftChange={setAdminDraft} externalOrder={origin?.data.origin==="external"}/>
+  <CaseAdministrationPanel selectedNotificationId={selectedNotificationId} projectId={projectId} section={section} overviewPart={overviewPart} refreshKey={view.revision} onChanged={()=>void refresh()} onDraftChange={setAdminDraft} externalOrder={outside}/>
   {/* Orders taken outside the site record their agreement and delivery here, so it also sits under 制作・納品 for them. */}
-  <div hidden={!(section==="overview"&&overviewPart==="outside")&&!(section==="production"&&(origin?.data.origin==="external"||origin?.data.origin==="manual"))}>
+  <div hidden={!(section==="overview"&&overviewPart==="outside")&&!(section==="production"&&outside)}>
    <section className={`${card} mt-4`}><h3 className="font-semibold">サイトの外であったこと</h3><p className="text-sm text-zinc-600">{origin?`受けた場所：${caseOriginLabels[origin.data.origin??"unknown"]}`:"メールや SNS で決まったこと、手渡しした納品などを書き残せます。"}</p>
     <WorkRecordForm view={view} disabled={busy||inactive} save={command} onDirty={setRecordDraft}/></section>
   </div>
   <div hidden={section!=="consultation"} className="space-y-4">
    <CaseItemsPanel key={`${projectId}/items`} projectId={projectId} store={caseItems} disabled={inactive} onDraftChange={setItemsDraft}/>
-   <ConsultationThread key={projectId} mode="staff" projectId={projectId} clientEmail={p.clientEmail??undefined} closed={inactive} events={talkEvents} readOnlyLookup workspaceExpected={{title:p.title,clientName:p.clientName,email:p.clientEmail}} onChanged={()=>{void refresh();}} onDraftChange={setDraft}/>
+   {outside?<ExternalCaseMoney amount={p.amount} payment={p.paymentConfirmedAt||p.paidAt||p.paidAmount!==null?{at:p.paymentConfirmedAt??p.paidAt}:null} items={caseItems.unavailable?null:caseItems.items} onOpen={onOpenTransaction}/>:null}
+   {outside&&!p.clientEmail&&!talkEvents?.length?null:<ConsultationThread key={projectId} mode="staff" projectId={projectId} clientEmail={p.clientEmail??undefined} closed={inactive} events={talkEvents} readOnlyLookup workspaceExpected={{title:p.title,clientName:p.clientName,email:p.clientEmail}} onChanged={()=>{void refresh();}} onDraftChange={setDraft}/>}
   </div>
   <div hidden={section!=="production"} className="space-y-4">
    <CaseItemsProgress projectId={projectId} store={caseItems} disabled={busy||inactive}/>

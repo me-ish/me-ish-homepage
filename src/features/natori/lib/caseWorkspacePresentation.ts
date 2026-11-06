@@ -44,6 +44,15 @@ export function observationLabel(value: CaseObservation<unknown>, absent = "„Åæ„
  * "unsupported" (a draft has no issued amount), and that is its only source of
  * "unsupported" for quotes. It is a normal stage, not a read failure.
  */
+/**
+ * A case registered by hand that has not used the site's quote or payment link.
+ * Once a quote is sent or a link exists, the site's own steps apply again.
+ * An unsent quote draft does not count: saving one must not switch the steps.
+ */
+export function caseUsesExternalSteps(record: CaseWorkspaceRecord): boolean {
+  const f = record.model.facts;
+  return caseKnown(f.project)?.origin === "external" && (f.quote.state === "absent" || caseQuoteDraftOnly(f.quote)) && f.link.state === "absent";
+}
 export function caseQuoteDraftOnly(value: CaseObservation<unknown>): boolean {
   return value.state === "unavailable" && value.reason === "unsupported" && !value.lastKnown;
 }
@@ -133,7 +142,8 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
     add(item.key, item.waitingOn, text, section, attentionButton[item.reason], MAIL_CHECK_REASONS.has(item.reason) ? true : undefined);
   }
   const inactive = !!project?.archivedAt || project?.rawStatus === "closed" || project?.rawStatus === "completed";
-  const quoteDraft = !quote && caseQuoteDraftOnly(m.facts.quote);
+  // Hand-registered cases settle the price outside the site, so an unsent draft is not a to-do.
+  const quoteDraft = !quote && caseQuoteDraftOnly(m.facts.quote) && !caseUsesExternalSteps(record);
   const quoteUnconfirmed = !quote && !quoteDraft && (m.facts.quote.state === "unavailable" || m.facts.quote.state === "not_requested");
   // Missing quote evidence is not an earlier business stage. Preserve confirmed
   // downstream facts and the model's higher-priority operation checks.

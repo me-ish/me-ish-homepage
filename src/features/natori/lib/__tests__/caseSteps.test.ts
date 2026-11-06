@@ -2,6 +2,7 @@ import { beforeAll, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { buildPreviewRecords } from "../../../../../scripts/natori-case-preview/fixtureReader";
 import { caseStepForSection, deriveCaseSteps } from "../caseSteps";
+import { deriveCaseGuidance } from "../caseWorkspacePresentation";
 import type { CaseWorkspaceRecord } from "../../types/caseWorkspace";
 
 let records: CaseWorkspaceRecord[];
@@ -76,4 +77,13 @@ it("keeps the outside-order steps while the quote is only an unsent draft", () =
   const draft = externalCase({}, r => ({ ...r, model: { ...r.model, facts: { ...r.model.facts,
     quote: { state: "unavailable" as const, reason: "unsupported" as const, snapshotId: r.model.snapshotId, observedAt: r.model.checkedAt } } } }));
   expect(deriveCaseSteps(draft).map(step => step.label)).toEqual(["依頼", "金額・入金", "制作", "納品", "完了"]);
+});
+
+it("does not ask to finish a quote draft on a case agreed outside the site", () => {
+  const draftQuote = (r: CaseWorkspaceRecord): CaseWorkspaceRecord => ({ ...r, model: { ...r.model, facts: { ...r.model.facts,
+    quote: { state: "unavailable" as const, reason: "unsupported" as const } } } });
+  const texts = (r: CaseWorkspaceRecord) => deriveCaseGuidance(r).waits.map(wait => wait.text);
+  expect(texts(externalCase({}, draftQuote))).not.toContain("見積の下書きを仕上げて送る");
+  // A site case with the same draft still gets the reminder.
+  expect(texts(externalCase({ origin: "internal" }, draftQuote))).toContain("見積の下書きを仕上げて送る");
 });
