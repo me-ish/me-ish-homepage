@@ -4,6 +4,8 @@ import EstimateJourney from "../dashboard/EstimateJourney";
 import { useCaseDraft } from "./useCaseDraft";
 import { useCaseAdminOperation } from "./useCaseAdminOperation";
 import { loadCaseAdministration } from "../../data/supabaseCaseAdministration";
+import { loadCaseItems } from "../../data/supabaseCaseItems";
+import { caseItemsTotal } from "../../lib/caseItems";
 import {
   caseAdminLabels,
   caseBasicDetails,
@@ -141,6 +143,17 @@ export function CaseAdministrationPanel({
     changed,
     setOpDirty,
   );
+  // 外部案件で品目があるときは、「金額と入金」を開くたびに品目の合計を読み直す（品目を直したあとでも合う）。
+  const [itemsTotal, setItemsTotal] = useState<number | null>(null);
+  useEffect(() => {
+    setItemsTotal(null);
+    if (!externalOrder || section !== "transaction") return;
+    let live = true;
+    void loadCaseItems(projectId).then((result) => {
+      if (live && result.kind === "ok" && result.items.length > 0) setItemsTotal(caseItemsTotal(result.items));
+    });
+    return () => { live = false; };
+  }, [externalOrder, section, projectId, refreshKey]);
   useEffect(() => {
     onDraftChange(formDirty || opDirty || quoteDirty || lifecycleDirty || amountDirty);
     return () => onDraftChange(false);
@@ -210,6 +223,7 @@ export function CaseAdministrationPanel({
             <ExternalAmount
               key={`${projectId}/${view.revision}`}
               view={view}
+              itemsTotal={itemsTotal}
               disabled={disabled || inactive}
               onDirty={setAmountDirty}
               prepare={(patch) =>
@@ -364,13 +378,16 @@ function QuoteMailSection({ folded, children }: { folded: "external" | "settled"
   );
 }
 /** Amount for an order taken outside the site. Saved with the same command as 案件の情報を直す. */
-function ExternalAmount({
+export function ExternalAmount({
   view,
+  itemsTotal,
   disabled,
   prepare,
   onDirty,
 }: {
   view: CaseAdminView;
+  /** 品目の金額の合計（品目が無い・金額が空の品目があるときは null）。 */
+  itemsTotal: number | null;
   disabled: boolean;
   prepare: (patch: ReturnType<typeof caseBasicDetails.parse>) => void;
   onDirty: (v: boolean) => void;
@@ -422,6 +439,18 @@ function ExternalAmount({
           金額を保存
         </button>
       </fieldset>
+      {itemsTotal !== null && String(itemsTotal) !== saved ? (
+        <p className="flex flex-wrap items-center gap-2 text-sm text-amber-900">
+          品目の合計は{itemsTotal.toLocaleString("ja-JP")}円です。
+          {String(itemsTotal) !== amount ? (
+            <button type="button" className={ui.btnSecondary} disabled={disabled} onClick={() => setAmount(String(itemsTotal))}>
+              品目の合計を入れる
+            </button>
+          ) : (
+            <span>「金額を保存」で案件の金額にします。</span>
+          )}
+        </p>
+      ) : null}
       {error ? <p role="alert" className="text-sm">{error}</p> : null}
     </form>
   );
