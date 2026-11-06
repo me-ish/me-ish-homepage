@@ -1,5 +1,7 @@
 import type { CaseSection, CaseWorkspaceRecord } from "../types/caseWorkspace";
-import { caseKnown, caseMoney, caseQuoteDraftOnly, caseTime } from "./caseWorkspacePresentation";
+import { caseKnown, caseMoney, caseQuoteDraftOnly, caseTime, caseUsesExternalSteps } from "./caseWorkspacePresentation";
+
+export { caseUsesExternalSteps };
 
 export const CASE_STEP_KEYS = ["consultation", "quote", "payment", "production", "delivery", "receipt"] as const;
 export type CaseStepKey = typeof CASE_STEP_KEYS[number];
@@ -57,15 +59,6 @@ export function caseStepForSection(steps: readonly CaseStep[], section: CaseSect
   return (candidates.find(step => step.state === "current") ?? [...candidates].reverse().find(step => step.state === "done") ?? candidates[0])?.key ?? null;
 }
 
-/**
- * A case registered by hand that has not used the site's quote or payment link.
- * Once a quote is sent or a link exists, the site's own steps apply again.
- * An unsent quote draft does not count: saving one must not switch the steps.
- */
-export function caseUsesExternalSteps(record: CaseWorkspaceRecord): boolean {
-  const f = record.model.facts;
-  return caseKnown(f.project)?.origin === "external" && (f.quote.state === "absent" || caseQuoteDraftOnly(f.quote)) && f.link.state === "absent";
-}
 /** Labels for orders taken outside the site (つなぐ, SNS, mail). Quote and payment happen there, so they are one step. */
 export const EXTERNAL_CASE_STEP_LABELS: Partial<Record<CaseStepKey, string>> = {
   consultation: "依頼", quote: "金額・入金", production: "制作", delivery: "納品", receipt: "完了",
