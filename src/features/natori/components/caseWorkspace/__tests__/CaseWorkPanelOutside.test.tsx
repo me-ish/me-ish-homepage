@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { CaseWorkView } from "../../../lib/caseWork";
 const m=vi.hoisted(()=>({fetch:vi.fn(),admin:vi.fn()}));
@@ -8,7 +8,7 @@ vi.mock("../CaseAdministrationPanel",()=>({CaseAdministrationPanel:(props:{exter
 vi.mock("../../consultation/ConsultationThread",()=>({default:()=><p>トーク欄</p>}));
 vi.mock("../../dashboard/DeliveryFilesManager",()=>({default:()=>null}));
 vi.mock("../CaseItemsPanel",()=>({CaseItemsPanel:()=>null,CaseItemsProgress:()=>null}));
-vi.mock("../useCaseItems",()=>({useCaseItems:()=>({})}));
+vi.mock("../useCaseItems",()=>({useCaseItems:()=>({items:[],unavailable:false})}));
 import { CaseWorkPanel } from "../CaseWorkPanel";
 const id="11111111-1111-4111-8111-111111111111",revision="a".repeat(64);
 function view(origin:string,clientEmail:string|null):CaseWorkView{
@@ -18,7 +18,7 @@ function view(origin:string,clientEmail:string|null):CaseWorkView{
 }
 beforeEach(()=>{vi.clearAllMocks();});
 afterEach(()=>cleanup());
-const panel=()=>render(<CaseWorkPanel projectId={id} section="consultation" onChanged={()=>{}} onDraftChange={()=>{}}/>);
+const panel=(onOpenTransaction?:()=>void)=>render(<CaseWorkPanel projectId={id} section="consultation" onOpenTransaction={onOpenTransaction} onChanged={()=>{}} onDraftChange={()=>{}}/>);
 it("treats a case registered by hand like an outside order and drops the empty talk",async()=>{
  m.fetch.mockResolvedValue(view("manual",null));
  panel();
@@ -36,4 +36,18 @@ it("keeps site cases on the site flow",async()=>{
  panel();
  expect(await screen.findByText("トーク欄")).toBeTruthy();
  expect(m.admin).toHaveBeenLastCalledWith(false);
+});
+it("puts the amount and payment of an outside order on the 依頼 sheet",async()=>{
+ const open=vi.fn();
+ m.fetch.mockResolvedValue(view("manual",null));
+ panel(open);
+ fireEvent.click(await screen.findByRole("button",{name:"入金を記録する"}));
+ expect(open).toHaveBeenCalledTimes(1);
+ expect(screen.getByText("30,000円")).toBeTruthy();
+});
+it("does not add the money card to site cases",async()=>{
+ m.fetch.mockResolvedValue(view("internal",null));
+ panel(()=>{});
+ await screen.findByText("トーク欄");
+ expect(screen.queryByRole("region",{name:"金額と入金"})).toBeNull();
 });

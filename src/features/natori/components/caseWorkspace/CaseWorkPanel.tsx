@@ -2,6 +2,7 @@
 import { useCallback,useEffect,useRef,useState } from "react";
 import {CaseAdministrationPanel} from "./CaseAdministrationPanel";
 import {CaseItemsPanel,CaseItemsProgress} from "./CaseItemsPanel";
+import {ExternalCaseMoney} from "./ExternalCaseMoney";
 import {useCaseItems} from "./useCaseItems";
 import {useCaseDraft} from "./useCaseDraft";
 import ConsultationThread from "../consultation/ConsultationThread";
@@ -17,7 +18,7 @@ import type { CaseOverviewPart, CaseSection } from "../../types/caseWorkspace";
 
 const card=`space-y-4 ${look.cardPadded}`;
 const fileTime=(value:string|null|undefined)=>value?caseTime(value):"—";
-export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selectedNotificationId,overviewPart=null,talkEvents}:{talkEvents?:ReadonlyArray<{at:string;text:string}>;selectedNotificationId?:string;projectId:string;section:CaseSection;onChanged:()=>void;onDraftChange:(value:boolean)=>void;overviewPart?:CaseOverviewPart|null}){
+export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selectedNotificationId,overviewPart=null,talkEvents,onOpenTransaction}:{onOpenTransaction?:()=>void;talkEvents?:ReadonlyArray<{at:string;text:string}>;selectedNotificationId?:string;projectId:string;section:CaseSection;onChanged:()=>void;onDraftChange:(value:boolean)=>void;overviewPart?:CaseOverviewPart|null}){
  const [view,setView]=useState<CaseWorkView|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState("");
  const [draft,setDraft]=useState(false),[deliveryDraft,setDeliveryDraft]=useState(false);
  const caseItems=useCaseItems(projectId);
@@ -49,6 +50,7 @@ export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selecte
   </div>
   <div hidden={section!=="consultation"} className="space-y-4">
    <CaseItemsPanel key={`${projectId}/items`} projectId={projectId} store={caseItems} disabled={inactive} onDraftChange={setItemsDraft}/>
+   {outside?<ExternalCaseMoney amount={p.amount} payment={p.paymentConfirmedAt||p.paidAt||p.paidAmount!==null?{at:p.paymentConfirmedAt??p.paidAt}:null} items={caseItems.unavailable?null:caseItems.items} onOpen={onOpenTransaction}/>:null}
    {outside&&!p.clientEmail&&!talkEvents?.length?null:<ConsultationThread key={projectId} mode="staff" projectId={projectId} clientEmail={p.clientEmail??undefined} closed={inactive} events={talkEvents} readOnlyLookup workspaceExpected={{title:p.title,clientName:p.clientName,email:p.clientEmail}} onChanged={()=>{void refresh();}} onDraftChange={setDraft}/>}
   </div>
   <div hidden={section!=="production"} className="space-y-4">
