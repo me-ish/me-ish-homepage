@@ -4,8 +4,6 @@ import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 // This suite verifies the outer reader/navigation; command panels have separate integration coverage.
 vi.mock("../../components/caseWorkspace/CaseWorkPanel",()=>({CaseWorkPanel:()=>null}));
-// 「今日やること」は同じ案件へのリンクを並べるので、一覧の検証では外す（CaseTodayList.test.tsx で別に確かめる）。
-vi.mock("../../components/caseWorkspace/CaseTodayList",()=>({CaseTodayList:()=>null}));
 vi.mock("../requireNatoriAdmin", () => ({ resolveNatoriOperator: () => { throw new Error("Unexpected live auth"); } }));
 vi.mock("../trustedNatoriOwner", () => ({ resolveTrustedNatoriOwnerId: () => { throw new Error("Unexpected live owner lookup"); } }));
 import { buildPreviewRecords } from "../../../../../scripts/natori-case-preview/fixtureReader";
