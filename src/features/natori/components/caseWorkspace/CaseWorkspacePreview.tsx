@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState, type AnchorHTMLAttributes, type Key, type ReactNode } from "react";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
 import { CASE_SECTIONS, type CaseEntry, type CaseOverviewPart, type CaseWorkspaceRecord } from "../../types/caseWorkspace";
-import { caseDate, caseDaysUntil, caseKnown, caseTime, caseTargetSection, CASE_SECTION_LABELS, caseTurn, caseWaitLine, deriveCaseGuidance, observationLabel } from "../../lib/caseWorkspacePresentation";
+import { caseDate, caseKnown, caseTime, caseTargetSection, CASE_SECTION_LABELS, caseTurn, caseWaitLine, deriveCaseGuidance, observationLabel } from "../../lib/caseWorkspacePresentation";
 import { CASE_NOTICE_PURPOSES, caseNoticeLabel, caseQuoteSentAt, caseTalkEvents, caseShelved, matchesCaseEntry } from "../../lib/caseWorkspaceEntries";
 import { caseDefaultFilter, caseWorkspaceHref, parseCaseWorkspaceLocation, type CaseWorkspaceLocation } from "../../lib/caseWorkspaceNavigation";
 import {publicAcceptanceTarget} from "@/lib/caseAcceptanceEnvironment";
@@ -30,8 +30,7 @@ import {NatoriAdminFont} from "../admin/NatoriAdminFont";
 import {caseStepForSection,deriveCaseSteps} from "../../lib/caseSteps";
 import {workspaceLook as look} from "../../constants/workspaceLook";
 import {CaseStageIcon} from "./CaseStageIcon";
-import {CaseTodayList} from "./CaseTodayList";
-import {deriveCaseTodayList,type CaseTodayItem} from "../../lib/caseTodayList";
+import {caseTodayDue,type CaseTodayDue} from "../../lib/caseTodayList";
 import {CalendarDays, ChevronRight, Clock, Globe, LayoutList, MessageCircle, MoreHorizontal, type LucideIcon} from "lucide-react";
 
 export type CasePreviewLoader = (mode: CaseWorkspaceLocation["mode"], signal: AbortSignal) => Promise<readonly CaseWorkspaceRecord[]>;
@@ -203,19 +202,21 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
   const utilityOpen=nav.utility!=="none"&&(application?entryTools:nav.utility==="pages");
   const pagesTab=!application||entryTools,pagesLocation:CaseWorkspaceLocation={...nav,utility:"pages",projectId:null,section:"overview"};
   const entryTitle=nav.entry==="schedule"?`${caseDate(nav.date,today)}の予定`:nav.entry==="notifications"?"トーク":"案件";
-  // Urgency only while the work is still ahead: a delivered case no longer races its due date.
+  // Every row states its remaining time in words (「あと◯日」「◯日超過」), not only the urgent ones.
+  // A delivered case no longer races its due date, so the receipt stage gets no badge.
+  const DUE_TONE: Record<CaseTodayDue["tone"], string> = {
+    overdue: "bg-[#FF3B30]/10 text-[#D70015]",
+    soon: "bg-[#FF9500]/15 text-[#C93400]",
+    later: "bg-sky-50 text-sky-800",
+    none: "bg-[#F2F2F7] text-[#6E6E73]",
+  };
   const dueBadge=(row:CaseWorkspaceRecord)=>{
     const step=deriveCaseSteps(row).find(s=>s.state==="current");
     if(!row.registeredDueDate||!step||step.key==="receipt")return null;
-    const days=caseDaysUntil(row.registeredDueDate,today);
-    return days<0?<span className="inline-block rounded-full bg-[#FF3B30]/10 px-2 py-0.5 text-[11px] font-semibold text-[#D70015]">納期を{-days}日過ぎています</span>
-      :days<=3?<span className="inline-block rounded-full bg-[#FF9500]/15 px-2 py-0.5 text-[11px] font-semibold text-[#C93400]">{days===0?"今日が納期":`納期まであと${days}日`}</span>:null;
+    const due=caseTodayDue(row,today);
+    return <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${DUE_TONE[due.tone]}`}>{due.label}</span>;
   };
   const itemBadge=(row:CaseWorkspaceRecord)=>(itemCounts[row.id]??0)>1?<span className="inline-block rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-800">{itemCounts[row.id]}点</span>:null;
-  // 「今日やること」: 案件一覧のトップ（スマホ）と、案件を選んでいない時の右側（案件・予定）で同じ部品を出す。
-  const todayItems=records===null?null:deriveCaseTodayList(rows,today);
-  const todayLink=(item:CaseTodayItem,content:ReactNode,className:string)=>link({...open(item.id),section:item.section},content,className);
-  const todayList=(headingId:string,className="")=><CaseTodayList items={todayItems} loading={pending} headingId={headingId} renderLink={todayLink} className={className}/>;
   const chevron=<ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[#C7C7CC]" strokeWidth={2.5}/>;
   const caseCard=(row:CaseWorkspaceRecord)=>{const g=deriveCaseGuidance(row),active=nav.projectId===row.id,step=deriveCaseSteps(row).find(s=>s.state==="current"),due=dueBadge(row);return link(open(row.id),<>
             <CaseStageIcon stage={step?.key??null}/>
@@ -260,7 +261,6 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
       <div className={`${utilityOpen?"hidden":"grid"} gap-6 lg:grid-cols-[21rem_minmax(0,1fr)]`}>
         <aside aria-label={entryTitle} className={`${nav.projectId?"hidden lg:block":""} min-w-0`}>
           {/* Registration is a small button beside the case heading; its form opens below the heading. */}
-          {nav.entry==="cases"?todayList("today-list-top","mb-8 lg:hidden"):null}
           <div className="mb-3 flex flex-wrap items-end gap-x-3 gap-y-2"><h1 className={look.largeTitle}>{entryTitle}</h1><span className={`pb-1 text-[13px] ${look.muted}`}>{records===null?"件数を読み込み中":`${pending||failed?"前回：":""}${visible.length}案件`}</span>
             {nav.entry==="cases"&&application&&entryTools&&personalEventsEnabled&&!publicAcceptanceTarget(true)&&!readOnly?<CaseRegistration today={today} onChanged={()=>setReload(v=>v+1)} onDraftChange={setHasRegistrationDraft} onOpen={id=>{const next={...nav,entry:"cases" as const,projectId:id,selectedId:id,section:"overview" as const};move(next);setReload(v=>v+1);}}/>:null}</div>
           {nav.entry==="cases"?<div role="group" aria-label="対応で絞り込む" className={`mb-3 overflow-x-auto ${look.segments}`}>{CASE_FILTER_CHIPS.map(([value,label])=><button key={value} type="button" aria-pressed={nav.filter===value} onClick={()=>move({...nav,filter:value})}
@@ -318,7 +318,6 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
             {selectedFailed?<p className="mb-5 text-xs leading-5 text-zinc-500">{caseTime(selected.model.checkedAt)}に読み込んだ内容です</p>:null}
             {guidance.unknown.some(item=>!item.startsWith("要確認："))&&!chatOnly?<div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"><p className="font-semibold">読み込めなかった記録があります</p><ul className="mt-1 space-y-1">{guidance.unknown.filter(item=>!item.startsWith("要確認：")).map(item=><li key={item}>{item}</li>)}</ul></div>:null}
           </>:nav.projectId?<div className={ui.card}><h1 ref={heading} tabIndex={-1} className="font-semibold outline-none">{selectedPending?"読み込み中":selectedFailed&&detail?.error!=="not_found"?"案件を読み込めませんでした":"この案件は見つかりませんでした"}</h1><p className="mt-3 text-sm text-zinc-600">{link(back,"一覧へ戻る",ui.btnLink)}</p></div>
-            :nav.entry==="cases"||nav.entry==="schedule"?todayList("today-list-main")
             :<div className="grid min-h-[480px] place-content-center rounded-2xl bg-white p-8 text-center"><h2 className={`text-xl ${look.title}`}>案件を選んでください</h2><p className={`mt-3 text-sm leading-7 ${look.muted}`}>左の一覧から選ぶと、ここに次にやることが出ます。</p></div>}
         </main>
       </div>
