@@ -10,8 +10,10 @@ type StepLink = (step: CaseStep, content: ReactNode, className: string, attribut
  * Vertical step view. The open step's work area sits right under that step; the
  * area keeps one position in the tree so drafts inside it survive step changes.
  */
-export function CaseStepList({ steps, selected, link, sheet = null, trailing = false, bare = false, children }: {
+export function CaseStepList({ steps, selected, link, sheet = null, trailing = false, bare = false, consultationClientLast = false, children }: {
   steps: readonly CaseStep[]; selected: CaseStepKey | null; link: StepLink; children: ReactNode;
+  /** The client wrote last: a pink dot on the 相談 step row (it used to sit on the bottom tab). */
+  consultationClientLast?: boolean;
   /** No step is open and the work area comes first, with every step listed after it. */
   trailing?: boolean;
   /** Only the work area, with no steps around it (the トーク tab's chat view). The tree stays the same so drafts survive. */
@@ -30,7 +32,7 @@ export function CaseStepList({ steps, selected, link, sheet = null, trailing = f
         <span aria-hidden="true" className={`relative z-[1] flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${dot}`}>{step.state === "done" ? "✓" : index + 1}</span>
         <span className="min-w-0 flex-1">
           <span className={`flex items-center justify-between gap-2 text-[15px] font-semibold leading-8 ${step.state === "upcoming" ? "text-[#8E8E93]" : "text-[#1C1C1E]"}`}>
-            <span>{step.label}<span className="sr-only">{step.state === "done" ? "（済み）" : step.state === "current" ? "（いまの段階）" : "（これから）"}</span></span>
+            <span>{step.label}<span className="sr-only">{step.state === "done" ? "（済み）" : step.state === "current" ? "（いまの段階）" : "（これから）"}</span>{step.key === "consultation" && consultationClientLast ? <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-pink-500" role="img" aria-label="お客さんが最後に書いています" /> : null}</span>
             {!open && step.state !== "upcoming" ? <span aria-hidden="true" className="text-base text-[#C7C7CC]">›</span> : null}
           </span>
           {step.summary ? <span className={`-mt-1 block ${look.stepSummary}`}>{step.summary}</span> : null}

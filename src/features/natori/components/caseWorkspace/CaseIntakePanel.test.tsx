@@ -85,6 +85,26 @@ it("keeps the original revision with a draft and blocks rebasing it onto a later
   );
   expect(saved.request.revision).toBe("b".repeat(64));
 });
+it("in the consultation view, hides the next-action memo and starts reference links as a single add button", async () => {
+  render(
+    <CaseIntakePanel
+      projectId={id}
+      section="consultation"
+      refreshKey="consult"
+      onChanged={changed}
+      onDraftChange={dirty}
+      onAccessRejected={rejected}
+    />,
+  );
+  expect(
+    await screen.findByRole("button", { name: "＋ 参考リンクを追加" }),
+  ).toBeTruthy();
+  expect(screen.queryByText(/参考リンク（/)).toBeNull();
+  expect(screen.queryByText("まだありません")).toBeNull();
+  expect(screen.queryByLabelText("次にやること")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "＋ 参考リンクを追加" }));
+  expect(screen.getByRole("button", { name: "リンクを保存する" })).toBeTruthy();
+});
 it("clears source content on a failed read and never labels an unavailable file list empty", async () => {
   const v = render(view("one"));
   await screen.findByText("受付時の記録");

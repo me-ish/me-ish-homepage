@@ -146,6 +146,7 @@ export function CaseIntakePanel({
         <IntakeContent
           key={projectId}
           view={view}
+          section={section}
           disabled={
             readOnly ||
             loading ||
@@ -180,6 +181,7 @@ export function CaseIntakePanel({
 }
 function IntakeContent({
   view,
+  section,
   disabled,
   resetDisabled,
   onDirty,
@@ -187,6 +189,7 @@ function IntakeContent({
   latest,
 }: {
   view: CaseContext;
+  section: CaseSection;
   disabled: boolean;
   resetDisabled: boolean;
   onDirty: (v: boolean) => void;
@@ -213,6 +216,7 @@ function IntakeContent({
     onDirty,
   );
   const [error, setError] = useState("");
+  const [linkFormOpen, setLinkFormOpen] = useState(false);
   const [resetting,setResetting]=useState(false);
   const stale = draft.revision !== view.revision;
   const save = (action: CaseAdminRequest["action"], summary: string[]) => {
@@ -272,10 +276,19 @@ function IntakeContent({
         acquisitionState={view.filesState}
       />
       <section aria-label="参考リンク">
-        <h4 className="font-semibold">参考リンク（{view.links.length}/5件）</h4>
-        {view.links.length === 0 ? (
-          <p>まだありません</p>
+        {view.links.length === 0 && draft.mode !== "edit" && !linkFormOpen ? (
+          <button
+            type="button"
+            className={ui.btnSecondary}
+            disabled={disabled || stale}
+            onClick={() => setLinkFormOpen(true)}
+          >
+            ＋ 参考リンクを追加
+          </button>
         ) : (
+          <>
+        <h4 className="font-semibold">参考リンク（{view.links.length}/5件）</h4>
+        {view.links.length === 0 ? null : (
           <ul>
             {view.links.map((l) => (
               <li key={l.id} className="my-2 rounded-xl border p-3">
@@ -384,7 +397,22 @@ function IntakeContent({
             リンクを保存する
           </button>
         </fieldset>
+        {view.links.length === 0 && draft.mode !== "edit" ? (
+          <button
+            type="button"
+            className={ui.btnLink}
+            onClick={() => {
+              setLinkFormOpen(false);
+              setDraft((d) => ({ ...d, mode: "add", linkId: "", url: "", label: "" }));
+            }}
+          >
+            やめる
+          </button>
+        ) : null}
+          </>
+        )}
       </section>
+      {section !== "consultation" ? (
       <fieldset disabled={disabled || stale} className="space-y-2">
         <legend className="font-semibold">次にやることのメモ</legend>
         <p className="text-sm">
@@ -411,6 +439,7 @@ function IntakeContent({
           メモを保存する
         </button>
       </fieldset>
+      ) : null}
       <button
         className={ui.btnSecondary}
         // This explicit read/discard can supersede an automatic read. Loading
