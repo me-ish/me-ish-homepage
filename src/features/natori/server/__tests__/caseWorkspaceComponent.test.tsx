@@ -285,9 +285,13 @@ it("presents unmatched acceptance consistently in overview and history", () => {
     quote: { ...quote, value: { ...quote.value, acceptance: { ...quote.value.acceptance, version: 99 } } },
   }) };
   const view = render(<CaseWorkspaceSections record={mismatched} section="overview" overviewPart="decided" />);
-  expect(screen.getByText(/でOK（要確認：どの見積へのOKか分かりません）/)).toBeTruthy();
+  // 要確認 is a badge that always says 「要確認」 in words; read aloud it is one sentence 「要確認：…」.
+  const needsCheck = (text: string) => Array.from(document.querySelectorAll("span")).filter(span => span.textContent === `要確認：${text}`);
+  expect(screen.getByText(/でOK/)).toBeTruthy();
+  expect(needsCheck("どの見積へのOKか分かりません")).toHaveLength(1);
   view.rerender(<CaseWorkspaceSections record={mismatched} section="history" />);
-  expect(screen.getByText("OKの記録（要確認：どの見積へのOKか分かりません）")).toBeTruthy();
+  expect(screen.getByText("OKの記録")).toBeTruthy();
+  expect(needsCheck("どの見積へのOKか分かりません")).toHaveLength(1);
   expect(document.querySelector("form")).toBeNull();
   expect(screen.queryByRole("button")).toBeNull();
 });

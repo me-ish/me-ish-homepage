@@ -131,10 +131,10 @@ export function CaseIntakePanel({
   return (
     <section
       hidden={section === "overview" ? overviewPart !== "request" : section !== "consultation"}
-      className={`mt-4 ${look.cardPadded}`}
+      className={`mt-4 ${look.panel}`}
       aria-label="依頼の内容"
     >
-      <h3 className="text-lg font-semibold">依頼の内容</h3>
+      <h3 className={look.sectionTitle}>依頼の内容</h3>
       {error ? <p role="alert">{error}</p> : null}
       <button
         className={`${ui.btnSecondary} my-3`}

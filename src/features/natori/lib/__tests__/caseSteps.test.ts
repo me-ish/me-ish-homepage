@@ -87,3 +87,14 @@ it("does not ask to finish a quote draft on a case agreed outside the site", () 
   // A site case with the same draft still gets the reminder.
   expect(texts(externalCase({ origin: "internal" }, draftQuote))).toContain("見積の下書きを仕上げて送る");
 });
+
+it("puts each step's 要確認 under the step itself, from the same facts as the records", () => {
+  for (const record of records) {
+    const steps = deriveCaseSteps(record);
+    const delivery = record.model.facts.delivery.state === "ready" ? record.model.facts.delivery.value : null;
+    const step = steps.find(item => item.key === "delivery");
+    expect(step?.needsCheck ?? null).toBe(delivery && delivery.manifest !== "verified" ? "納品ファイルの記録が足りません" : null);
+    // The summary no longer ends with a bare 「要確認」; the badge says it instead.
+    expect(steps.every(item => !item.summary?.endsWith("要確認"))).toBe(true);
+  }
+});

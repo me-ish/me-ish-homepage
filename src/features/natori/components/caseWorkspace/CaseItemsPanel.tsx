@@ -48,14 +48,14 @@ export function CaseItemsPanel({ projectId, store, disabled, onDraftChange }: { 
     if (await store.run(action)) setEditing(null);
   };
 
-  if (items === null) return <section className={look.cardPadded}><p role="status" className="text-sm">品目を読み込み中…</p></section>;
+  if (items === null) return <section className={look.panel}><p role="status" className="text-sm">品目を読み込み中…</p></section>;
   // The table may not exist yet in this environment; then the case simply has no items.
   if (unavailable) return null;
   const total = caseItemsTotal(items);
   return (
-    <section className={`${look.cardPadded} space-y-3`} aria-label="品目">
+    <section className={`${look.panel} space-y-3`} aria-label="品目">
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="font-semibold">品目{items.length ? <span className="ml-2 text-sm font-normal text-zinc-500">{items.length}点</span> : null}</h3>
+        <h3 className={look.sectionTitle}>品目{items.length ? <span className="ml-2 text-sm font-normal text-zinc-500">{items.length}点</span> : null}</h3>
         {total !== null && items.length > 1 ? <p className="text-sm text-zinc-600">合計 {yen(total)}</p> : null}
       </div>
       {items.length === 0 && editing !== "new" ? <p className="text-sm text-zinc-600">1つのご依頼で何点か描くときは、1点ずつ足します。</p> : null}
@@ -115,9 +115,9 @@ export function CaseItemsProgress({ projectId, store, disabled }: { projectId: s
     return store.run(() => updateCaseItem(projectId, item, next));
   };
   return (
-    <section className={`${look.cardPadded} space-y-3`} aria-label="品目の進み">
+    <section className={`${look.panel} space-y-3`} aria-label="品目の進み">
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="font-semibold">品目の進み</h3>
+        <h3 className={look.sectionTitle}>品目の進み</h3>
         <p className="text-sm text-zinc-600">{done}/{items.length} 完成</p>
       </div>
       {items.length > 1 ? (

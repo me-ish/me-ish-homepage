@@ -19,7 +19,7 @@ import { natoriAdminUi as ui } from "../../constants/adminUi";
 import { workspaceLook as look } from "../../constants/workspaceLook";
 import type { CaseOverviewPart, CaseSection } from "../../types/caseWorkspace";
 const DETAIL_LABELS = { title: "案件名", client_name: "お客さんの名前", amount: "金額", delivery_plan: "納期のプラン", start_date: "作業を始める日", due_date: "納期", note: "依頼文" } as const;
-const card = `space-y-3 ${look.cardPadded}`;
+const card = `space-y-3 ${look.panel}`;
 type Operation = ReturnType<typeof useCaseAdminOperation>;
 export function CaseAdminConfirmation({ operation }: { operation: Operation }) {
   const o = operation;
@@ -36,7 +36,7 @@ export function CaseAdminConfirmation({ operation }: { operation: Operation }) {
           aria-label="保存する前の確認"
           className={look.confirm}
         >
-          <h3 className="font-semibold">
+          <h3 className={look.sectionTitle}>
             {caseAdminLabels[o.saved.request.action.command]}
           </h3>
           {o.saved.summary.map((s, i) => (
@@ -192,7 +192,7 @@ export function CaseAdministrationPanel({
       <CaseAdminConfirmation operation={operation} />
       <div hidden={section !== "overview"} className="space-y-4">
         <section hidden={overviewPart !== "details"} className={card}>
-          <h3 className="font-semibold">案件の情報</h3>
+          <h3 className={look.sectionTitle}>案件の情報</h3>
           <BasicDetails
             key={projectId}
             view={view}
@@ -207,7 +207,7 @@ export function CaseAdministrationPanel({
           />
         </section>
         <section hidden={overviewPart !== "lifecycle"} className={card}>
-          <h3 className="font-semibold">見送る・しまう</h3>
+          <h3 className={look.sectionTitle}>見送る・しまう</h3>
           <Lifecycle
             view={view}
             disabled={disabled}
@@ -218,7 +218,7 @@ export function CaseAdministrationPanel({
       </div>
       <div hidden={section !== "transaction"} className="space-y-4">
         <section className={card}>
-          <h3 className="font-semibold">{externalOrder ? "金額と入金" : "振込などの入金を記録"}</h3>
+          <h3 className={look.sectionTitle}>{externalOrder ? "金額と入金" : "振込などの入金を記録"}</h3>
           {externalOrder && !paymentRecorded ? (
             <ExternalAmount
               key={`${projectId}/${view.revision}`}
@@ -294,7 +294,7 @@ export function CaseAdministrationPanel({
         </QuoteMailSection>
         {/* Orders taken outside the site send no mail from here until they switch to the site flow. */}
         <section hidden={externalOrder && !view.notices.length && !view.selectedNotice} className={card}>
-          <h3 className="font-semibold">送ったメール</h3>
+          <h3 className={look.sectionTitle}>送ったメール</h3>
           {view.selectedNotice?<p role="status">選んだメールだけを表示しています。{view.selectedNotice.isLatest?"":"これより新しいメールがあるので、ここからは送り直せません。"}</p>:null}
           {!view.complete&&!view.selectedNotice ? (
             <p role="status">
@@ -358,12 +358,12 @@ function QuoteMailSection({ folded, children }: { folded: "external" | "settled"
   if (!folded)
     return (
       <section className={card}>
-        <h3 className="font-semibold">見積</h3>
+        <h3 className={look.sectionTitle}>見積</h3>
         {children}
       </section>
     );
   return (
-    <details className={look.cardPadded}>
+    <details className={look.panel}>
       <summary className="cursor-pointer font-semibold">
         {folded === "external" ? "見積をメールで送る" : "見積の控え"}
       </summary>

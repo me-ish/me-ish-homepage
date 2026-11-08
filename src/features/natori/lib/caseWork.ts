@@ -69,6 +69,27 @@ export function caseCompletionOption(view:CaseWorkView,now:number):CaseCompletio
  if(p.requestData!==null||p.deliveredMailAt)return null;
  return view.records.some(r=>r.kind==="origin"&&r.data.origin==="internal")?null:"external";
 }
+/** The work panel's forms that can be folded to one line. */
+export type CaseWorkForm="record"|"revision"|"delivery"|"complete";
+/**
+ * Which work-panel form this case needs now, from what the panel already reads.
+ * null = nothing pressing (the forms all stay folded). Display only; it never decides what may be saved.
+ * - an open revision request comes first;
+ * - while production tasks remain, no form (the task buttons are the work);
+ * - a delivery page that expired unaccepted, or an outside order already handed over (delivered or received by hand), → 完了;
+ * - otherwise, with no delivery page yet, → 納品 (outside orders without an e-mail address are completed instead).
+ */
+export function caseWorkFocus(view:CaseWorkView,now:number):CaseWorkForm|null{
+ const p=view.project;
+ if(p.deletedAt||p.status==="closed"||p.status==="completed"||p.completedAt)return null;
+ if(openCaseRevisions(view.records).length)return "revision";
+ const work=p.tasks.filter(t=>t.stage!=="material"&&t.stage!=="delivery");
+ if(!work.length||work.some(t=>!t.done))return null;
+ const completion=caseCompletionOption(view,now);
+ if(completion==="deemed")return "complete";
+ if(completion==="external")return p.status==="delivered"||!p.clientEmail||view.records.some(r=>r.kind==="manual_delivery"||r.kind==="manual_receipt")?"complete":"delivery";
+ return view.release?null:"delivery";
+}
 export const caseCompletionResultText=(result:string|undefined)=>({
  applied:"完了にしました。",
  "already-completed":"この案件はもう完了しています。",
