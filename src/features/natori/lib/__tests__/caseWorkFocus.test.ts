@@ -38,6 +38,7 @@ it("for an outside order, raises delivery until it is handed over, then completi
   const origin = record("origin", { origin: "external" });
   expect(caseWorkFocus(view(outside, { records: [origin] }), now)).toBe("delivery");
   expect(caseWorkFocus(view(outside, { records: [origin, record("manual_delivery")] }), now)).toBe("complete");
+  expect(caseWorkFocus(view(outside, { records: [origin, record("manual_receipt")] }), now)).toBe("complete");
   expect(caseWorkFocus(view({ ...outside, status: "delivered" }, { records: [origin] }), now)).toBe("complete");
   expect(caseWorkFocus(view({ ...outside, clientEmail: null }, { records: [origin] }), now)).toBe("complete");
 });

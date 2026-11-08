@@ -76,7 +76,7 @@ export type CaseWorkForm="record"|"revision"|"delivery"|"complete";
  * null = nothing pressing (the forms all stay folded). Display only; it never decides what may be saved.
  * - an open revision request comes first;
  * - while production tasks remain, no form (the task buttons are the work);
- * - a delivery page that expired unaccepted, or an outside order already handed over, → 完了;
+ * - a delivery page that expired unaccepted, or an outside order already handed over (delivered or received by hand), → 完了;
  * - otherwise, with no delivery page yet, → 納品 (outside orders without an e-mail address are completed instead).
  */
 export function caseWorkFocus(view:CaseWorkView,now:number):CaseWorkForm|null{
@@ -87,7 +87,7 @@ export function caseWorkFocus(view:CaseWorkView,now:number):CaseWorkForm|null{
  if(!work.length||work.some(t=>!t.done))return null;
  const completion=caseCompletionOption(view,now);
  if(completion==="deemed")return "complete";
- if(completion==="external")return p.status==="delivered"||!p.clientEmail||view.records.some(r=>r.kind==="manual_delivery")?"complete":"delivery";
+ if(completion==="external")return p.status==="delivered"||!p.clientEmail||view.records.some(r=>r.kind==="manual_delivery"||r.kind==="manual_receipt")?"complete":"delivery";
  return view.release?null:"delivery";
 }
 export const caseCompletionResultText=(result:string|undefined)=>({
