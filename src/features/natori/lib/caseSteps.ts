@@ -17,6 +17,8 @@ export type CaseStep = {
   key: CaseStepKey; label: string; section: CaseSection;
   state: "done" | "current" | "upcoming";
   summary: string | null;
+  /** 段階の下に「要確認」の札で出す一文（記録の中の要確認と同じ内容）。 */
+  needsCheck?: string | null;
 };
 
 /**
@@ -39,7 +41,7 @@ export function deriveCaseSteps(record: CaseWorkspaceRecord): CaseStep[] {
   const summaries: Record<CaseStepKey, string | null> = {
     consultation: null,
     quote: quote?.acceptance && accepted ? `${caseMoney(quote.acceptance.money)}でOK（${quote.version > 1 ? `${quote.version}回目の見積` : "見積"}）`
-      : quote ? `${caseMoney(quote.money)}・${quote.state === "draft" ? "下書き" : m.agreement === "needs_review" ? "要確認" : "お客さんの返事待ち"}`
+      : quote ? m.agreement === "needs_review" && quote.state !== "draft" ? caseMoney(quote.money) : `${caseMoney(quote.money)}・${quote.state === "draft" ? "下書き" : "お客さんの返事待ち"}`
         : quoteDraft ? "下書き" : quoteUnread ? "読み込めませんでした" : null,
     payment: payment ? `${caseMoney(payment.money)}・入金済み（${caseTime(payment.confirmedAt)}）`
       : m.stage === "payment_notified" ? "お支払い待ち" : caseKnown(m.facts.link) ? "支払いリンク作成済み" : null,
@@ -47,8 +49,14 @@ export function deriveCaseSteps(record: CaseWorkspaceRecord): CaseStep[] {
     delivery: delivery ? `納品済み（${caseTime(delivery.recordedAt)}）` : null,
     receipt: receipt ? `受取済み（${caseTime(receipt.acceptedAt)}）` : null,
   };
+  // The same 要確認 lines as inside the records, so they are seen without opening them.
+  const needsCheck: Partial<Record<CaseStepKey, string>> = {
+    ...(quote && quote.state !== "draft" && m.agreement === "needs_review" ? { quote: "OKの内容がこの見積と合っているか見てください" } : {}),
+    ...(delivery && delivery.manifest !== "verified" ? { delivery: "納品ファイルの記録が足りません" } : {}),
+    ...(receipt?.correspondence === "unconfirmed" ? { receipt: "どの納品の受け取りか分かりません" } : {}),
+  };
   return CASE_STEP_KEYS.map((key, index) => ({
-    key, label: CASE_STEP_LABELS[key], section: CASE_STEP_SECTIONS[key], summary: summaries[key],
+    key, label: CASE_STEP_LABELS[key], section: CASE_STEP_SECTIONS[key], summary: summaries[key], needsCheck: needsCheck[key] ?? null,
     state: index < reached ? "done" : index === reached && !ended ? "current" : "upcoming",
   }));
 }
@@ -92,6 +100,7 @@ function deriveExternalCaseSteps(record: CaseWorkspaceRecord): CaseStep[] {
   };
   return EXTERNAL_KEYS.map((key, index) => ({
     key, label: EXTERNAL_CASE_STEP_LABELS[key] ?? CASE_STEP_LABELS[key], section: CASE_STEP_SECTIONS[key], summary: summaries[key] ?? null,
+    needsCheck: key === "delivery" && delivery && delivery.manifest !== "verified" ? "納品ファイルの記録が足りません" : null,
     state: index < reached ? "done" : index === reached && !ended ? "current" : "upcoming",
   }));
 }

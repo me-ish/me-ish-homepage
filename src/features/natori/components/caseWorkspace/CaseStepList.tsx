@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import type { CaseStep, CaseStepKey } from "../../lib/caseSteps";
 import { workspaceLook as look } from "../../constants/workspaceLook";
+import { CaseNeedsCheck } from "./CaseNeedsCheck";
 
 type StepLink = (step: CaseStep, content: ReactNode, className: string, attributes: Record<string, string | undefined>) => ReactNode;
 
@@ -32,7 +33,8 @@ export function CaseStepList({ steps, selected, link, sheet = null, trailing = f
             <span>{step.label}<span className="sr-only">{step.state === "done" ? "（済み）" : step.state === "current" ? "（いまの段階）" : "（これから）"}</span></span>
             {!open && step.state !== "upcoming" ? <span aria-hidden="true" className="text-base text-[#C7C7CC]">›</span> : null}
           </span>
-          {step.summary ? <span className="-mt-1 block text-xs leading-5 text-zinc-500">{step.summary}</span> : null}
+          {step.summary ? <span className={`-mt-1 block ${look.stepSummary}`}>{step.summary}</span> : null}
+          {step.needsCheck ? <CaseNeedsCheck className="mb-1 mt-1">{step.needsCheck}</CaseNeedsCheck> : null}
         </span>
       </>, `flex min-h-11 items-start gap-3 rounded-xl pr-1 ${open ? "" : "[@media(hover:hover)_and_(pointer:fine)]:hover:bg-white"}`, { "aria-current": open ? "step" : undefined })}
     </li>;

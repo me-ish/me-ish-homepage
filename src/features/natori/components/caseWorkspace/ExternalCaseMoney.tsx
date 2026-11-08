@@ -18,8 +18,8 @@ export function ExternalCaseMoney({ amount, payment, items, onOpen }: {
   const total = items && items.length > 0 ? caseItemsTotal(items) : null;
   const differs = total !== null && amount !== null && total !== amount;
   return (
-    <section className={`${look.cardPadded} space-y-2`} aria-label="金額と入金">
-      <h3 className="font-semibold">金額と入金</h3>
+    <section className={`${look.panel} space-y-2`} aria-label="金額と入金">
+      <h3 className={look.sectionTitle}>金額と入金</h3>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt className="text-zinc-600">金額</dt>
         <dd>{amount === null ? (total !== null ? `まだ（品目の合計は${yen(total)}）` : "まだ決めていません") : yen(amount)}</dd>

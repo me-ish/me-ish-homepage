@@ -47,8 +47,8 @@ export function CaseReconciliationPanel({ projectId, onChanged,selectedNotificat
   }
   const inspect = (kind: ReconciliationKind, target: string) => view && execute({ action: "inspect", projectId, id: crypto.randomUUID(), kind, target, revision: view.revision });
   function open(c: Confirmation) { setChecked(false); setConfirmation(c); }
-  return <section aria-label="結果が分からない処理" className={`space-y-4 ${look.cardPadded}`}>
-    <h3 className="font-semibold">結果が分からない処理を調べる</h3>
+  return <section aria-label="結果が分からない処理" className={`space-y-4 ${look.panel}`}>
+    <h3 className={look.sectionTitle}>結果が分からない処理を調べる</h3>
     <p className="text-sm text-zinc-600">Stripe やメールの送信サービスに問い合わせて、実際にどうなったかを調べます。分かるまで、同じ処理はやり直せません。</p>
     <button type="button" disabled={busy} className={look.btnSecondary} onClick={() => { void refresh(); }}>いまの記録を読み込む</button>
     {message ? <p role="status" className="text-sm">{message}</p> : null}

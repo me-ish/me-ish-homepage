@@ -1,5 +1,5 @@
 "use client";
-import { useCallback,useEffect,useRef,useState } from "react";
+import { useCallback,useEffect,useRef,useState,type ReactNode } from "react";
 import {CaseAdministrationPanel} from "./CaseAdministrationPanel";
 import {CaseItemsPanel,CaseItemsProgress} from "./CaseItemsPanel";
 import {ExternalCaseMoney} from "./ExternalCaseMoney";
@@ -9,14 +9,24 @@ import ConsultationThread from "../consultation/ConsultationThread";
 import DeliveryFilesManager from "../dashboard/DeliveryFilesManager";
 import type { NatoriDeliveryFileView } from "../../data/supabaseDeliveryFiles";
 import { fetchCaseWork,mutateCaseWork } from "../../data/supabaseCaseWork";
-import { caseDeliveryRequest,caseWorkLabels,caseOriginLabels,caseWorkNoticeLabel,openCaseRevisions,caseCompletionOption,caseCompletionResultText,type CaseWorkView,type CaseDeliveryRequest } from "../../lib/caseWork";
+import { caseDeliveryRequest,caseWorkLabels,caseOriginLabels,caseWorkNoticeLabel,openCaseRevisions,caseCompletionOption,caseCompletionResultText,caseWorkFocus,type CaseWorkForm,type CaseWorkView,type CaseDeliveryRequest } from "../../lib/caseWork";
 import { buildDeliveryMailDraft,DELIVERY_EXTENSION_DAYS,DELIVERY_VALID_DAYS } from "../../lib/orderMail";
 import { caseTime } from "../../lib/caseWorkspacePresentation";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
 import { workspaceLook as look } from "../../constants/workspaceLook";
 import type { CaseOverviewPart, CaseSection } from "../../types/caseWorkspace";
 
-const card=`space-y-4 ${look.cardPadded}`;
+const card=`space-y-4 ${look.panel}`;
+type Fold={focus:CaseWorkForm|null;fold:boolean};
+/**
+ * One form of the work panel. The form this case needs now is raised with a pink frame and 「いまはこれ」;
+ * the others fold to one line (still mounted, so drafts survive) and open when tapped or when they hold a draft.
+ */
+function WorkCard({form,fold,title,open=false,className="",children}:{form:CaseWorkForm;fold:Fold;title:string;open?:boolean;className?:string;children:ReactNode}){
+ if(fold.focus===form)return <section className={`${look.workNow} ${className}`}><div><p className={look.workNowTag}>いまはこれ</p><h3 className={look.sectionTitle}>{title}</h3></div>{children}</section>;
+ if(!fold.fold)return <section className={`${card} ${className}`}><h3 className={look.sectionTitle}>{title}</h3>{children}</section>;
+ return <details open={open||undefined} className={`${look.workFolded} ${className}`}><summary className={look.workFoldedSummary}><h3>{title}</h3><span aria-hidden="true" className={look.disclosure}>›</span></summary><div className="space-y-4 px-4 pb-4 sm:px-5 sm:pb-5">{children}</div></details>;
+}
 const fileTime=(value:string|null|undefined)=>value?caseTime(value):"—";
 export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selectedNotificationId,overviewPart=null,talkEvents,onOpenTransaction}:{onOpenTransaction?:()=>void;talkEvents?:ReadonlyArray<{at:string;text:string}>;selectedNotificationId?:string;projectId:string;section:CaseSection;onChanged:()=>void;onDraftChange:(value:boolean)=>void;overviewPart?:CaseOverviewPart|null}){
  const [view,setView]=useState<CaseWorkView|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState("");
@@ -39,14 +49,16 @@ export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selecte
  const p=view.project,inactive=!!p.deletedAt||p.status==="closed",deliveredStatus=p.status==="delivered"||p.status==="completed",origin=view.records.find(r=>r.kind==="origin");
  // Both つなぐ/SNS orders and cases registered by hand were agreed outside the site (the steps treat them alike).
  const outside=origin?.data.origin==="external"||origin?.data.origin==="manual";
+ // Only the production step folds its forms; the overview's 「サイトの外であったこと」 stays open as the one thing shown there.
+ const fold:Fold={focus:section==="production"?caseWorkFocus(view,Date.now()):null,fold:section==="production"};
  return <div className="mt-4 space-y-4">
   {error?<p role="alert" className={ui.alert.warning}>{error}</p>:null}{result?<p role="status">{result}</p>:null}
   
   <CaseAdministrationPanel selectedNotificationId={selectedNotificationId} projectId={projectId} section={section} overviewPart={overviewPart} refreshKey={view.revision} onChanged={()=>void refresh()} onDraftChange={setAdminDraft} externalOrder={outside}/>
   {/* Orders taken outside the site record their agreement and delivery here, so it also sits under 制作・納品 for them. */}
   <div hidden={!(section==="overview"&&overviewPart==="outside")&&!(section==="production"&&outside)}>
-   <section className={`${card} mt-4`}><h3 className="font-semibold">サイトの外であったこと</h3><p className="text-sm text-zinc-600">{origin?`受けた場所：${caseOriginLabels[origin.data.origin??"unknown"]}`:"メールや SNS で決まったこと、手渡しした納品などを書き残せます。"}</p>
-    <WorkRecordForm view={view} disabled={busy||inactive} save={command} onDirty={setRecordDraft}/></section>
+   <WorkCard form="record" fold={fold} title="サイトの外であったこと" open={recordDraft} className="mt-4"><p className={look.meta}>{origin?`受けた場所：${caseOriginLabels[origin.data.origin??"unknown"]}`:"メールや SNS で決まったこと、手渡しした納品などを書き残せます。"}</p>
+    <WorkRecordForm view={view} disabled={busy||inactive} save={command} onDirty={setRecordDraft}/></WorkCard>
   </div>
   <div hidden={section!=="consultation"} className="space-y-4">
    <CaseItemsPanel key={`${projectId}/items`} projectId={projectId} store={caseItems} disabled={inactive} onDraftChange={setItemsDraft}/>
@@ -55,16 +67,16 @@ export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selecte
   </div>
   <div hidden={section!=="production"} className="space-y-4">
    <CaseItemsProgress projectId={projectId} store={caseItems} disabled={busy||inactive}/>
-   <section className={card}><h3 className="font-semibold">工程を進める</h3><p className="text-sm text-zinc-600">終わった工程を押してください。</p>
+   <section className={card}><h3 className={look.sectionTitle}>工程を進める</h3><p className={look.meta}>終わった工程を押してください。</p>
     {p.tasks.filter(t=>t.stage!=="material").map(t=><button key={t.id} aria-pressed={t.done||(t.stage==="delivery"&&deliveredStatus)} disabled={busy||inactive} className={`${ui.btnSecondary} mr-2`} onClick={()=>void command({command:"task",projectId,revision:view.revision,taskKey:t.id,done:!t.done})}>{t.done||(t.stage==="delivery"&&deliveredStatus)?"✓ ":""}{t.label}</button>)}
     {p.type==="undecided"?<label className="block">依頼の種類（選ぶと工程ができます）<select defaultValue="" className={ui.input} disabled={busy||inactive} onChange={e=>{if(e.target.value)void command({command:"confirm_type",projectId,revision:view.revision,projectType:e.target.value});}}><option value="">選択してください</option><option value="icon">アイコン</option><option value="sd">SD</option><option value="standing">立ち絵</option><option value="illustration">イラスト</option></select></label>:null}</section>
-   <section className={card}><h3 className="font-semibold">修正の依頼を記録</h3><p className="text-sm text-zinc-600">お客さんのメッセージと、どのラフかを選びます。追加料金がかかる時は、相談で決めてください。</p>
-    <RevisionForm view={view} disabled={busy||inactive} save={command} onDirty={setRevisionDraft}/></section>
-   <DeliveryWork key={projectId} view={view} disabled={busy||inactive} load={load} onChanged={onChanged} onDraftChange={setDeliveryDraft}/>
-   <CompleteWork key={`${projectId}/complete`} view={view} disabled={busy||inactive} load={load} onChanged={onChanged}/>
+   <WorkCard form="revision" fold={fold} title="修正の依頼を記録" open={revisionDraft}><p className={look.meta}>お客さんのメッセージと、どのラフかを選びます。追加料金がかかる時は、相談で決めてください。</p>
+    <RevisionForm view={view} disabled={busy||inactive} save={command} onDirty={setRevisionDraft}/></WorkCard>
+   <DeliveryWork key={projectId} view={view} disabled={busy||inactive} load={load} onChanged={onChanged} onDraftChange={setDeliveryDraft} fold={fold} open={deliveryDraft}/>
+   <CompleteWork key={`${projectId}/complete`} view={view} disabled={busy||inactive} load={load} onChanged={onChanged} fold={fold}/>
   </div>
-  <section hidden={section!=="history"} className={card}><h3 className="font-semibold">あなたが書いた記録</h3>
-   {view.records.length===0?<p>まだありません。</p>:view.records.map(r=><article key={r.id} className="border-t py-3 text-sm"><p className="font-semibold">{caseWorkLabels[r.kind]}</p><p>{r.data.note}</p>{r.data.target?<p>{r.data.target}</p>:null}<p className="text-zinc-600">{r.data.occurredAt?`${caseTime(r.data.occurredAt)}のこと · `:""}{caseTime(r.created_at)}に記録 · {r.operator.kind==="auth-user"?"ログインした人":"共有の鍵で入った人"}</p></article>)}
+  <section hidden={section!=="history"} className={card}><h3 className={look.sectionTitle}>あなたが書いた記録</h3>
+   {view.records.length===0?<p>まだありません。</p>:view.records.map(r=><article key={r.id} className={`border-t border-black/[0.08] py-3 ${look.body}`}><p className="font-semibold">{caseWorkLabels[r.kind]}</p><p>{r.data.note}</p>{r.data.target?<p>{r.data.target}</p>:null}<p className={look.meta}>{r.data.occurredAt?`${caseTime(r.data.occurredAt)}のこと · `:""}{caseTime(r.created_at)}に記録 · {r.operator.kind==="auth-user"?"ログインした人":"共有の鍵で入った人"}</p></article>)}
   </section>
  </div>;
 }
@@ -90,7 +102,7 @@ function RevisionForm({view,disabled,save,onDirty}:{view:CaseWorkView;disabled:b
   <label className="block">メモ<textarea required className={ui.input} value={note} maxLength={2000} onChange={e=>setNote(e.target.value)}/></label><button className={ui.btnSecondary} disabled={disabled}>記録を残す</button>
  </fieldset></form>;
 }
-function DeliveryWork({view,disabled,load,onChanged,onDraftChange}:{view:CaseWorkView;disabled:boolean;load:(operationId?:string)=>Promise<CaseWorkView>;onChanged:()=>void;onDraftChange:(v:boolean)=>void}){
+function DeliveryWork({view,disabled,load,onChanged,onDraftChange,fold={focus:null,fold:false},open=false}:{view:CaseWorkView;disabled:boolean;load:(operationId?:string)=>Promise<CaseWorkView>;onChanged:()=>void;onDraftChange:(v:boolean)=>void;fold?:Fold;open?:boolean}){
  const p=view.project,key=`natori-case-delivery/${p.id}`;
  const [files,setFiles]=useState<NatoriDeliveryFileView[]|null>(null),[composeDirty,setComposeDirty]=useState(false);
  const initial=buildDeliveryMailDraft({title:p.title,clientName:p.clientName});
@@ -113,8 +125,8 @@ function DeliveryWork({view,disabled,load,onChanged,onDraftChange}:{view:CaseWor
    else setMessage("送れませんでした。「結果を見る」を押してください。");
   }catch(e){if(mounted.current)setMessage(e instanceof Error?e.message:"うまくいったか分かりません。");}finally{lock.current=false;if(mounted.current)setBusy(false);}
  };
- return <section className={card}><h3 className="font-semibold">納品する</h3><DeliveryFilesManager projectId={p.id} folder="final" onFilesChange={setFiles} workspaceSafe/>
-  <p className="text-sm text-zinc-600">ファイルを上げてメールを送ると、お客さんが専用のページで受け取ります。</p>
+ return <WorkCard form="delivery" fold={fold} title="納品する" open={open||!!message}><DeliveryFilesManager projectId={p.id} folder="final" onFilesChange={setFiles} workspaceSafe/>
+  <p className={look.meta}>ファイルを上げてメールを送ると、お客さんが専用のページで受け取ります。</p>
   {view.release?<p>納品した日：{caseTime(view.release.publishedAt)} / ページの期限：{caseTime(view.release.expiresAt)} / {p.deliveryAcceptedAt?"受け取ってもらいました":"受け取りはまだ"}</p>:null}
   {frozen?<div className={look.confirm}><h4 className="font-semibold">送る前に見てください</h4><p>宛先：{frozen.to}</p><p>{p.title} / {frozen.extension?`期限を${frozen.extension.days}日延ばす：${frozen.extension.reason}`:view.release?"納品のメールを送り直す":"はじめての納品"}</p><p>ページの期限：{caseTime(frozen.expiresAt)}</p><ul>{frozen.fileIds.map(id=><li key={id}>{frozen.files.find(f=>f.id===id)?.fileName??id} · {Math.max(1,Math.round((frozen.files.find(f=>f.id===id)?.sizeBytes??0)/1024)).toLocaleString("ja-JP")} KB · {fileTime(frozen.files.find(f=>f.id===id)?.verifiedAt)}</li>)}</ul><p>{frozen.subject}</p><pre className="whitespace-pre-wrap break-words text-sm">{frozen.body}</pre>
    <button className={ui.btnPrimary} disabled={disabled||busy||unknown} onClick={()=>void submit()}>納品してメールを送る</button>
@@ -127,11 +139,11 @@ function DeliveryWork({view,disabled,load,onChanged,onDraftChange}:{view:CaseWor
    {view.release?<><label className="block">ページの期限<select className={ui.input} value={days} onChange={e=>setDays(Number(e.target.value))}><option value={0}>いまの期限のまま</option>{DELIVERY_EXTENSION_DAYS.filter(()=>Date.parse(view.release!.expiresAt)<=Date.now()).map(d=><option key={d} value={d}>{d}日延ばす（前のリンクは使えなくなります）</option>)}</select></label>{days?<label className="block">延ばす理由<input className={ui.input} value={reason} maxLength={200} onChange={e=>setReason(e.target.value)}/></label>:null}</>:null}
    <button className={ui.btnSecondary} disabled={disabled||busy||unknown} onClick={()=>void prepare()}>納品する（送る前に内容を表示）</button></div>}
   {message?<p role="status" className="whitespace-pre-wrap text-sm">{message}</p>:null}
- </section>;
+ </WorkCard>;
 }
 const localDate=(d:Date)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 /** Completion when no customer will press 受け取り: outside-the-site orders, or an expired delivery page. */
-function CompleteWork({view,disabled,load,onChanged}:{view:CaseWorkView;disabled:boolean;load:(operationId?:string)=>Promise<CaseWorkView>;onChanged:()=>void}){
+function CompleteWork({view,disabled,load,onChanged,fold={focus:null,fold:false}}:{view:CaseWorkView;disabled:boolean;load:(operationId?:string)=>Promise<CaseWorkView>;onChanged:()=>void;fold?:Fold}){
  const option=caseCompletionOption(view,Date.now());
  const [confirming,setConfirming]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
  const [date,setDate]=useState(()=>localDate(new Date()));
@@ -151,8 +163,8 @@ function CompleteWork({view,disabled,load,onChanged}:{view:CaseWorkView;disabled
    await load();onChanged();
   }catch(e){setMessage(e instanceof Error?e.message:"うまくいったか分かりません。");}finally{lock.current=false;setBusy(false);}
  };
- return <section className={card}><h3 className="font-semibold">{deemed?"受け取り済みとみなして完了にする":"完了にする"}</h3>
-  <p className="text-sm text-zinc-600">{deemed?`納品ページの期限（${caseTime(view.release?.expiresAt??"")}）が過ぎて、受け取りは押されていません。期限の日に完了したことになります。`:view.project.paidAt||view.project.paymentConfirmedAt?"サイトの外で受けた案件です。納品が済んだら、ここで完了にすると実績に載ります。":"サイトの外で受けた案件です。納品が済んだら、ここで完了にできます。実績に載せるには、入金の記録（振込などの入金を記録）も必要です。"}</p>
+ return <WorkCard form="complete" fold={fold} title={deemed?"受け取り済みとみなして完了にする":"完了にする"} open={confirming||!!message}>
+  <p className={look.meta}>{deemed?`納品ページの期限（${caseTime(view.release?.expiresAt??"")}）が過ぎて、受け取りは押されていません。期限の日に完了したことになります。`:view.project.paidAt||view.project.paymentConfirmedAt?"サイトの外で受けた案件です。納品が済んだら、ここで完了にすると実績に載ります。":"サイトの外で受けた案件です。納品が済んだら、ここで完了にできます。実績に載せるには、入金の記録（振込などの入金を記録）も必要です。"}</p>
   {confirming?<div className={look.confirm}>
    {deemed?null:<label className="block">完了した日<input type="date" className={ui.input} value={date} max={localDate(new Date())} onChange={e=>setDate(e.target.value)}/></label>}
    <label className="block">メモ<textarea required className={ui.input} value={note} maxLength={2000} onChange={e=>setNote(e.target.value)}/></label>
@@ -161,5 +173,5 @@ function CompleteWork({view,disabled,load,onChanged}:{view:CaseWorkView;disabled
    <button className={ui.btnSecondary} disabled={busy} onClick={()=>{setConfirming(false);request.current="";}}>やめる</button>
   </div>:<button className={ui.btnSecondary} disabled={disabled} onClick={()=>{setConfirming(true);setMessage("");}}>{deemed?"受け取り済みとみなして完了にする":"完了にする"}</button>}
   {message?<p role="status" className="text-sm">{message}</p>:null}
- </section>;
+ </WorkCard>;
 }
