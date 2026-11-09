@@ -88,7 +88,11 @@ export function caseWorkFocus(view:CaseWorkView,now:number):CaseWorkForm|null{
  const completion=caseCompletionOption(view,now);
  if(completion==="deemed")return "complete";
  if(completion==="external")return p.status==="delivered"||!p.clientEmail||view.records.some(r=>r.kind==="manual_delivery"||r.kind==="manual_receipt")?"complete":"delivery";
- return view.release?null:"delivery";
+ // Off-system progress recorded by hand leaves nothing pressing in this panel:
+ // a recorded receipt settles the tail, and a recorded delivery means the
+ // delivery-page form is not the next step (receipt is recorded the same way).
+ if(view.records.some(r=>r.kind==="manual_receipt"))return null;
+ return view.release||view.records.some(r=>r.kind==="manual_delivery")?null:"delivery";
 }
 export const caseCompletionResultText=(result:string|undefined)=>({
  applied:"完了にしました。",

@@ -21,9 +21,18 @@ export type CaseDisplayEvidence = {
 export const CASE_SECTIONS = ["overview", "consultation", "transaction", "production", "history"] as const;
 export type CaseSection = typeof CASE_SECTIONS[number];
 export type CaseEntry = "cases" | "schedule" | "notifications";
+/**
+ * Staff-recorded off-system progress ("サイトの外で納品した" / "サイトの外で
+ * 受け取ってもらった" work records), as ISO timestamps of the latest record
+ * per kind. Display-only: these never become delivery/receipt facts, so the
+ * read model's provenance checks stay untouched; the presentation layer shows
+ * them as 手入力 wherever a fact is absent.
+ */
+export type CaseManualProgress = { delivery: string | null; receipt: string | null };
 export type CaseWorkspaceRecord = {
   id: string; title: string; clientLabel: string; registeredDueDate: string | null;
   model: CaseReadModel; display: CaseDisplayEvidence;
+  manualProgress?: CaseManualProgress;
 };
 export type CaseGuidance = {
   status: string;

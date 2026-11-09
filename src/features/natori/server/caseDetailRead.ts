@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { assertServerAcceptanceTarget } from "@/lib/caseAcceptanceEnvironment";
 import { acceptanceProjectAllowed } from "./caseAcceptance";
 import { readCaseManagement, type CaseReadExecutor } from "./caseManagementReader";
+import { readCaseManualProgress } from "./caseManualProgress";
 import type { CaseWorkspaceRecord } from "../types/caseWorkspace";
 
 export async function readCaseDetail(projectId: string, execute?: CaseReadExecutor) {
@@ -23,5 +24,7 @@ export async function readCaseDetail(projectId: string, execute?: CaseReadExecut
     registeredDueDate: result.metadata.registeredDueDate,
     model: result.model, display: result.display,
   };
+  const marks = (await readCaseManualProgress([projectId])).get(projectId);
+  if (marks) record.manualProgress = marks;
   return { state: "ready" as const, record };
 }
