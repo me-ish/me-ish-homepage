@@ -42,3 +42,11 @@ it("for an outside order, raises delivery until it is handed over, then completi
   expect(caseWorkFocus(view({ ...outside, status: "delivered" }, { records: [origin] }), now)).toBe("complete");
   expect(caseWorkFocus(view({ ...outside, clientEmail: null }, { records: [origin] }), now)).toBe("complete");
 });
+
+it("asks for no form on a site case once delivery or receipt was recorded by hand", () => {
+  expect(caseWorkFocus(view(), now)).toBe("delivery");
+  expect(caseWorkFocus(view({}, { records: [record("manual_delivery")] }), now)).toBeNull();
+  expect(caseWorkFocus(view({}, { records: [record("manual_receipt")] }), now)).toBeNull();
+  // A delivery page that is already out still wins over the hand records.
+  expect(caseWorkFocus(view({ status: "delivered" }, { release: release("2026-11-04T00:00:00Z"), records: [record("manual_receipt")] }), now)).toBe("complete");
+});

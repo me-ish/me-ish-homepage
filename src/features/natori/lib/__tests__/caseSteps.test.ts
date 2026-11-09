@@ -98,3 +98,41 @@ it("puts each step's 要確認 under the step itself, from the same facts as the
     expect(steps.every(item => !item.summary?.endsWith("要確認"))).toBe(true);
   }
 });
+
+it("advances the tail steps from hand-recorded off-system delivery and receipt", () => {
+  const producing = records[2]; // 雲のアイコン: payment recorded, still in production, no delivery fact.
+  const delivered = { ...producing, manualProgress: { delivery: "2026-11-09T10:00:00+09:00", receipt: null } };
+  const deliverySteps = deriveCaseSteps(delivered);
+  expect(deliverySteps.find(step => step.key === "delivery")).toMatchObject({ state: "done", summary: "手入力で完了（11/9 10:00）" });
+  expect(current(delivered)).toBe("receipt");
+  expect(deriveCaseGuidance(delivered).status).toBe("納品済み・受取待ち");
+
+  const received = { ...delivered, manualProgress: { delivery: "2026-11-09T10:00:00+09:00", receipt: "2026-11-10T15:30:00+09:00" } };
+  const receiptSteps = deriveCaseSteps(received);
+  expect(receiptSteps.every(step => step.state === "done")).toBe(true);
+  expect(receiptSteps.find(step => step.key === "receipt")?.summary).toBe("手入力で完了（11/10 15:30）");
+  const guidance = deriveCaseGuidance(received);
+  expect(guidance.status).toBe("受取済み");
+  expect(guidance.facts.find(fact => fact.label === "受取")?.value).toBe("手入力で完了（11/10 15:30）");
+  expect(guidance.waits.map(wait => wait.text)).not.toContain("制作を進める");
+});
+
+it("lets a hand-recorded receipt finish a delivered case without replacing the delivery fact", () => {
+  const deliveredCase = records[1]; // 星の立ち絵: delivery fact exists, receipt pending.
+  const received = { ...deliveredCase, manualProgress: { delivery: null, receipt: "2026-11-10T09:00:00+09:00" } };
+  const steps = deriveCaseSteps(received);
+  expect(steps.every(step => step.state === "done")).toBe(true);
+  expect(steps.find(step => step.key === "delivery")?.summary).toMatch(/^納品済み（/);
+  expect(steps.find(step => step.key === "receipt")?.summary).toBe("手入力で完了（11/10 9:00）");
+});
+
+it("advances outside orders from hand-recorded delivery and receipt too", () => {
+  const delivered = externalCase({}, r => ({ ...r, manualProgress: { delivery: "2026-11-09T12:00:00+09:00", receipt: null } }));
+  const steps = deriveCaseSteps(delivered);
+  expect(steps.find(step => step.key === "delivery")).toMatchObject({ state: "done", summary: "手入力で完了（11/9 12:00）" });
+  expect(steps.find(step => step.key === "receipt")?.state).toBe("current");
+  const received = externalCase({}, r => ({ ...r, manualProgress: { delivery: null, receipt: "2026-11-11T12:00:00+09:00" } }));
+  const doneSteps = deriveCaseSteps(received);
+  expect(doneSteps.every(step => step.state === "done")).toBe(true);
+  expect(doneSteps.find(step => step.key === "receipt")?.summary).toBe("手入力で完了（11/11 12:00）");
+});

@@ -10,6 +10,7 @@ import { assertServerAcceptanceTarget } from "@/lib/caseAcceptanceEnvironment";
 import { acceptanceProjectAllowed } from "./caseAcceptance";
 import { isLoopbackUrl } from "../lib/caseAcceptanceTarget";
 import {collectCaseEntryPages} from "./caseEntryPages";
+import {readCaseManualProgress} from "./caseManualProgress";
 import {readCaseSystemHold} from "./caseSystemHold";
 import {assertCaseReleaseTarget} from "./caseRelease";
 
@@ -87,6 +88,11 @@ export async function readCaseWorkspace(
     records.push({ id: projectId, title: result.metadata.title?.trim() || "案件名未確認",
       clientLabel: result.metadata.clientLabel?.trim() || "依頼者名未確認",
       registeredDueDate: result.metadata.registeredDueDate, model: result.model, display: result.display });
+  }
+  const manualProgress = await readCaseManualProgress(records.map(record => record.id));
+  for (const record of records) {
+    const marks = manualProgress.get(record.id);
+    if (marks) record.manualProgress = marks;
   }
   return { state: "ready", records };
 }

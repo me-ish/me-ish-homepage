@@ -35,8 +35,12 @@ export function deriveCaseSteps(record: CaseWorkspaceRecord): CaseStep[] {
   const accepted = m.agreement === "accepted" && !!quote?.acceptance;
   const tasksDone = !!tasks?.length && tasks.every(task => task.done);
   const completed = project?.rawStatus === "completed";
-  const ended = !receipt && !completed && (!!project?.archivedAt || project?.rawStatus === "closed");
-  const reached = receipt || completed ? CASE_STEP_KEYS.length : delivery ? 5 : payment ? tasksDone ? 4 : 3
+  // Off-system progress the staff recorded by hand fills only the two tail
+  // steps, and only where the recorded fact itself is absent.
+  const manualDelivery = !delivery ? record.manualProgress?.delivery ?? null : null;
+  const manualReceipt = !receipt ? record.manualProgress?.receipt ?? null : null;
+  const ended = !receipt && !manualReceipt && !completed && (!!project?.archivedAt || project?.rawStatus === "closed");
+  const reached = receipt || completed || manualReceipt ? CASE_STEP_KEYS.length : delivery || manualDelivery ? 5 : payment ? tasksDone ? 4 : 3
     : accepted ? 2 : quote || quoteDraft || quoteUnread ? 1 : 0;
   const summaries: Record<CaseStepKey, string | null> = {
     consultation: null,
@@ -46,8 +50,8 @@ export function deriveCaseSteps(record: CaseWorkspaceRecord): CaseStep[] {
     payment: payment ? `${caseMoney(payment.money)}・入金済み（${caseTime(payment.confirmedAt)}）`
       : m.stage === "payment_notified" ? "お支払い待ち" : caseKnown(m.facts.link) ? "支払いリンク作成済み" : null,
     production: tasks?.length ? `${tasks.filter(task => task.done).length}/${tasks.length}工程 完了` : null,
-    delivery: delivery ? `納品済み（${caseTime(delivery.recordedAt)}）` : null,
-    receipt: receipt ? `受取済み（${caseTime(receipt.acceptedAt)}）` : null,
+    delivery: delivery ? `納品済み（${caseTime(delivery.recordedAt)}）` : manualDelivery ? `手入力で完了（${caseTime(manualDelivery)}）` : null,
+    receipt: receipt ? `受取済み（${caseTime(receipt.acceptedAt)}）` : manualReceipt ? `手入力で完了（${caseTime(manualReceipt)}）` : null,
   };
   // The same 要確認 lines as inside the records, so they are seen without opening them.
   const needsCheck: Partial<Record<CaseStepKey, string>> = {
@@ -86,8 +90,10 @@ function deriveExternalCaseSteps(record: CaseWorkspaceRecord): CaseStep[] {
   const tasksDone = work.length > 0 && work.every(task => task.done);
   const started = work.some(task => task.done);
   const status = project?.rawStatus;
-  const completed = status === "completed" || !!caseKnown(d.receipt);
-  const delivered = !!delivery || status === "delivered";
+  const manualDelivery = !delivery ? record.manualProgress?.delivery ?? null : null;
+  const manualReceipt = !caseKnown(d.receipt) ? record.manualProgress?.receipt ?? null : null;
+  const completed = status === "completed" || !!caseKnown(d.receipt) || !!manualReceipt;
+  const delivered = !!delivery || status === "delivered" || !!manualDelivery;
   const ended = !completed && (!!project?.archivedAt || status === "closed");
   const reached = completed ? EXTERNAL_KEYS.length : delivered ? 4 : payment || started ? tasksDone ? 3 : 2 : 1;
   const amount = project?.administrativeAmount;
@@ -95,8 +101,8 @@ function deriveExternalCaseSteps(record: CaseWorkspaceRecord): CaseStep[] {
     consultation: null,
     quote: payment ? `${caseMoney(payment.money ?? amount ?? null)}・入金済み` : amount ? `${caseMoney(amount)}・入金はまだ` : "金額はまだ",
     production: work.length ? `${work.filter(task => task.done).length}/${work.length}工程 完了` : project?.type === "undecided" ? "依頼の種類を選ぶと工程ができます" : null,
-    delivery: delivery ? `納品済み（${caseTime(delivery.recordedAt)}）` : status === "delivered" ? "納品済み" : null,
-    receipt: completed ? "完了" : null,
+    delivery: delivery ? `納品済み（${caseTime(delivery.recordedAt)}）` : status === "delivered" ? "納品済み" : manualDelivery ? `手入力で完了（${caseTime(manualDelivery)}）` : null,
+    receipt: manualReceipt ? `手入力で完了（${caseTime(manualReceipt)}）` : completed ? "完了" : null,
   };
   return EXTERNAL_KEYS.map((key, index) => ({
     key, label: EXTERNAL_CASE_STEP_LABELS[key] ?? CASE_STEP_LABELS[key], section: CASE_STEP_SECTIONS[key], summary: summaries[key] ?? null,

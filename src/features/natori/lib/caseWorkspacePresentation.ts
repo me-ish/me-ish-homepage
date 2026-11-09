@@ -115,6 +115,10 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
   const project = caseKnown(d.project), quote = caseKnown(m.facts.quote), payment = caseKnown(d.payment);
   const link = caseKnown(m.facts.link), delivery = caseKnown(m.facts.delivery), receipt = caseKnown(d.receipt);
   const conversation = caseKnown(d.conversation);
+  // Hand-recorded off-system delivery/receipt calms the same waits and stage
+  // labels as the facts would, without ever becoming facts themselves.
+  const manualDelivery = !delivery ? record.manualProgress?.delivery ?? null : null;
+  const manualReceipt = !receipt ? record.manualProgress?.receipt ?? null : null;
   const waits: CaseGuidance["waits"][number][] = [];
   const buttons = new Map<string, string>();
   const unknown: string[] = [];
@@ -130,7 +134,7 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
     if (["unavailable", "not_requested", "external_evidence_unsupported", "legacy_evidence_required"].includes(item.reason)) continue;
     // A positive project record survives an incomplete ledger/release read. It
     // does not prove correlation, but must not send the client back to pay or receive again.
-    if (receipt && ["receipt_pending", "delivery_access_expired", "production_attention", "rough_response_pending",
+    if ((receipt || manualReceipt) && ["receipt_pending", "delivery_access_expired", "production_attention", "rough_response_pending",
       "quote_acceptance_pending", "payment_pending", "payment_notice_needed", "payment_notice_unconfirmed","delivery_notice_unconfirmed"].includes(item.reason)) continue;
     if (payment && ["quote_acceptance_pending", "payment_pending", "payment_notice_needed", "payment_notice_unconfirmed"].includes(item.reason)) continue;
     const section = attentionSection(item, record);
@@ -150,9 +154,9 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
   if (quoteUnconfirmed && !inactive && !receipt && !payment && !delivery) {
     add("quote-unconfirmed", "staff", "見積を読み込めませんでした。見積・支払いを開いて見る", "transaction");
   }
-  if (!inactive && !receipt) {
+  if (!inactive && !receipt && !manualReceipt) {
     if (conversation?.latestSender === "client") add("conversation", "staff", "お客さんのメッセージを読む", "consultation", "相談を開く");
-    if (!delivery && payment && !waits.some(wait => wait.section === "production")) {
+    if (!delivery && !manualDelivery && payment && !waits.some(wait => wait.section === "production")) {
       const next = d.tasks.state === "ready" ? d.tasks.value.find(task => !task.done) : undefined;
       add("production", "staff", next ? `制作を進める（次は${CASE_TASK_STAGE_LABELS[next.stage]}）` : "制作を進める", "production");
     } else if (!payment && m.agreement === "accepted" && !link) {
@@ -172,6 +176,7 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
     // 旧方式の入金は、返金を追うための Stripe の情報が記録に無く、この形式では表示できない。入金そのものは読めているので、読み込み失敗の警告にはしない（返金はStripeの画面で確認する）。
     if (observation === m.facts.financialReview && observation.state === "unavailable" && observation.reason === "unsupported" && m.facts.payment.state === "ready") continue;
     if (observation === m.facts.quote && quoteDraft) continue;
+    if (observation === m.facts.delivery && manualDelivery) continue;
     if (observation.state === "unavailable" || observation.state === "not_requested") {
       unknown.push(`${label}：${observationLabel(observation)}`);
     }
@@ -181,16 +186,16 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
   }
   const paymentUnread = m.facts.payment.state === "unavailable" || m.facts.payment.state === "not_requested";
   // Short stage names. They describe recorded facts only; they never unlock commands.
-  let status = receipt ? (project?.rawStatus === "completed" ? "完了" : "受取済み") : project?.archivedAt ? "保管中"
+  let status = receipt || manualReceipt ? (project?.rawStatus === "completed" ? "完了" : "受取済み") : project?.archivedAt ? "保管中"
     : project?.rawStatus === "closed" ? "終了" : project?.rawStatus === "completed" ? "完了"
-      : delivery ? "納品済み・受取待ち" : payment ? "制作中"
+      : delivery || manualDelivery ? "納品済み・受取待ち" : payment ? "制作中"
         : m.stage === "payment_notified" ? "入金待ち" : m.agreement === "accepted" ? paymentUnread ? "見積OK・入金は読み込めず" : "見積OK・支払い前" : quoteUnconfirmed ? "見積の状態が分かりません"
           : quote?.state === "draft" || quoteDraft ? "見積の準備中" : m.agreement === "needs_review" ? "見積の確認が必要" : quote ? "見積の返事待ち" : "相談中";
   if (!project && !receipt && !payment && !delivery && !quote) status = "読み込めませんでした";
   // Mail checks go last so the main next step is always a real one.
   waits.sort((a, b) => Number(!!a.mailCheck) - Number(!!b.mailCheck));
   const primary = waits[0] ? { label: buttons.get(waits[0].key) ?? `${CASE_SECTION_LABELS[waits[0].section]}を開く`, section: waits[0].section }
-    : receipt || inactive ? { label: "履歴を開く", section: "history" as const }
+    : receipt || manualReceipt || inactive ? { label: "履歴を開く", section: "history" as const }
       : { label: "相談を開く", section: "consultation" as const };
   return { status, primary, waits, unknown, facts: [
     { label: "見積", value: quote ? `${quote.version > 1 ? `${quote.version}回目の見積` : "見積"}${m.agreement === "accepted" ? "でOK" : m.agreement === "needs_review" ? "（内容の確認が必要）" : quote.state === "draft" ? "（下書き）" : "（返事待ち）"}`
@@ -198,7 +203,7 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
     { label: m.agreement === "needs_review" && quote?.acceptance ? "OKをもらった金額（要確認）" : "決まった金額",
       value: quote?.acceptance && (m.agreement === "accepted" || m.agreement === "needs_review") ? caseMoney(quote.acceptance.money) : quoteUnconfirmed ? "分かりません" : "まだ" },
     { label: "入金", value: payment ? `${caseMoney(payment.money)}・入金済み` : observationLabel(m.facts.payment, "まだ") },
-    { label: "受取", value: receipt ? `${caseTime(receipt.acceptedAt)}・受取済み` : observationLabel(d.receipt, "まだ") },
+    { label: "受取", value: receipt ? `${caseTime(receipt.acceptedAt)}・受取済み` : manualReceipt ? `手入力で完了（${caseTime(manualReceipt)}）` : observationLabel(d.receipt, "まだ") },
     { label: "支払リンク", value: link ? link.state === "active" ? "使える状態" : "作成済み"
       : observationLabel(m.facts.link, "まだ") },
   ] };
