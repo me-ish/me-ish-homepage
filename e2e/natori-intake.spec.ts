@@ -156,7 +156,11 @@ test.describe("Natori public intake rollout", () => {
     await page.goto(`${DEMO_PATH}?structured=1`);
     await openInquiry(page, "quote");
     // 種類と範囲のプルダウンは「細かく選ぶ」の中にある。
-    await page.locator("details:has(#pf-request-type)").evaluate((element) => { (element as HTMLDetailsElement).open = true; });
+    // 見積もりへの切り替え直後は描き直しで閉じることがあるので、プルダウンが見えるまで開き直す。
+    await expect(async () => {
+      await page.locator("#pf-fine-select").evaluate((element) => { (element as HTMLDetailsElement).open = true; });
+      await expect(page.locator("#pf-request-type")).toBeVisible({ timeout: 1000 });
+    }).toPass();
     await page.getByLabel("ご依頼の種類", { exact: true }).selectOption("other");
     await page.getByLabel(/ご依頼の種類（その他の内容）/).fill("イベント表紙");
     await page.getByRole("checkbox", { name: /表情を追加する（表情差分）/ }).check();

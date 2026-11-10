@@ -57,7 +57,7 @@ async function main(){
  }finally{await pre.close();}
  const cases=[],test=(name,fn)=>cases.push({name,fn});test.info=()=>({outputPath:name=>{check(/^phase5-[a-z0-9-]+\.png$/.test(name),'SCREENSHOT_PATH');return '/results/'+name;}});
  async function prepareActualEnvelope(page){
-  await page.locator('details:has(#pf-request-type)').evaluate(element=>{element.open=true;});
+  await expect(async()=>{await page.locator('#pf-fine-select').evaluate(element=>{element.open=true;});await expect(page.locator('#pf-request-type')).toBeVisible({timeout:1000});}).toPass();
   await page.getByLabel('ご依頼の種類',{exact:true}).selectOption('other');await page.getByLabel(/ご依頼の種類（その他の内容）/).fill('hidden old request');await page.getByLabel('ご依頼の種類',{exact:true}).selectOption('illustration');
   await page.getByLabel('制作範囲',{exact:true}).selectOption('other');await page.getByLabel(/制作範囲（その他の内容）/).fill('hidden old scope');await page.getByLabel('制作範囲',{exact:true}).selectOption('full_body');
   await page.getByLabel('補足（任意）',{exact:true}).fill('笑顔・泣き顔');

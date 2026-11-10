@@ -812,6 +812,7 @@ export default function PortfolioStructuredCommissionForm({
           >
             <PlanPicker plans={content.plans} works={content.works} value={planPick} onPick={pickPlan} />
             <details
+              id="pf-fine-select"
               className="group/fine"
               open={fineOpen || massProductionSelected || massProductionNotice}
               onToggle={(event) => setFineOpen(event.currentTarget.open)}
