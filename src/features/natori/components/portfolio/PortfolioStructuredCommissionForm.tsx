@@ -1711,7 +1711,7 @@ export default function PortfolioStructuredCommissionForm({
               {emailSuggestion ? <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm" style={{ color: c.text }}>
                 <span>もしかして <span className="font-bold break-all">{emailSuggestion}</span> ですか？</span>
                 <button type="button" className="pf-cute-focus min-h-[44px] font-bold underline" style={{ color: c.accentText }}
-                  onClick={() => { setClientEmail(emailSuggestion); setEmailSuggestion(null); }}>この住所にする</button>
+                  onClick={() => { setClientEmail(emailSuggestion); setEmailSuggestion(null); }}>このアドレスにする</button>
               </p> : null}
               <FieldError id="pf-email-error" message={serverErrorFor("clientEmail")} />
             </div>

@@ -124,7 +124,7 @@ describe("メールの打ち間違い案内", () => {
     fireEvent.blur(email);
     expect(screen.getByText(/もしかして/).textContent).toBe("もしかして taro@gmail.com ですか？");
     expect(email.value).toBe("taro@gmial.com");
-    fireEvent.click(screen.getByRole("button", { name: "この住所にする" }));
+    fireEvent.click(screen.getByRole("button", { name: "このアドレスにする" }));
     expect(email.value).toBe("taro@gmail.com");
     expect(screen.queryByText(/もしかして/)).toBeNull();
   });
