@@ -13,7 +13,7 @@ const SUPABASE_HOST = SUPABASE_URL ? new URL(SUPABASE_URL).hostname : '';
 // ポートフォリオの「相談・見積もり」「このプランで相談」などはすべて /natori/portfolio/contact を指しているので、
 // ここで転送すればボタン側は触らずに済む。プレビューとローカル・CI ではフォームがそのまま開く（作り直しの確認用）。
 // 元に戻すときは null にする。
-const NATORI_TEMPORARY_INTAKE_URL = 'https://tsunagu.cloud/users/natonato_o';
+const NATORI_TEMPORARY_INTAKE_URL = null; // 転送中は 'https://tsunagu.cloud/users/natonato_o'
 
 const natoriTemporaryIntakeActive = Boolean(NATORI_TEMPORARY_INTAKE_URL) && process.env.VERCEL_ENV === 'production';
 
