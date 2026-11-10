@@ -118,8 +118,11 @@ describe("Phase 5 confirmation and actual submitted values", () => {
     fetchMock.mockReturnValue(new Promise<Response>(() => undefined));
     renderForm();
     if (mode === "quote") await userEvent.click(screen.getByLabelText("見積もりを希望"));
-    await openPhase5Details(mode === "quote" ? "選べる詳細項目" : "詳しい条件を追加する");
-    await openPhase5Details("依頼の種類");
+    // 見積もりモードは「依頼の種類」「用途・条件」「予算・納期」を折りたたまずに並べる。
+    if (mode !== "quote") {
+      await openPhase5Details("詳しい条件を追加する");
+      await openPhase5Details("依頼の種類");
+    }
     phase5Change("ご依頼の種類", "other");
     phase5Change(/ご依頼の種類（その他の内容）/, " 表紙 ");
     phase5Change("制作範囲", "other");
@@ -139,26 +142,25 @@ describe("Phase 5 confirmation and actual submitted values", () => {
     phase5Change("このURLの内容（任意）", " 衣装の設定資料 ");
     const image = new File([new Uint8Array([1, 2, 3])], "costume.png", { type: "image/png" });
     fireEvent.change(screen.getByLabelText("キャラクター資料の画像を選択"), { target: { files: [image] } });
-    if (mode === "quote") await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
-    await openPhase5Details("用途・条件");
+    // 見積もりモードでは使いみち（使用目的）を 1 画面目で聞く。
+    if (mode !== "quote") await openPhase5Details("用途・条件");
     await userEvent.click(screen.getByLabelText("配信で使用"));
     await userEvent.click(screen.getByLabelText("その他"));
     phase5Change(/使用目的（その他の内容）/, " 特番 ");
+    if (mode === "quote") await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
     phase5Change("商用利用", "yes");
     phase5Change(/作品の公開可否/, "delayed");
     phase5Change("公開可能日必須", "2026-11-15");
-    await openPhase5Details("予算・納期");
-    phase5Change("ご予算", "range");
-    phase5Change(/下限（円）/, "10000");
-    phase5Change("上限（円・任意）", "15000");
-    phase5Change("希望納期", "preferred_date");
+    if (mode !== "quote") await openPhase5Details("予算・納期");
+    await userEvent.click(within(screen.getByRole("group", { name: "ご予算" })).getByRole("radio", { name: "10,000〜20,000円" }));
+    await userEvent.click(within(screen.getByRole("group", { name: "希望納期" })).getByRole("radio", { name: "希望の日付がある" }));
     phase5Change(/希望日/, "2026-12-01");
     phase5Change("納期の補足（任意）", " イベント前まで ");
     phase5Change(/お名前/, " テスト太郎 ");
     phase5Change(/メールアドレス/, " client@example.com ");
     await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
     const confirmation = await screen.findByRole("region", { name: "送信前の確認" });
-    for (const value of ["その他（表紙）", "その他（二人の全身）", "表情差分 ×2（笑顔・泣き顔）", "水色の髪", "笑顔", "二人並び", "青", "画像の服装", "配信で使用 / その他（特番）", "商用利用する", "一定期間後なら公開してよい（2026年11月15日から）", "10,000円〜15,000円", "2026年12月1日 希望 / イベント前まで", "衣装の設定資料", "example.com", "costume.png", "テスト太郎", "client@example.com"]) {
+    for (const value of ["その他（表紙）", "その他（二人の全身）", "表情差分 ×2（笑顔・泣き顔）", "水色の髪", "笑顔", "二人並び", "青", "画像の服装", "配信で使用 / その他（特番）", "商用利用する", "一定期間後なら公開してよい（2026年11月15日から）", "10,000円〜20,000円", "2026年12月1日 希望 / イベント前まで", "衣装の設定資料", "example.com", "costume.png", "テスト太郎", "client@example.com"]) {
       expect(confirmation.textContent).toContain(value);
     }
     expect(confirmation.textContent).not.toContain("相談内容なし");
@@ -179,7 +181,7 @@ describe("Phase 5 confirmation and actual submitted values", () => {
     const parsed = validateNatoriRequestDataV1(JSON.parse(String(form.get("requestData"))));
     expect(parsed.success).toBe(true);
     if (!parsed.success) throw new Error("actual submitted request is invalid");
-    expect(parsed.data).toMatchObject({ inquiryMode: mode, requestTypeOther: "表紙", commissionScopeOther: "二人の全身", options: [{ id: "expression_variation", label: "表情差分", quantity: 2, notes: "笑顔・泣き顔" }], characterFeatures: "水色の髪", expressionMood: "笑顔", composition: "二人並び", colorDirection: "青", referenceNotes: "画像の服装", commercialUse: "yes", publicationPolicy: "delayed", publicationAllowedFrom: "2026-11-15", budget: { kind: "range", min: 10000, max: 15000 }, deadline: { kind: "preferred_date", date: "2026-12-01", note: "イベント前まで" }, message: "" });
+    expect(parsed.data).toMatchObject({ inquiryMode: mode, requestTypeOther: "表紙", commissionScopeOther: "二人の全身", options: [{ id: "expression_variation", label: "表情差分", quantity: 2, notes: "笑顔・泣き顔" }], characterFeatures: "水色の髪", expressionMood: "笑顔", composition: "二人並び", colorDirection: "青", referenceNotes: "画像の服装", commercialUse: "yes", publicationPolicy: "delayed", publicationAllowedFrom: "2026-11-15", budget: { kind: "range", min: 10000, max: 20000 }, deadline: { kind: "preferred_date", date: "2026-12-01", note: "イベント前まで" }, message: "" });
     const admin = buildNatoriInquiryRequestView(parsed.data);
     expect(admin.kind).toBe("structured");
     if (admin.kind !== "structured") throw new Error("admin reader cannot show actual submission");

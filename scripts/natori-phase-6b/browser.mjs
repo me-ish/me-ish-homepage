@@ -83,6 +83,8 @@ async function contrastStates(page, name, locator, theme, disabled = false) {
     await resetContrastFocus(page);
     if (state.includes('hover')) await locator.hover({ force: true });
     if (state === 'focus') await focusForContrast(page, locator);
+    // 色の切り替え（CSS transition）の途中を測らないよう、動いている transition が終わるのを待つ。
+    await page.evaluate(() => Promise.all(document.getAnimations().filter(animation => animation instanceof CSSTransition).map(animation => animation.finished.catch(() => {}))));
     const value = await colors(locator);
     observations.push({ name, theme, state, ...value });
     check(value.contrast >= 4.5, `CTA_CONTRAST_${name}_${theme}_${state}`);

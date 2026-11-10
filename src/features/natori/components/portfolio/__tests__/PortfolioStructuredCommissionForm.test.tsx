@@ -51,6 +51,11 @@ function formElement(): HTMLFormElement {
   return document.querySelector("form") as HTMLFormElement;
 }
 
+const budgetChip = (name: string) =>
+  within(screen.getByRole("group", { name: "ご予算", hidden: true })).getByRole("radio", { name, hidden: true });
+const deadlineChip = (name: string) =>
+  within(screen.getByRole("group", { name: "希望納期", hidden: true })).getByRole("radio", { name, hidden: true });
+
 function detailsBySummary(text: string): HTMLDetailsElement {
   const details = Array.from(document.querySelectorAll("details")).find((element) =>
     element.querySelector("summary")?.textContent?.includes(text)
@@ -253,9 +258,7 @@ describe("条件付き入力", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: /商用利用\s*\+1,000円/ }));
     expect(screen.queryByRole("checkbox", { name: /しっかり背景/ })).toBeNull();
     expect(screen.queryByLabelText("数量")).toBeNull();
-    for (const title of ["用途・条件", "予算・納期", "キャラクター・イメージの詳細"]) {
-      expect(detailsBySummary(title).open).toBe(false);
-    }
+    expect(detailsBySummary("キャラクター・イメージの詳細").open).toBe(false);
 
     await fillMinimum("量産イラストをお願いします。");
     submit();
@@ -374,16 +377,21 @@ describe("条件付き入力", () => {
     });
   });
 
-  it("予算は kind に応じて入力欄が切り替わり、隠れた値は送らない", async () => {
+  it("予算はチップで選び、範囲チップは下限・上限をそのまま送る", async () => {
     renderForm();
-    const budgetKind = screen.getByLabelText("ご予算");
+    await userEvent.click(budgetChip("10,000〜20,000円"));
+    // 範囲はチップで決まるので、下限・上限の入力欄は出さない
+    expect(screen.queryByLabelText("上限（円・任意）")).toBeNull();
+    await fillMinimum();
+    submit();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(submittedRequestData().budget).toEqual({ kind: "range", min: 10000, max: 20000, currency: "JPY" });
+  });
 
-    await userEvent.selectOptions(budgetKind, "range");
-    await userEvent.type(screen.getByLabelText(/下限（円）/), "5000");
-    await userEvent.type(screen.getByLabelText("上限（円・任意）"), "9000");
-
-    await userEvent.selectOptions(budgetKind, "fixed");
-    // 上限は kind 切替で非表示になり、送信対象からも外れる
+  it("予算は「金額を入力」で金額欄が出て、範囲の値は送らない", async () => {
+    renderForm();
+    await userEvent.click(budgetChip("5,000〜10,000円"));
+    await userEvent.click(budgetChip("金額を入力"));
     expect(screen.queryByLabelText("上限（円・任意）")).toBeNull();
     const fixedAmount = screen.getByLabelText(/ご予算（円）/);
     await userEvent.clear(fixedAmount);
@@ -402,15 +410,13 @@ describe("条件付き入力", () => {
 
   it("納期は4種類を選べ、日付欄は該当 kind のときだけ現れる", async () => {
     renderForm();
-    const deadlineKind = screen.getByLabelText("希望納期");
-
-    await userEvent.selectOptions(deadlineKind, "standard");
+    await userEvent.click(deadlineChip("通常でOK（入金後 約1か月）"));
     expect(screen.queryByLabelText(/希望日/)).toBeNull();
 
-    await userEvent.selectOptions(deadlineKind, "preferred_date");
+    await userEvent.click(deadlineChip("希望の日付がある"));
     fireEvent.change(screen.getByLabelText(/希望日/), { target: { value: "2026-09-01" } });
 
-    await userEvent.selectOptions(deadlineKind, "rush_consultation");
+    await userEvent.click(deadlineChip("お急ぎ（+2,000円／要相談）"));
     await userEvent.type(screen.getByLabelText("納期の補足（任意）"), "急ぎです");
 
     await fillMinimum();
@@ -529,32 +535,33 @@ describe("server error の表示", () => {
   it("予算エラーでは予算だけ開き、通信せずに修正・再送できる", async () => {
     renderForm();
     await fillMinimum();
-    await userEvent.selectOptions(screen.getByLabelText("ご予算"), "range");
-    fireEvent.change(screen.getByLabelText(/下限（円）/), { target: { value: "10000" } });
-    fireEvent.change(screen.getByLabelText("上限（円・任意）"), { target: { value: "5000" } });
+    await userEvent.click(budgetChip("金額を入力"));
+    fireEvent.change(screen.getByLabelText(/ご予算（円）/), { target: { value: "1万円" } });
     submit();
     expect(fetchMock).not.toHaveBeenCalled();
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("上限（円・任意）")));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText(/ご予算（円）/)));
     expect(detailsBySummary("予算・納期").open).toBe(true);
     for (const title of ["依頼の種類", "用途・条件", "資料", "キャラクター・イメージの詳細"]) {
       expect(detailsBySummary(title).open).toBe(false);
     }
-    expect(screen.getByLabelText("上限（円・任意）").getAttribute("aria-invalid")).toBe("true");
-    fireEvent.change(screen.getByLabelText("上限（円・任意）"), { target: { value: "15000" } });
+    expect(screen.getByLabelText(/ご予算（円）/).getAttribute("aria-invalid")).toBe("true");
+    fireEvent.change(screen.getByLabelText(/ご予算（円）/), { target: { value: "15000" } });
     submit();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    expect(submittedRequestData()).toMatchObject({ budget: { kind: "range", min: 10000, max: 15000 } });
+    expect(submittedRequestData()).toMatchObject({ budget: { kind: "fixed", min: 15000, max: 15000 } });
   });
 
   it.each([
     ["ご依頼の種類", "other", "pf-request-type-other"],
     ["制作範囲", "other", "pf-scope-other"],
-    ["希望納期", "preferred_date", "pf-deadline-date"],
-    ["ご予算", "fixed", "pf-budget-fixed"],
+    ["希望納期", "希望の日付がある", "pf-deadline-date"],
+    ["ご予算", "金額を入力", "pf-budget-fixed"],
   ])("%s の条件付き必須を送信前に検証する", async (label, value, targetId) => {
     renderForm();
     await fillMinimum();
-    await userEvent.selectOptions(screen.getByLabelText(label), value);
+    if (label === "希望納期") await userEvent.click(deadlineChip(value));
+    else if (label === "ご予算") await userEvent.click(budgetChip(value));
+    else await userEvent.selectOptions(screen.getByLabelText(label), value);
     submit();
     expect(fetchMock).not.toHaveBeenCalled();
     await waitFor(() => expect(document.activeElement?.id).toBe(targetId));
@@ -678,12 +685,12 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     await waitFor(() => expect(document.activeElement?.id).toBe("pf-ref-url-0"));
     expect(screen.getByLabelText("参考URL 1").getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByRole("list", { name: "進行状況 1 / 3" })).toBeTruthy();
-    expect(screen.getByLabelText("ご予算").closest("div[hidden]")).not.toBeNull();
+    expect(screen.getByRole("group", { name: "ご予算", hidden: true }).closest("div[hidden]")).not.toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
     fireEvent.change(screen.getByLabelText("参考URL 1"), { target: { value: "https://example.com/reference" } });
     await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
     await waitFor(() => expect(document.activeElement?.textContent).toBe("ご希望の条件と連絡先"));
-    expect(screen.getByLabelText("ご予算").closest("div[hidden]")).toBeNull();
+    expect(screen.getByRole("group", { name: "ご予算" }).closest("div[hidden]")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
     await waitFor(() => expect(document.activeElement?.id).toBe("pf-name"));
     expect(fetchMock).not.toHaveBeenCalled();
@@ -741,8 +748,9 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     renderForm();
     await fillMinimum("SDキャラを相談したいです。");
     fireEvent(window, new CustomEvent(PLAN_SELECT_EVENT, { detail: { id: "sd", name: "SDキャラ" } }));
-    expect(detailsBySummary("選べる詳細項目").open).toBe(true);
-    expect(detailsBySummary("依頼の種類").open).toBe(true);
+    // 見積もりモードの「描く範囲」は折りたたみではなく、そのまま見えていて SD が選ばれている。
+    expect(screen.getByRole("group", { name: /描く範囲/ }).closest("details")).toBeNull();
+    expect((screen.getByRole("radio", { name: /^SD/ }) as HTMLInputElement).checked).toBe(true);
     expect((screen.getByLabelText("ご依頼の種類") as HTMLSelectElement).value).toBe("sd");
     expect((screen.getByLabelText("見積もりを希望") as HTMLInputElement).checked).toBe(true);
     await userEvent.click(screen.getByLabelText("まず相談したい"));
@@ -765,7 +773,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     expect(detailsBySummary("用途・条件").open).toBe(true);
   });
 
-  it("quote でも依頼の種類以外を一斉展開しない", async () => {
+  it("quote では入れ子の折りたたみをやめ、詳細と資料だけを閉じておく", async () => {
     renderForm();
 
     for (const title of [
@@ -781,16 +789,40 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
 
     await userEvent.click(screen.getByLabelText("見積もりを希望"));
 
-    expect(detailsBySummary("選べる詳細項目").open).toBe(true);
-    expect(detailsBySummary("依頼の種類").open).toBe(true);
-    for (const title of [
-      "用途・条件",
-      "予算・納期",
-      "キャラクター・イメージの詳細",
-      "資料",
-    ]) {
-      expect(detailsBySummary(title).open).toBe(false);
+    expect(screen.getByRole("group", { name: /描く範囲/ }).closest("details")).toBeNull();
+    for (const label of ["商用利用"]) {
+      expect(screen.getByLabelText(label).closest("details")).toBeNull();
     }
+    for (const name of ["ご予算", "希望納期"]) {
+      expect(screen.getByRole("group", { name, hidden: true }).closest("details")).toBeNull();
+    }
+    // 種類と範囲のプルダウンは「細かく選ぶ」の中にしまう
+    expect(detailsBySummary("細かく選ぶ").open).toBe(false);
+    expect(screen.getByLabelText("ご依頼の種類").closest("details")).toBe(detailsBySummary("細かく選ぶ"));
+    for (const title of ["キャラクター・イメージの詳細", "資料"]) {
+      const section = detailsBySummary(title);
+      expect(section.open).toBe(false);
+      expect(section.parentElement?.closest("details")).toBeNull();
+    }
+  });
+
+  it("書き出しボタンで本文に見出し行を足し、同じ見出しは二重に入れない", async () => {
+    renderForm();
+    const message = screen.getByLabelText(/ご相談・ご依頼の内容/) as HTMLTextAreaElement;
+    await userEvent.click(screen.getByRole("button", { name: "＋ 誰を" }));
+    await userEvent.type(message, "自分のオリジナルキャラ");
+    await userEvent.click(screen.getByRole("button", { name: "＋ 表情・ポーズ" }));
+    await userEvent.click(screen.getByRole("button", { name: "＋ 誰を" }));
+    expect(message.value).toBe("誰を：自分のオリジナルキャラ\n表情・ポーズ：");
+    expect(document.activeElement).toBe(message);
+    expect(message.selectionStart).toBe("誰を：自分のオリジナルキャラ".length);
+  });
+
+  it("最初のステップに所要時間の目安を出す", async () => {
+    renderForm();
+    expect(screen.getByText(/ステップ 1 \/ 2・2分くらい/)).toBeTruthy();
+    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    expect(screen.getByText(/ステップ 1 \/ 3・3分くらい/)).toBeTruthy();
   });
 
   it("primary fields は desktop でも1列で、必須を文字で示す", () => {
@@ -816,8 +848,6 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
       /メールアドレス/,
       "ご依頼の種類",
       "制作範囲",
-      "ご予算",
-      "希望納期",
       /ご相談・ご依頼の内容/,
       "参考URL 1",
     ]) {

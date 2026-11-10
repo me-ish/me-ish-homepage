@@ -7,6 +7,8 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
       await openInquiry(page, "見積もりをお願いしたい");
       const checkbox = page.getByRole("checkbox", { name: /表情を追加する（表情差分）/ });
       const cardLabel = page.locator("label").filter({ has: checkbox });
+      // 見積もりモードに切り替えた直後の再描画を待ってから位置を測る。
+      await expect(cardLabel).toBeVisible();
       const box = await cardLabel.boundingBox();
       if (!box) throw new Error("option card label is not visible");
       // Actual pointer coordinates inside the label's blank padding, outside checkbox/text.
@@ -71,6 +73,12 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
     await page.goto(`${DEMO_PATH}?structured=1`);
     await openInquiry(page, "見積もりをお願いしたい");
     checkpoint('EDIT_INPUTS');
+    // 種類と範囲のプルダウンは「細かく選ぶ」の中にある。
+    // 見積もりへの切り替え直後は描き直しで閉じることがあるので、プルダウンが見えるまで開き直す。
+    await expect(async () => {
+      await page.locator("#pf-fine-select").evaluate((element) => { element.open = true; });
+      await expect(page.locator("#pf-request-type")).toBeVisible({ timeout: 1000 });
+    }).toPass();
     await page.getByLabel("ご依頼の種類", { exact: true }).selectOption("other");
     await page.getByLabel(/ご依頼の種類（その他の内容）/).fill("イベント表紙");
     await page.getByRole("checkbox", { name: /表情を追加する（表情差分）/ }).check();

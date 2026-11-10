@@ -14,6 +14,13 @@ import {
 } from "@/features/natori/constants/portfolioContent";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import { NATORI_INTAKE_COPY } from "@/features/natori/constants/portfolioContactCopy";
+import { NATORI_INTAKE_WRITING_PROMPTS } from "@/features/natori/constants/intakeWritingPrompts";
+import { insertWritingPrompt } from "@/features/natori/lib/intakeWritingPrompts";
+import { NATORI_INTAKE_BUDGET_CHIPS, NATORI_INTAKE_DEADLINE_CHIP_LABELS } from "@/features/natori/constants/intakeBudgetChips";
+import { applyPortfolioBudgetChip, portfolioBudgetChipId } from "@/features/natori/lib/portfolioBudgetChips";
+import { applyPortfolioPlanPick, portfolioBaseEstimate, portfolioPlanPickValue, type PortfolioPlanPick } from "@/features/natori/lib/portfolioPlanPicker";
+import PlanPicker from "./intake/PlanPicker";
+import ChoiceChip from "./intake/ChoiceChip";
 import { MASS_PRODUCTION_COMMERCIAL_AMOUNT, MASS_PRODUCTION_VARIANTS } from "@/features/natori/constants/massProductionIllustration";
 import {
   NATORI_MAX_REFERENCE_IMAGES,
@@ -53,7 +60,6 @@ import {
   NATORI_COMMISSION_SCOPES_V1,
   NATORI_REQUEST_TYPES_V1,
   NATORI_USAGE_TYPES_V1,
-  type NatoriBudgetV1,
   type NatoriDeadlineV1,
   type NatoriInquiryModeV1,
   type NatoriUsageTypeV1,
@@ -220,6 +226,7 @@ export default function PortfolioStructuredCommissionForm({
   const [refImageError, setRefImageError] = useState<string | null>(null);
   const [massProductionNotice, setMassProductionNotice] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [fineOpen, setFineOpen] = useState(false);
   const [optionalOpen, setOptionalOpen] = useState(false);
   const [openSections, setOpenSections] = useState({
     requestType: false,
@@ -229,6 +236,8 @@ export default function PortfolioStructuredCommissionForm({
   });
   const refFileInputRef = useRef<HTMLInputElement | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const messageRef = useRef<HTMLTextAreaElement | null>(null);
+  const pendingCaretRef = useRef<number | null>(null);
   const stepHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const focusStepOnChangeRef = useRef(false);
   const sendingRef = useRef(false);
@@ -236,7 +245,8 @@ export default function PortfolioStructuredCommissionForm({
   const [retrySeconds, setRetrySeconds] = useState(0);
   const retryUntilRef = useRef(0);
   const waitingToRetry = retrySeconds > 0;
-  const lastStep = state.inquiryMode === "quote" ? 2 : 1;
+  const isQuote = state.inquiryMode === "quote";
+  const lastStep = isQuote ? 2 : 1;
   const stepLabels = state.inquiryMode === "quote"
     ? ["制作内容", "条件・連絡先", "確認・送信"]
     : ["ご相談内容", "確認・送信"];
@@ -271,6 +281,17 @@ export default function PortfolioStructuredCommissionForm({
     else fallback?.focus();
   }, [focusTarget, step]);
 
+  // 書き出しボタンで足した見出し行の末尾にカーソルを置く。
+  useLayoutEffect(() => {
+    const caret = pendingCaretRef.current;
+    if (caret === null) return;
+    pendingCaretRef.current = null;
+    const field = messageRef.current;
+    if (!field) return;
+    field.focus();
+    field.setSelectionRange(caret, caret);
+  }, [state.message]);
+
   useLayoutEffect(() => {
     if (!focusStepOnChangeRef.current) return;
     focusStepOnChangeRef.current = false;
@@ -285,6 +306,7 @@ export default function PortfolioStructuredCommissionForm({
     [content, massProductionSelected],
   );
   const requestTypeChoice = portfolioRequestTypeChoiceValue(state);
+  const planPick = portfolioPlanPickValue(state);
   const validatedSubmission = useMemo(
     () => validatePortfolioForm(state, optionChoices, clientName, clientEmail),
     [state, optionChoices, clientName, clientEmail],
@@ -324,7 +346,9 @@ export default function PortfolioStructuredCommissionForm({
   };
 
   const openErrorSections = (errors: ServerFieldError[]) => {
-    const sections = errors.map((error) => portfolioErrorTarget(error.path, state, optionChoices).section);
+    const targets = errors.map((error) => portfolioErrorTarget(error.path, state, optionChoices));
+    const sections = targets.map((target) => target.section);
+    if (targets.some((target) => target.id === "pf-request-type" || target.id === "pf-scope")) setFineOpen(true);
     if (sections.some(Boolean)) setOptionalOpen(true);
     if (sections.includes("details")) setDetailsOpen(true);
     setOpenSections((current) => ({
@@ -339,7 +363,9 @@ export default function PortfolioStructuredCommissionForm({
     openErrorSections([error]);
     const target = portfolioErrorTarget(error.path, state, optionChoices);
     if (state.inquiryMode === "quote") {
-      setStep(target.section === "usage" || target.section === "budget" || error.path === "clientName" || error.path === "clientEmail" ? 1 : 0);
+      // 見積もりでは使いみち（使用目的）は 1 画面目、商用利用・公開・予算・納期・連絡先は 2 画面目。
+      const onFirstStep = target.id === "pf-usage-types" || target.id === "pf-usage-other";
+      setStep(!onFirstStep && (target.section === "usage" || target.section === "budget" || error.path === "clientName" || error.path === "clientEmail") ? 1 : 0);
     } else {
       setStep(0);
     }
@@ -364,6 +390,19 @@ export default function PortfolioStructuredCommissionForm({
   const update = (patch: Partial<PortfolioRequestFormState>) =>
     setState((current) => pruneHiddenPortfolioRequestFields({ ...current, ...patch }));
 
+  const addWritingPrompt = (heading: string) => {
+    const result = insertWritingPrompt(state.message, heading);
+    pendingCaretRef.current = result.caret;
+    if (result.message === state.message) {
+      // 本文が変わらないときは effect が走らないので、ここでカーソルだけ動かす。
+      pendingCaretRef.current = null;
+      messageRef.current?.focus();
+      messageRef.current?.setSelectionRange(result.caret, result.caret);
+      return;
+    }
+    update({ message: result.message });
+  };
+
   const changeRequestType = (value: PortfolioRequestTypeChoiceValue) => {
     if (
       value === NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE &&
@@ -379,6 +418,11 @@ export default function PortfolioStructuredCommissionForm({
       setOpenSections({ requestType: true, usage: false, budget: false, materials: false });
       setDetailsOpen(false);
     }
+  };
+
+  const pickPlan = (pick: PortfolioPlanPick) => {
+    setMassProductionNotice(false);
+    setState((current) => applyPortfolioPlanPick(current, pick));
   };
 
   /** モード切替で任意セクションの開閉だけを変える。残留値は prune で落とす。 */
@@ -561,13 +605,13 @@ export default function PortfolioStructuredCommissionForm({
     }
   };
 
-  const budgetKinds: NatoriBudgetV1["kind"][] = ["undecided", "range", "fixed"];
   const deadlineKinds: NatoriDeadlineV1["kind"][] = [
     "undecided",
     "standard",
     "preferred_date",
     "rush_consultation",
   ];
+  const budgetChip = portfolioBudgetChipId(state, NATORI_INTAKE_BUDGET_CHIPS);
 
   const messageSection = (
     <FormSection key="message" title={state.inquiryMode === "quote" ? "描いてほしいもの・相談したいこと" : "ご相談内容"}>
@@ -575,7 +619,22 @@ export default function PortfolioStructuredCommissionForm({
           <label htmlFor="pf-message" className={labelClass}>
             内容{messageRequired ? <RequiredBadge /> : <OptionalBadge />}
           </label>
+          <div className="mb-2 flex flex-wrap gap-2" role="group" aria-label="書き出しの項目を足す">
+            {NATORI_INTAKE_WRITING_PROMPTS.map((prompt) => (
+              <button
+                key={prompt.heading}
+                type="button"
+                aria-controls="pf-message"
+                onClick={() => addWritingPrompt(prompt.heading)}
+                className="pf-cute-focus min-h-[36px] rounded-full border-2 px-3 text-sm font-bold"
+                style={{ borderColor: c.formBorder, background: c.surface, color: c.text }}
+              >
+                ＋ {prompt.label}
+              </button>
+            ))}
+          </div>
           <textarea
+            ref={messageRef}
             id="pf-message"
             aria-label={`ご相談・ご依頼の内容${messageRequired ? "必須" : "任意"}`}
             {...errorAttributes("pf-message")}
@@ -590,197 +649,16 @@ export default function PortfolioStructuredCommissionForm({
               serverErrorFor("requestData.message") ? "pf-message-error" : undefined
             }
           />
+          <p className="mt-1.5 text-xs" style={{ color: c.textSoft }}>
+            書き出しに迷ったら、上のボタンで項目を足せます。
+          </p>
           <FieldError id="pf-message-error" message={serverErrorFor("requestData.message")} />
         </div>
       </FormSection>
   );
 
-  const optionalSection = (
-    <details key="optional"
-        open={state.inquiryMode === "quote" || optionalOpen}
-        onToggle={(event) => { if (state.inquiryMode === "consultation") setOptionalOpen(event.currentTarget.open); }}
-        className="group/optional"
-      >
-        <summary className="pf-cute-focus flex min-h-[44px] cursor-pointer list-none items-center gap-2 font-bold [&::-webkit-details-marker]:hidden">
-          {state.inquiryMode === "quote" ? "選べる詳細項目" : massProductionSelected ? <>量産イラストの依頼内容<RequiredBadge /></> : <>詳しい条件を追加する<OptionalBadge /></>}
-          <span aria-hidden="true" className="ml-auto group-open/optional:rotate-180">⌄</span>
-        </summary>
-        {massProductionSelected ? <p className="mt-2 text-sm" style={{ color: c.textSoft }}>デザインと表情を選んでください。</p> : null}
-        <div className="mt-4 space-y-4">
-          <div hidden={state.inquiryMode === "quote" && step !== 0}>
-          <FormSection
-            title="依頼の種類"
-            summary={state.requestType !== "undecided" || state.commissionScope !== "undecided"
-              ? [massProductionSelected ? NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL : NATORI_REQUEST_TYPE_LABELS_V1[state.requestType],
-                massProductionSelected ? state.commissionScopeOther : NATORI_COMMISSION_SCOPE_LABELS_V1[state.commissionScope]].filter(Boolean).join("／")
-              : undefined}
-            description={massProductionSelected ? "「おばけ」か「魔女」を選び、ご希望の表情をご記入ください。" : undefined}
-            collapsible
-            required={massProductionSelected}
-            open={openSections.requestType}
-            onToggle={(next) => setOpenSections((current) => ({ ...current, requestType: next }))}
-          >
-            <div className="grid gap-4">
-              <div>
-                <label htmlFor="pf-request-type" className={labelClass}>
-                  ご依頼の種類
-                </label>
-                <select
-                  id="pf-request-type"
-                  {...errorAttributes("pf-request-type")}
-                  value={requestTypeChoice}
-                  onChange={(event) =>
-                    changeRequestType(event.target.value as PortfolioRequestTypeChoiceValue)
-                  }
-                  className={inputClass}
-                  aria-describedby={massProductionNotice ? "pf-mass-production-notice" : undefined}
-                >
-                  {NATORI_REQUEST_TYPES_V1.filter((type) => type !== "other").map((type) => (
-                    <option key={type} value={type}>
-                      {type === "sd" ? "SDキャラクター（ちびキャラ）" : NATORI_REQUEST_TYPE_LABELS_V1[type]}
-                    </option>
-                  ))}
-                  <option value={NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE}>
-                    {NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL}
-                  </option>
-                  <option value="other">{NATORI_REQUEST_TYPE_LABELS_V1.other}</option>
-                </select>
-                {massProductionNotice ? (
-                  <div
-                    id="pf-mass-production-notice"
-                    role="alert"
-                    className="mt-2 rounded-lg border-2 px-3 py-2 text-sm font-bold"
-                    style={{
-                      borderColor: c.formBorder,
-                      background: c.surfaceSubtle,
-                      color: c.text,
-                    }}
-                  >
-                    現在、量産イラストは受け付けていません。再開・詳細は
-                    {xLink ? (
-                      <a
-                        href={xLink.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="pf-cute-focus mx-1 underline decoration-2 underline-offset-4 hover:opacity-70"
-                        style={{ color: c.formBorderActive }}
-                      >
-                        X
-                      </a>
-                    ) : (
-                      "X"
-                    )}
-                    をご確認ください。
-                  </div>
-                ) : null}
-              </div>
-              {!massProductionSelected ? (
-              <div>
-                <label htmlFor="pf-scope" className={labelClass}>
-                  制作範囲
-                </label>
-                <select
-                  id="pf-scope"
-                  {...errorAttributes("pf-scope")}
-                  value={state.commissionScope}
-                  onChange={(event) =>
-                    update({ commissionScope: event.target.value as typeof state.commissionScope })
-                  }
-                  disabled={massProductionSelected}
-                  className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-70`}
-                >
-                  {NATORI_COMMISSION_SCOPES_V1.map((scope) => (
-                    <option key={scope} value={scope}>
-                      {NATORI_COMMISSION_SCOPE_LABELS_V1[scope]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              ) : null}
-            </div>
-
-            {state.requestType === "other" && !massProductionSelected ? (
-              <div>
-                <label htmlFor="pf-request-type-other" className={labelClass}>
-                  ご依頼の種類（その他の内容）<RequiredBadge />
-                </label>
-                <input
-                  id="pf-request-type-other"
-                  {...errorAttributes("pf-request-type-other")}
-                  required
-                  value={state.requestTypeOther}
-                  onChange={(event) => update({ requestTypeOther: event.target.value })}
-                  maxLength={100}
-                  className={inputClass}
-                  aria-describedby={
-                    serverErrorFor("requestData.requestTypeOther")
-                      ? "pf-request-type-other-error"
-                      : undefined
-                  }
-                />
-                <FieldError
-                  id="pf-request-type-other-error"
-                  message={serverErrorFor("requestData.requestTypeOther")}
-                />
-              </div>
-            ) : null}
-
-            {state.commissionScope === "other" ? (
-              <div>
-                <label htmlFor="pf-scope-other" className={labelClass}>
-                  {massProductionSelected ? "デザイン" : "制作範囲（その他の内容）"}<RequiredBadge />
-                </label>
-                {massProductionSelected ? (
-                  <select
-                    id="pf-scope-other"
-                    {...errorAttributes("pf-scope-other")}
-                    required
-                    value={state.commissionScopeOther}
-                    onChange={(event) => update({ commissionScopeOther: event.target.value })}
-                    className={inputClass}
-                    aria-describedby={serverErrorFor("requestData.commissionScopeOther") ? "pf-scope-other-error" : undefined}
-                  >
-                    <option value="">デザインを選択してください</option>
-                    {MASS_PRODUCTION_VARIANTS.map((variant) => <option key={variant} value={variant}>{variant}</option>)}
-                  </select>
-                ) : (
-                  <input
-                    id="pf-scope-other"
-                    {...errorAttributes("pf-scope-other")}
-                    required
-                    value={state.commissionScopeOther}
-                    onChange={(event) => update({ commissionScopeOther: event.target.value })}
-                    maxLength={100}
-                    className={inputClass}
-                    aria-describedby={serverErrorFor("requestData.commissionScopeOther") ? "pf-scope-other-error" : undefined}
-                  />
-                )}
-                <FieldError
-                  id="pf-scope-other-error"
-                  message={serverErrorFor("requestData.commissionScopeOther")}
-                />
-              </div>
-            ) : null}
-
-            {massProductionSelected ? (
-              <div>
-                <label htmlFor="pf-mass-expression" className={labelClass}>表情指定<RequiredBadge /></label>
-                <textarea
-                  id="pf-mass-expression"
-                  {...errorAttributes("pf-mass-expression")}
-                  required
-                  rows={3}
-                  maxLength={1000}
-                  value={state.expressionMood}
-                  onChange={(event) => update({ expressionMood: event.target.value })}
-                  placeholder="例：口を開けた笑顔。表情差分ありの場合は、追加分の表情もご記入ください。"
-                  className={inputClass}
-                  aria-describedby={serverErrorFor("requestData.expressionMood") ? "pf-mass-expression-error" : undefined}
-                />
-                <FieldError id="pf-mass-expression-error" message={serverErrorFor("requestData.expressionMood")} />
-              </div>
-            ) : null}
-
+  const optionsBlock = (
+    <>
             <fieldset>
               <legend className={labelClass}>
                 {massProductionSelected ? "量産イラスト専用オプション" : "追加オプション"}<OptionalBadge />
@@ -903,38 +781,227 @@ export default function PortfolioStructuredCommissionForm({
                 </p>
               </>
             ) : null}
-          </FormSection>
+    </>
+  );
 
-          </div>
-          <div hidden={state.inquiryMode === "quote" && step !== 1}>
+  const baseEstimate = massProductionSelected ? null : portfolioBaseEstimate(state, content.plans);
+  const estimateBlock = (
+    <div aria-live="polite" className="empty:hidden">
+      {baseEstimate ? (
+        <p className="rounded-xl border-2 border-dashed px-4 py-3 text-sm leading-relaxed" style={{ borderColor: c.formBorder, background: c.surfaceSubtle }}>
+          この内容の目安：
+          <span className="mx-1 text-lg font-black" style={{ color: c.accentText }}>{baseEstimate.amount.toLocaleString("ja-JP")}円〜</span>
+          <span className="block text-xs sm:inline" style={{ color: c.textSoft }}>オプション・商用利用・お急ぎは、正式なお見積もりで確定します。</span>
+        </p>
+      ) : null}
+    </div>
+  );
+
+  const requestTypeSection = (
           <FormSection
-            title="用途・条件"
-            summary={state.usageTypes.length > 0 || state.commercialUse !== "unknown" || state.publicationPolicy !== "unknown"
-              ? `用途${state.usageTypes.length}件／商用利用：${NATORI_COMMERCIAL_USE_LABELS_V1[state.commercialUse]}／実績掲載：${NATORI_PUBLICATION_POLICY_LABELS_V1[state.publicationPolicy]}`
+            title={isQuote ? "描くもの" : "依頼の種類"}
+            summary={state.requestType !== "undecided" || state.commissionScope !== "undecided"
+              ? [massProductionSelected ? NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL : NATORI_REQUEST_TYPE_LABELS_V1[state.requestType],
+                massProductionSelected ? state.commissionScopeOther : NATORI_COMMISSION_SCOPE_LABELS_V1[state.commissionScope]].filter(Boolean).join("／")
               : undefined}
-            collapsible
-            open={openSections.usage}
-            onToggle={(next) => setOpenSections((current) => ({ ...current, usage: next }))}
+            description={massProductionSelected ? "「おばけ」か「魔女」を選び、ご希望の表情をご記入ください。" : undefined}
+            collapsible={!isQuote}
+            required={massProductionSelected}
+            open={openSections.requestType}
+            onToggle={(next) => setOpenSections((current) => ({ ...current, requestType: next }))}
           >
+            <PlanPicker plans={content.plans} works={content.works} value={planPick} onPick={pickPlan} />
+            <details
+              id="pf-fine-select"
+              className="group/fine"
+              open={fineOpen || massProductionSelected || massProductionNotice}
+              onToggle={(event) => setFineOpen(event.currentTarget.open)}
+            >
+              <summary className="pf-cute-focus inline-flex min-h-[44px] cursor-pointer list-none items-center gap-1 text-sm font-bold underline decoration-2 underline-offset-4 [&::-webkit-details-marker]:hidden"
+                style={{ color: c.textSoft }}>
+                細かく選ぶ（立ち絵の胸上など）
+                <span aria-hidden="true" className="group-open/fine:rotate-180">⌄</span>
+              </summary>
+            <div className="mt-2 grid gap-4">
+              <div>
+                <label htmlFor="pf-request-type" className={labelClass}>
+                  ご依頼の種類
+                </label>
+                <select
+                  id="pf-request-type"
+                  {...errorAttributes("pf-request-type")}
+                  value={requestTypeChoice}
+                  onChange={(event) =>
+                    changeRequestType(event.target.value as PortfolioRequestTypeChoiceValue)
+                  }
+                  className={inputClass}
+                  aria-describedby={massProductionNotice ? "pf-mass-production-notice" : undefined}
+                >
+                  {NATORI_REQUEST_TYPES_V1.filter((type) => type !== "other").map((type) => (
+                    <option key={type} value={type}>
+                      {type === "sd" ? "SDキャラクター（ちびキャラ）" : NATORI_REQUEST_TYPE_LABELS_V1[type]}
+                    </option>
+                  ))}
+                  <option value={NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE}>
+                    {NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL}
+                  </option>
+                  <option value="other">{NATORI_REQUEST_TYPE_LABELS_V1.other}</option>
+                </select>
+                {massProductionNotice ? (
+                  <div
+                    id="pf-mass-production-notice"
+                    role="alert"
+                    className="mt-2 rounded-lg border-2 px-3 py-2 text-sm font-bold"
+                    style={{
+                      borderColor: c.formBorder,
+                      background: c.surfaceSubtle,
+                      color: c.text,
+                    }}
+                  >
+                    現在、量産イラストは受け付けていません。再開・詳細は
+                    {xLink ? (
+                      <a
+                        href={xLink.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="pf-cute-focus mx-1 underline decoration-2 underline-offset-4 hover:opacity-70"
+                        style={{ color: c.formBorderActive }}
+                      >
+                        X
+                      </a>
+                    ) : (
+                      "X"
+                    )}
+                    をご確認ください。
+                  </div>
+                ) : null}
+              </div>
+              {!massProductionSelected ? (
+              <div>
+                <label htmlFor="pf-scope" className={labelClass}>
+                  制作範囲
+                </label>
+                <select
+                  id="pf-scope"
+                  {...errorAttributes("pf-scope")}
+                  value={state.commissionScope}
+                  onChange={(event) =>
+                    update({ commissionScope: event.target.value as typeof state.commissionScope })
+                  }
+                  disabled={massProductionSelected}
+                  className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-70`}
+                >
+                  {NATORI_COMMISSION_SCOPES_V1.map((scope) => (
+                    <option key={scope} value={scope}>
+                      {NATORI_COMMISSION_SCOPE_LABELS_V1[scope]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              ) : null}
+            </div>
+            </details>
+
+            {state.requestType === "other" && !massProductionSelected ? (
+              <div>
+                <label htmlFor="pf-request-type-other" className={labelClass}>
+                  ご依頼の種類（その他の内容）<RequiredBadge />
+                </label>
+                <input
+                  id="pf-request-type-other"
+                  {...errorAttributes("pf-request-type-other")}
+                  required
+                  value={state.requestTypeOther}
+                  onChange={(event) => update({ requestTypeOther: event.target.value })}
+                  maxLength={100}
+                  className={inputClass}
+                  aria-describedby={
+                    serverErrorFor("requestData.requestTypeOther")
+                      ? "pf-request-type-other-error"
+                      : undefined
+                  }
+                />
+                <FieldError
+                  id="pf-request-type-other-error"
+                  message={serverErrorFor("requestData.requestTypeOther")}
+                />
+              </div>
+            ) : null}
+
+            {state.commissionScope === "other" ? (
+              <div>
+                <label htmlFor="pf-scope-other" className={labelClass}>
+                  {massProductionSelected ? "デザイン" : "制作範囲（その他の内容）"}<RequiredBadge />
+                </label>
+                {massProductionSelected ? (
+                  <select
+                    id="pf-scope-other"
+                    {...errorAttributes("pf-scope-other")}
+                    required
+                    value={state.commissionScopeOther}
+                    onChange={(event) => update({ commissionScopeOther: event.target.value })}
+                    className={inputClass}
+                    aria-describedby={serverErrorFor("requestData.commissionScopeOther") ? "pf-scope-other-error" : undefined}
+                  >
+                    <option value="">デザインを選択してください</option>
+                    {MASS_PRODUCTION_VARIANTS.map((variant) => <option key={variant} value={variant}>{variant}</option>)}
+                  </select>
+                ) : (
+                  <input
+                    id="pf-scope-other"
+                    {...errorAttributes("pf-scope-other")}
+                    required
+                    value={state.commissionScopeOther}
+                    onChange={(event) => update({ commissionScopeOther: event.target.value })}
+                    maxLength={100}
+                    className={inputClass}
+                    aria-describedby={serverErrorFor("requestData.commissionScopeOther") ? "pf-scope-other-error" : undefined}
+                  />
+                )}
+                <FieldError
+                  id="pf-scope-other-error"
+                  message={serverErrorFor("requestData.commissionScopeOther")}
+                />
+              </div>
+            ) : null}
+
+            {massProductionSelected ? (
+              <div>
+                <label htmlFor="pf-mass-expression" className={labelClass}>表情指定<RequiredBadge /></label>
+                <textarea
+                  id="pf-mass-expression"
+                  {...errorAttributes("pf-mass-expression")}
+                  required
+                  rows={3}
+                  maxLength={1000}
+                  value={state.expressionMood}
+                  onChange={(event) => update({ expressionMood: event.target.value })}
+                  placeholder="例：口を開けた笑顔。表情差分ありの場合は、追加分の表情もご記入ください。"
+                  className={inputClass}
+                  aria-describedby={serverErrorFor("requestData.expressionMood") ? "pf-mass-expression-error" : undefined}
+                />
+                <FieldError id="pf-mass-expression-error" message={serverErrorFor("requestData.expressionMood")} />
+              </div>
+            ) : null}
+
+            {!isQuote ? optionsBlock : null}
+            {!isQuote ? estimateBlock : null}
+          </FormSection>
+  );
+
+  const usageBlock = (
+    <>
             <fieldset id="pf-usage-types" tabIndex={-1} {...errorAttributes("pf-usage-types")}>
-              <legend className={labelClass}>使用目的（複数選択可）</legend>
-              <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+              <legend className={labelClass}>{isQuote ? "使いみち（複数OK）" : "使用目的（複数選択可）"}</legend>
+              <p className="mb-2 text-xs" style={{ color: c.textSoft }}>決まっていなければ空のままで大丈夫です。</p>
+              <div className="flex flex-wrap gap-2">
                 {NATORI_USAGE_TYPES_V1.filter((usage) => usage !== "original_character").map((usage) => (
-                  <label key={usage} className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm" style={{ color: c.textSoft }}>
-                    <input type="checkbox" checked={state.usageTypes.includes(usage)} onChange={() => toggleUsageType(usage)} className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0" />
+                  <ChoiceChip key={usage} type="checkbox" checked={state.usageTypes.includes(usage)} onChange={() => toggleUsageType(usage)}>
                     {NATORI_USAGE_TYPE_LABELS_V1[usage]}
-                  </label>
+                  </ChoiceChip>
                 ))}
               </div>
             </fieldset>
-            <fieldset>
-              <legend className={labelClass}>題材<OptionalBadge /></legend>
-              <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm" style={{ color: c.textSoft }}>
-                <input type="checkbox" checked={state.usageTypes.includes("original_character")} onChange={() => toggleUsageType("original_character")} className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0" />
-                {NATORI_USAGE_TYPE_LABELS_V1.original_character}
-              </label>
-            </fieldset>
-
             {state.usageTypes.includes("other") ? (
               <div>
                 <label htmlFor="pf-usage-other" className={labelClass}>
@@ -958,6 +1025,29 @@ export default function PortfolioStructuredCommissionForm({
                 />
               </div>
             ) : null}
+
+    </>
+  );
+
+  const conditionSections = (
+    <>
+          <FormSection
+            title="用途・条件"
+            summary={state.usageTypes.length > 0 || state.commercialUse !== "unknown" || state.publicationPolicy !== "unknown"
+              ? `用途${state.usageTypes.length}件／商用利用：${NATORI_COMMERCIAL_USE_LABELS_V1[state.commercialUse]}／実績掲載：${NATORI_PUBLICATION_POLICY_LABELS_V1[state.publicationPolicy]}`
+              : undefined}
+            collapsible={!isQuote}
+            open={openSections.usage}
+            onToggle={(next) => setOpenSections((current) => ({ ...current, usage: next }))}
+          >
+            {!isQuote ? usageBlock : null}
+            <fieldset>
+              <legend className={labelClass}>題材<OptionalBadge /></legend>
+              <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm" style={{ color: c.textSoft }}>
+                <input type="checkbox" checked={state.usageTypes.includes("original_character")} onChange={() => toggleUsageType("original_character")} className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0" />
+                {NATORI_USAGE_TYPE_LABELS_V1.original_character}
+              </label>
+            </fieldset>
 
             <div className="grid gap-4">
               {!massProductionSelected ? (
@@ -1066,31 +1156,22 @@ export default function PortfolioStructuredCommissionForm({
             summary={state.budgetKind !== "undecided" || state.deadlineKind !== "undecided"
               ? `${NATORI_BUDGET_KIND_LABELS_V1[state.budgetKind]}／${NATORI_DEADLINE_KIND_LABELS_V1[state.deadlineKind]}`
               : undefined}
-            collapsible
+            collapsible={!isQuote}
             open={openSections.budget}
             onToggle={(next) => setOpenSections((current) => ({ ...current, budget: next }))}
           >
-            <div>
-              <label htmlFor="pf-budget-kind" className={labelClass}>
-                ご予算
-              </label>
-              <select
-                id="pf-budget-kind"
-                {...errorAttributes("pf-budget-kind")}
-                value={state.budgetKind}
-                onChange={(event) =>
-                  update({ budgetKind: event.target.value as NatoriBudgetV1["kind"] })
-                }
-                  className={inputClass}
-              >
-                {budgetKinds.map((kind) => (
-                  <option key={kind} value={kind}>
-                    {NATORI_BUDGET_KIND_LABELS_V1[kind]}
-                  </option>
+            <fieldset id="pf-budget-kind" tabIndex={-1} {...errorAttributes("pf-budget-kind")}>
+              <legend className={labelClass}>ご予算</legend>
+              <div className="flex flex-wrap gap-2">
+                {NATORI_INTAKE_BUDGET_CHIPS.map((chip) => (
+                  <ChoiceChip key={chip.id} type="radio" name="pf-budget" checked={budgetChip === chip.id}
+                    onChange={() => setState((current) => applyPortfolioBudgetChip(current, chip))}>
+                    {chip.label}
+                  </ChoiceChip>
                 ))}
-              </select>
+              </div>
 
-              {state.budgetKind === "range" ? (
+              {state.budgetKind === "range" && budgetChip === null ? (
                 /* 下限と上限は1つの予算範囲を構成するため、desktopのみ横並びにする。 */
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
                   <div>
@@ -1162,27 +1243,18 @@ export default function PortfolioStructuredCommissionForm({
                   />
                 </div>
               ) : null}
-            </div>
+            </fieldset>
 
-            <div>
-              <label htmlFor="pf-deadline-kind" className={labelClass}>
-                希望納期
-              </label>
-              <select
-                id="pf-deadline-kind"
-                {...errorAttributes("pf-deadline-kind")}
-                value={state.deadlineKind}
-                onChange={(event) =>
-                  update({ deadlineKind: event.target.value as NatoriDeadlineV1["kind"] })
-                }
-                className={inputClass}
-              >
+            <fieldset id="pf-deadline-kind" tabIndex={-1} {...errorAttributes("pf-deadline-kind")}>
+              <legend className={labelClass}>希望納期</legend>
+              <div className="flex flex-wrap gap-2">
                 {deadlineKinds.map((kind) => (
-                  <option key={kind} value={kind}>
-                    {NATORI_DEADLINE_KIND_LABELS_V1[kind]}
-                  </option>
+                  <ChoiceChip key={kind} type="radio" name="pf-deadline" checked={state.deadlineKind === kind}
+                    onChange={() => update({ deadlineKind: kind })}>
+                    {NATORI_INTAKE_DEADLINE_CHIP_LABELS[kind]}
+                  </ChoiceChip>
                 ))}
-              </select>
+              </div>
 
               {state.deadlineKind === "standard" ? (
                 <p className="mt-2 text-sm" style={{ color: c.textSoft }}>
@@ -1235,18 +1307,23 @@ export default function PortfolioStructuredCommissionForm({
                   className={inputClass}
                 />
               </div>
-            </div>
+            </fieldset>
           </FormSection>
 
-          </div>
-          <div hidden={state.inquiryMode === "quote" && step !== 0}>
+    </>
+  );
+
+  const detailSections = (
+    <>
           <details
+            className="group/char border-b pb-4"
+            style={{ borderColor: c.borderSubtle }}
             open={detailsOpen}
             onToggle={(event) => setDetailsOpen(event.currentTarget.open)}
           >
-            <summary className="pf-cute-focus cursor-pointer text-sm font-bold">
-              キャラクター・イメージの詳細を入力する
-              <OptionalBadge />
+            <summary className="pf-cute-focus flex min-h-[44px] cursor-pointer list-none items-center text-base font-black [&::-webkit-details-marker]:hidden">
+              <span className="min-w-0">キャラクター・イメージの詳細を入力する<OptionalBadge /></span>
+              <span aria-hidden="true" className="ml-auto group-open/char:rotate-180">⌄</span>
             </summary>
             <div className="mt-3 space-y-3">
               <div>
@@ -1480,7 +1557,25 @@ export default function PortfolioStructuredCommissionForm({
               ) : null}
             </fieldset>
           </FormSection>
-          </div>
+    </>
+  );
+
+  // 相談モードだけ「詳しい条件を追加する」の折りたたみ 1 段にまとめる。見積もりモードは平らに並べる。
+  const optionalSection = (
+    <details key="optional"
+        open={optionalOpen}
+        onToggle={(event) => setOptionalOpen(event.currentTarget.open)}
+        className="group/optional"
+      >
+        <summary className="pf-cute-focus flex min-h-[44px] cursor-pointer list-none items-center gap-2 font-bold [&::-webkit-details-marker]:hidden">
+          {massProductionSelected ? <>量産イラストの依頼内容<RequiredBadge /></> : <>詳しい条件を追加する<OptionalBadge /></>}
+          <span aria-hidden="true" className="ml-auto group-open/optional:rotate-180">⌄</span>
+        </summary>
+        {massProductionSelected ? <p className="mt-2 text-sm" style={{ color: c.textSoft }}>デザインと表情を選んでください。</p> : null}
+        <div className="mt-4 space-y-4">
+          {requestTypeSection}
+          {conditionSections}
+          {detailSections}
         </div>
       </details>
   );
@@ -1516,7 +1611,7 @@ export default function PortfolioStructuredCommissionForm({
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-bold" style={{ color: c.accentText }}>
-            ステップ {step + 1} / {stepLabels.length}
+            ステップ {step + 1} / {stepLabels.length}{step === 0 ? `・${isQuote ? "3" : "2"}分くらい` : ""}
           </p>
           <h3 ref={stepHeadingRef} className="mt-1 scroll-mt-24 text-lg font-black" tabIndex={-1}>{stepTitle}</h3>
         </div>
@@ -1549,8 +1644,19 @@ export default function PortfolioStructuredCommissionForm({
           </div>
         </fieldset>
       )}
-      <div hidden={step === lastStep || (state.inquiryMode === "quote" && step !== 0)}>{messageSection}</div>
-      <div hidden={step === lastStep}>{optionalSection}</div>
+      {isQuote ? <>
+        <div hidden={step !== 0} className="space-y-4">
+          {requestTypeSection}
+          <section className="border-b pb-5" style={{ borderColor: c.borderSubtle }}>{usageBlock}</section>
+          {messageSection}
+          <section className="space-y-4 border-b pb-5" style={{ borderColor: c.borderSubtle }}>{optionsBlock}{estimateBlock}</section>
+          {detailSections}
+        </div>
+        <div hidden={step !== 1} className="space-y-4">{conditionSections}</div>
+      </> : <>
+        <div hidden={step === lastStep}>{messageSection}</div>
+        <div hidden={step === lastStep}>{optionalSection}</div>
+      </>}
       {/* 連絡先は内容と資料のあとに聞く（何を頼むか決めてから名前を書くほうが入りやすい）。 */}
       <div hidden={step === lastStep || (state.inquiryMode === "quote" && step !== 1)}>
         <FormSection title="ご連絡先" description={NATORI_INTAKE_COPY.noAccount}>

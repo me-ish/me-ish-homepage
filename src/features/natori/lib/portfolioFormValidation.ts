@@ -58,8 +58,10 @@ export function validatePortfolioStep(
   if (state.inquiryMode === "quote" && step === 0) {
     // Neutral later fields prevent an invalid budget type from aborting the
     // shared schema's current-screen Other and mass-production refinements.
+    // 使いみち（使用目的）は 1 画面目で聞く。題材（オリジナルキャラクター）は 2 画面目に残る。
     current = {
-      ...state, usageTypes: [], usageTypeOther: "", commercialUse: "unknown",
+      ...state, usageTypes: state.usageTypes.filter((usage) => usage !== "original_character"),
+      commercialUse: "unknown",
       publicationPolicy: "unknown", publicationAllowedFrom: "",
       budgetKind: "undecided", budgetMin: "", budgetMax: "",
       deadlineKind: "undecided", deadlineDate: "", deadlineNote: "",
@@ -72,6 +74,7 @@ export function validatePortfolioStep(
       commissionScope: "undecided", commissionScopeOther: "", optionSelections: {},
       characterFeatures: "", expressionMood: "", composition: "", colorDirection: "",
       referenceNotes: "", message: "", referenceLinks: [],
+      usageTypes: state.usageTypes.filter((usage) => usage === "original_character"), usageTypeOther: "",
     };
   }
   const result = validatePortfolioForm(current, choices, name, email);
