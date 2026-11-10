@@ -80,7 +80,7 @@ let objectUrlCounter = 0;
 beforeEach(() => {
   vi.clearAllMocks();
   fetchMock.mockReset();
-  sessionStorage.clear();
+  sessionStorage.clear(); localStorage.clear();
   vi.stubGlobal("crypto", webcrypto);
   Object.defineProperty(File.prototype, "arrayBuffer", { configurable: true, value() {
     return new Promise<ArrayBuffer>((resolve, reject) => { const reader = new FileReader();

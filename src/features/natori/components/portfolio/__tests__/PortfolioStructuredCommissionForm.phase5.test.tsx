@@ -31,7 +31,7 @@ function detailsBySummary(text: string): HTMLDetailsElement {
 let objectUrlCounter = 0;
 beforeEach(() => {
   vi.clearAllMocks();
-  sessionStorage.clear();
+  sessionStorage.clear(); localStorage.clear();
   objectUrlCounter = 0;
   vi.stubGlobal("crypto", webcrypto);
   vi.stubGlobal("fetch", fetchMock);
@@ -47,7 +47,7 @@ beforeEach(() => {
     });
   } });
 });
-afterEach(() => { cleanup(); sessionStorage.clear(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); sessionStorage.clear(); localStorage.clear(); vi.unstubAllGlobals(); });
 
 // PREPARED APPEND BLOCK: add the imports specified in source_guards.json, then insert
 // before describe("アクセシビリティ / モバイル想定 DOM", ...). Uses existing suite helpers.

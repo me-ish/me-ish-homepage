@@ -67,6 +67,8 @@ import {
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 import { useIntakeOperation } from "./useIntakeOperation";
 import IntakeRecoveryPanel from "./IntakeRecoveryPanel";
+import { useIntakeDraft } from "./intake/useIntakeDraft";
+import { suggestEmailDomain } from "@/features/natori/lib/emailTypoSuggestion";
 import { restoreStructuredIntakeFields } from "../../lib/restoreIntakeForm";
 import { portfolioConfirmationSections, readFrozenPortfolioSubmission, validatePortfolioForm, validatePortfolioStep } from "@/features/natori/lib/portfolioFormValidation";
 import PortfolioLegalNotice from "./PortfolioLegalNotice";
@@ -211,11 +213,17 @@ export default function PortfolioStructuredCommissionForm({
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [sending, setSending] = useState(false);
+  const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
+  // 送信の復元（再読み込み後の受付確認など）があったら、下書きより優先する。
+  const restoredFromOperationRef = useRef(false);
+  const clearDraftRef = useRef<(stop?: boolean) => void>(() => {});
   const intake = useIntakeOperation(({ receipt, clientEmail }) => {
+    clearDraftRef.current(true);
     releasePreviews();
     trackNatoriPageEvent("portfolio_form_submit", "completed");
     onSuccess({ autoReplied: false, receipt, clientEmail });
   }, !demoMode, fields => {
+    restoredFromOperationRef.current = true;
     const restored = restoreStructuredIntakeFields(fields, content);
     setClientName(restored.clientName); setClientEmail(restored.clientEmail); setState(restored.state);
     setStep(restored.state.inquiryMode === "quote" ? 2 : 1);
@@ -224,6 +232,30 @@ export default function PortfolioStructuredCommissionForm({
   const [serverFieldErrors, setServerFieldErrors] = useState<ServerFieldError[]>([]);
   const [refImages, setRefImages] = useState<RefImageEntry[]>([]);
   const [refImageError, setRefImageError] = useState<string | null>(null);
+  // 下書きはこの端末だけに置く。お名前・メール・画像は保存しない。デモでは保存しない。
+  const draft = useIntakeDraft({
+    enabled: !demoMode,
+    state,
+    step,
+    hadImages: refImages.length > 0,
+    canRestore: () => !restoredFromOperationRef.current && !initialPlan && !initialMessage && !fromPlan,
+    // 復元したら最初の画面から見直してもらう（途中の画面に飛ぶと、何が戻ったか分かりにくい）。
+    onRestore: (saved) => {
+      setState(saved.state);
+      setStep(0);
+    },
+  });
+  clearDraftRef.current = draft.clear;
+  // 送信を始めたら、内容は送信の記録（再読み込み後の確認・復元用）が持つので下書きは消す。
+  const sendingOperationId = intake.operation?.operationId ?? null;
+  useEffect(() => {
+    if (sendingOperationId) clearDraftRef.current();
+  }, [sendingOperationId]);
+  const discardDraft = () => {
+    draft.clear();
+    setState((current) => ({ ...createInitialPortfolioRequestFormState(), inquiryMode: current.inquiryMode }));
+    setStep(0);
+  };
   const [massProductionNotice, setMassProductionNotice] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [fineOpen, setFineOpen] = useState(false);
@@ -578,6 +610,7 @@ export default function PortfolioStructuredCommissionForm({
     payload.set("email", validatedSubmission.data.clientEmail);
 
     if (demoMode) {
+      draft.clear(true);
       releasePreviews();
       onSuccess({ autoReplied: true });
       return;
@@ -1620,6 +1653,10 @@ export default function PortfolioStructuredCommissionForm({
       {(fromPlan || planOrigin) ? <p className="rounded-lg px-3 py-2 text-sm" style={{ background: c.surfaceSubtle, color: c.textSoft }}>
         料金から選んだ内容：{massProductionSelected ? NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL : NATORI_REQUEST_TYPE_LABELS_V1[state.requestType]}／{massProductionSelected ? state.commissionScopeOther || "デザインは未選択" : NATORI_COMMISSION_SCOPE_LABELS_V1[state.commissionScope]}。入力画面で変更できます。
       </p> : null}
+      {draft.restored ? <div role="status" className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg px-3 py-2 text-sm" style={{ background: c.surfaceSubtle, color: c.text }}>
+        <span>前回の下書きを復元しました。{draft.restored.hadImages ? "参考画像は選び直してください。" : ""}</span>
+        <button type="button" onClick={discardDraft} className="pf-cute-focus min-h-[44px] font-bold underline">下書きを消す</button>
+      </div> : null}
       <ol className="flex gap-2" aria-label={`進行状況 ${step + 1} / ${stepLabels.length}`}>
         {stepLabels.map((label, index) => (
           <li key={label} className="min-w-0 flex-1" aria-current={index === step ? "step" : undefined}>
@@ -1668,7 +1705,14 @@ export default function PortfolioStructuredCommissionForm({
             </div>
             <div>
               <label htmlFor="pf-email" className={labelClass}>メールアドレス<RequiredBadge /></label>
-              <input id="pf-email" {...errorAttributes("pf-email")} name="email" type="email" required maxLength={254} autoComplete="email" value={clientEmail} onChange={(event) => setClientEmail(event.target.value)} className={inputClass} />
+              <input id="pf-email" {...errorAttributes("pf-email")} name="email" type="email" required maxLength={254} autoComplete="email" value={clientEmail}
+                onChange={(event) => { setClientEmail(event.target.value); setEmailSuggestion(null); }}
+                onBlur={(event) => setEmailSuggestion(suggestEmailDomain(event.target.value))} className={inputClass} />
+              {emailSuggestion ? <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm" style={{ color: c.text }}>
+                <span>もしかして <span className="font-bold break-all">{emailSuggestion}</span> ですか？</span>
+                <button type="button" className="pf-cute-focus min-h-[44px] font-bold underline" style={{ color: c.accentText }}
+                  onClick={() => { setClientEmail(emailSuggestion); setEmailSuggestion(null); }}>このアドレスにする</button>
+              </p> : null}
               <FieldError id="pf-email-error" message={serverErrorFor("clientEmail")} />
             </div>
           </div>
@@ -1732,6 +1776,7 @@ export default function PortfolioStructuredCommissionForm({
             className={`${natoriPrimaryActionClassName} pf-btn pf-cute-focus w-full py-3.5 text-base font-black`}>
             {!commissionOpen ? "現在受付停止中です" : sending ? "送信中…" : retrySeconds > 0 ? `再送まで ${retrySeconds}秒` : state.inquiryMode === "quote" ? "見積もりを依頼する" : "相談内容を送信する"}
           </button>
+          {!demoMode ? <p className="text-xs" style={{ color: c.textSoft }}>入力内容はこの端末に自動で保存されます（お名前・メールアドレスは保存しません。送信後に消えます）。</p> : null}
         </FormSection>
       ) : <button type="button" onClick={nextStep} className={`${natoriPrimaryActionClassName} pf-btn pf-cute-focus w-full min-h-[48px] px-4 py-3 font-black`}>
         {step === 0 && state.inquiryMode === "quote" ? "条件・連絡先へ" : "内容を確認する"}

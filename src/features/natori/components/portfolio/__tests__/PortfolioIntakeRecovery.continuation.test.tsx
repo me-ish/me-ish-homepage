@@ -43,7 +43,7 @@ function structuredFields() {
 }
 
 beforeEach(() => {
-  sessionStorage.clear(); posted.length = 0; vi.clearAllMocks();
+  sessionStorage.clear(); localStorage.clear(); posted.length = 0; vi.clearAllMocks();
   vi.stubGlobal("crypto", webcrypto); vi.stubGlobal("fetch", fetchMock);
   Object.defineProperty(File.prototype, "arrayBuffer", { configurable: true, value() {
     return new Promise<ArrayBuffer>((resolve, reject) => { const reader = new FileReader();
@@ -57,7 +57,7 @@ beforeEach(() => {
     return Promise.resolve(response("completed", request.operationId));
   });
 });
-afterEach(() => { cleanup(); sessionStorage.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); sessionStorage.clear(); localStorage.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("completed receipt continuation and original answer recovery", () => {
   it.each([false, true])("starts a separate legitimate B only by the completed A action (structured=%s)", async (structured) => {

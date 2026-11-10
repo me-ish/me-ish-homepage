@@ -20,6 +20,7 @@ import { defaultPortfolioContent } from "@/features/natori/constants/portfolioCo
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   window.history.replaceState({}, "", "/");
 });
 
