@@ -4,7 +4,7 @@
 // ご依頼フォーム。送信すると /api/natori/portfolio/contact 経由でナトリ宛に
 // メールが飛び、案件（依頼受付）として自動起票される。
 // 料金カードの「このプランで相談」からの遷移でプランが自動選択される。
-import { NATORI_INTAKE_COPY } from "@/features/natori/constants/portfolioContactCopy";
+import { NATORI_INTAKE_COPY, NATORI_INTAKE_NEXT_STEPS } from "@/features/natori/constants/portfolioContactCopy";
 import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
@@ -302,9 +302,18 @@ function PortfolioCommissionFormSession({
             <h3 ref={successHeadingRef} tabIndex={-1} className="mb-1 text-lg font-bold outline-none">
               送信ありがとうございます!
             </h3>
-            <p className="text-sm" style={{ color: c.textSoft }}>
-              {NATORI_INTAKE_COPY.reply}{NATORI_INTAKE_COPY.next}
-            </p>
+            <h4 className="mt-4 text-sm font-bold">このあとの流れ</h4>
+            <ol className="mx-auto mt-2 grid max-w-md gap-2 text-left text-sm sm:grid-cols-2">
+              {NATORI_INTAKE_NEXT_STEPS.map((item, index) => (
+                <li key={item.title} className="pf-sketch-soft flex min-w-0 gap-2 rounded-xl px-3 py-2">
+                  <span aria-hidden="true" className="font-black" style={{ color: c.actionTextSmall }}>{index + 1}</span>
+                  <span className="min-w-0">
+                    <span className="block font-bold">{item.title}</span>
+                    <span className="block text-xs leading-relaxed" style={{ color: c.textSoft }}>{item.body}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
             <p className="mt-2 text-xs" style={{ color: c.textSoft }}>
               {completed ? "受付確認メールは別にお送りします。メールが届かない場合も、送り直しは不要です。" : autoReplied
                 ? "ご入力のメールアドレス宛に受付確認メールをお送りしました。届かない場合は迷惑メールフォルダをご確認ください。"

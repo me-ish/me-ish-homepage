@@ -253,9 +253,7 @@ describe("条件付き入力", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: /商用利用\s*\+1,000円/ }));
     expect(screen.queryByRole("checkbox", { name: /しっかり背景/ })).toBeNull();
     expect(screen.queryByLabelText("数量")).toBeNull();
-    for (const title of ["用途・条件", "予算・納期", "キャラクター・イメージの詳細"]) {
-      expect(detailsBySummary(title).open).toBe(false);
-    }
+    expect(detailsBySummary("キャラクター・イメージの詳細").open).toBe(false);
 
     await fillMinimum("量産イラストをお願いします。");
     submit();
@@ -741,8 +739,8 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     renderForm();
     await fillMinimum("SDキャラを相談したいです。");
     fireEvent(window, new CustomEvent(PLAN_SELECT_EVENT, { detail: { id: "sd", name: "SDキャラ" } }));
-    expect(detailsBySummary("選べる詳細項目").open).toBe(true);
-    expect(detailsBySummary("依頼の種類").open).toBe(true);
+    // 見積もりモードの「依頼の種類」は折りたたみではなく、そのまま見えている。
+    expect(screen.getByLabelText("ご依頼の種類").closest("details")).toBeNull();
     expect((screen.getByLabelText("ご依頼の種類") as HTMLSelectElement).value).toBe("sd");
     expect((screen.getByLabelText("見積もりを希望") as HTMLInputElement).checked).toBe(true);
     await userEvent.click(screen.getByLabelText("まず相談したい"));
@@ -765,7 +763,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     expect(detailsBySummary("用途・条件").open).toBe(true);
   });
 
-  it("quote でも依頼の種類以外を一斉展開しない", async () => {
+  it("quote では入れ子の折りたたみをやめ、詳細と資料だけを閉じておく", async () => {
     renderForm();
 
     for (const title of [
@@ -781,16 +779,33 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
 
     await userEvent.click(screen.getByLabelText("見積もりを希望"));
 
-    expect(detailsBySummary("選べる詳細項目").open).toBe(true);
-    expect(detailsBySummary("依頼の種類").open).toBe(true);
-    for (const title of [
-      "用途・条件",
-      "予算・納期",
-      "キャラクター・イメージの詳細",
-      "資料",
-    ]) {
-      expect(detailsBySummary(title).open).toBe(false);
+    for (const label of ["ご依頼の種類", "商用利用", "ご予算", "希望納期"]) {
+      expect(screen.getByLabelText(label).closest("details")).toBeNull();
     }
+    for (const title of ["キャラクター・イメージの詳細", "資料"]) {
+      const section = detailsBySummary(title);
+      expect(section.open).toBe(false);
+      expect(section.parentElement?.closest("details")).toBeNull();
+    }
+  });
+
+  it("書き出しボタンで本文に見出し行を足し、同じ見出しは二重に入れない", async () => {
+    renderForm();
+    const message = screen.getByLabelText(/ご相談・ご依頼の内容/) as HTMLTextAreaElement;
+    await userEvent.click(screen.getByRole("button", { name: "＋ 誰を" }));
+    await userEvent.type(message, "自分のオリジナルキャラ");
+    await userEvent.click(screen.getByRole("button", { name: "＋ 表情・ポーズ" }));
+    await userEvent.click(screen.getByRole("button", { name: "＋ 誰を" }));
+    expect(message.value).toBe("誰を：自分のオリジナルキャラ\n表情・ポーズ：");
+    expect(document.activeElement).toBe(message);
+    expect(message.selectionStart).toBe("誰を：自分のオリジナルキャラ".length);
+  });
+
+  it("最初のステップに所要時間の目安を出す", async () => {
+    renderForm();
+    expect(screen.getByText(/ステップ 1 \/ 2・2分くらい/)).toBeTruthy();
+    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    expect(screen.getByText(/ステップ 1 \/ 3・3分くらい/)).toBeTruthy();
   });
 
   it("primary fields は desktop でも1列で、必須を文字で示す", () => {

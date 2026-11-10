@@ -118,8 +118,11 @@ describe("Phase 5 confirmation and actual submitted values", () => {
     fetchMock.mockReturnValue(new Promise<Response>(() => undefined));
     renderForm();
     if (mode === "quote") await userEvent.click(screen.getByLabelText("見積もりを希望"));
-    await openPhase5Details(mode === "quote" ? "選べる詳細項目" : "詳しい条件を追加する");
-    await openPhase5Details("依頼の種類");
+    // 見積もりモードは「依頼の種類」「用途・条件」「予算・納期」を折りたたまずに並べる。
+    if (mode !== "quote") {
+      await openPhase5Details("詳しい条件を追加する");
+      await openPhase5Details("依頼の種類");
+    }
     phase5Change("ご依頼の種類", "other");
     phase5Change(/ご依頼の種類（その他の内容）/, " 表紙 ");
     phase5Change("制作範囲", "other");
@@ -140,14 +143,14 @@ describe("Phase 5 confirmation and actual submitted values", () => {
     const image = new File([new Uint8Array([1, 2, 3])], "costume.png", { type: "image/png" });
     fireEvent.change(screen.getByLabelText("キャラクター資料の画像を選択"), { target: { files: [image] } });
     if (mode === "quote") await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
-    await openPhase5Details("用途・条件");
+    if (mode !== "quote") await openPhase5Details("用途・条件");
     await userEvent.click(screen.getByLabelText("配信で使用"));
     await userEvent.click(screen.getByLabelText("その他"));
     phase5Change(/使用目的（その他の内容）/, " 特番 ");
     phase5Change("商用利用", "yes");
     phase5Change(/作品の公開可否/, "delayed");
     phase5Change("公開可能日必須", "2026-11-15");
-    await openPhase5Details("予算・納期");
+    if (mode !== "quote") await openPhase5Details("予算・納期");
     phase5Change("ご予算", "range");
     phase5Change(/下限（円）/, "10000");
     phase5Change("上限（円・任意）", "15000");

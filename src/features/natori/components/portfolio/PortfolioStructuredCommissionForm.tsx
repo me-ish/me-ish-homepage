@@ -14,6 +14,8 @@ import {
 } from "@/features/natori/constants/portfolioContent";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import { NATORI_INTAKE_COPY } from "@/features/natori/constants/portfolioContactCopy";
+import { NATORI_INTAKE_WRITING_PROMPTS } from "@/features/natori/constants/intakeWritingPrompts";
+import { insertWritingPrompt } from "@/features/natori/lib/intakeWritingPrompts";
 import { MASS_PRODUCTION_COMMERCIAL_AMOUNT, MASS_PRODUCTION_VARIANTS } from "@/features/natori/constants/massProductionIllustration";
 import {
   NATORI_MAX_REFERENCE_IMAGES,
@@ -229,6 +231,8 @@ export default function PortfolioStructuredCommissionForm({
   });
   const refFileInputRef = useRef<HTMLInputElement | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const messageRef = useRef<HTMLTextAreaElement | null>(null);
+  const pendingCaretRef = useRef<number | null>(null);
   const stepHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const focusStepOnChangeRef = useRef(false);
   const sendingRef = useRef(false);
@@ -236,7 +240,8 @@ export default function PortfolioStructuredCommissionForm({
   const [retrySeconds, setRetrySeconds] = useState(0);
   const retryUntilRef = useRef(0);
   const waitingToRetry = retrySeconds > 0;
-  const lastStep = state.inquiryMode === "quote" ? 2 : 1;
+  const isQuote = state.inquiryMode === "quote";
+  const lastStep = isQuote ? 2 : 1;
   const stepLabels = state.inquiryMode === "quote"
     ? ["制作内容", "条件・連絡先", "確認・送信"]
     : ["ご相談内容", "確認・送信"];
@@ -270,6 +275,17 @@ export default function PortfolioStructuredCommissionForm({
     if (target && formRef.current?.contains(target)) target.focus();
     else fallback?.focus();
   }, [focusTarget, step]);
+
+  // 書き出しボタンで足した見出し行の末尾にカーソルを置く。
+  useLayoutEffect(() => {
+    const caret = pendingCaretRef.current;
+    if (caret === null) return;
+    pendingCaretRef.current = null;
+    const field = messageRef.current;
+    if (!field) return;
+    field.focus();
+    field.setSelectionRange(caret, caret);
+  }, [state.message]);
 
   useLayoutEffect(() => {
     if (!focusStepOnChangeRef.current) return;
@@ -363,6 +379,19 @@ export default function PortfolioStructuredCommissionForm({
 
   const update = (patch: Partial<PortfolioRequestFormState>) =>
     setState((current) => pruneHiddenPortfolioRequestFields({ ...current, ...patch }));
+
+  const addWritingPrompt = (heading: string) => {
+    const result = insertWritingPrompt(state.message, heading);
+    pendingCaretRef.current = result.caret;
+    if (result.message === state.message) {
+      // 本文が変わらないときは effect が走らないので、ここでカーソルだけ動かす。
+      pendingCaretRef.current = null;
+      messageRef.current?.focus();
+      messageRef.current?.setSelectionRange(result.caret, result.caret);
+      return;
+    }
+    update({ message: result.message });
+  };
 
   const changeRequestType = (value: PortfolioRequestTypeChoiceValue) => {
     if (
@@ -575,7 +604,22 @@ export default function PortfolioStructuredCommissionForm({
           <label htmlFor="pf-message" className={labelClass}>
             内容{messageRequired ? <RequiredBadge /> : <OptionalBadge />}
           </label>
+          <div className="mb-2 flex flex-wrap gap-2" role="group" aria-label="書き出しの項目を足す">
+            {NATORI_INTAKE_WRITING_PROMPTS.map((prompt) => (
+              <button
+                key={prompt.heading}
+                type="button"
+                aria-controls="pf-message"
+                onClick={() => addWritingPrompt(prompt.heading)}
+                className="pf-cute-focus min-h-[36px] rounded-full border-2 px-3 text-sm font-bold"
+                style={{ borderColor: c.formBorder, background: c.surface, color: c.text }}
+              >
+                ＋ {prompt.label}
+              </button>
+            ))}
+          </div>
           <textarea
+            ref={messageRef}
             id="pf-message"
             aria-label={`ご相談・ご依頼の内容${messageRequired ? "必須" : "任意"}`}
             {...errorAttributes("pf-message")}
@@ -590,24 +634,15 @@ export default function PortfolioStructuredCommissionForm({
               serverErrorFor("requestData.message") ? "pf-message-error" : undefined
             }
           />
+          <p className="mt-1.5 text-xs" style={{ color: c.textSoft }}>
+            書き出しに迷ったら、上のボタンで項目を足せます。
+          </p>
           <FieldError id="pf-message-error" message={serverErrorFor("requestData.message")} />
         </div>
       </FormSection>
   );
 
-  const optionalSection = (
-    <details key="optional"
-        open={state.inquiryMode === "quote" || optionalOpen}
-        onToggle={(event) => { if (state.inquiryMode === "consultation") setOptionalOpen(event.currentTarget.open); }}
-        className="group/optional"
-      >
-        <summary className="pf-cute-focus flex min-h-[44px] cursor-pointer list-none items-center gap-2 font-bold [&::-webkit-details-marker]:hidden">
-          {state.inquiryMode === "quote" ? "選べる詳細項目" : massProductionSelected ? <>量産イラストの依頼内容<RequiredBadge /></> : <>詳しい条件を追加する<OptionalBadge /></>}
-          <span aria-hidden="true" className="ml-auto group-open/optional:rotate-180">⌄</span>
-        </summary>
-        {massProductionSelected ? <p className="mt-2 text-sm" style={{ color: c.textSoft }}>デザインと表情を選んでください。</p> : null}
-        <div className="mt-4 space-y-4">
-          <div hidden={state.inquiryMode === "quote" && step !== 0}>
+  const requestTypeSection = (
           <FormSection
             title="依頼の種類"
             summary={state.requestType !== "undecided" || state.commissionScope !== "undecided"
@@ -615,7 +650,7 @@ export default function PortfolioStructuredCommissionForm({
                 massProductionSelected ? state.commissionScopeOther : NATORI_COMMISSION_SCOPE_LABELS_V1[state.commissionScope]].filter(Boolean).join("／")
               : undefined}
             description={massProductionSelected ? "「おばけ」か「魔女」を選び、ご希望の表情をご記入ください。" : undefined}
-            collapsible
+            collapsible={!isQuote}
             required={massProductionSelected}
             open={openSections.requestType}
             onToggle={(next) => setOpenSections((current) => ({ ...current, requestType: next }))}
@@ -905,22 +940,26 @@ export default function PortfolioStructuredCommissionForm({
             ) : null}
           </FormSection>
 
-          </div>
-          <div hidden={state.inquiryMode === "quote" && step !== 1}>
+  );
+
+  const conditionSections = (
+    <>
           <FormSection
             title="用途・条件"
             summary={state.usageTypes.length > 0 || state.commercialUse !== "unknown" || state.publicationPolicy !== "unknown"
               ? `用途${state.usageTypes.length}件／商用利用：${NATORI_COMMERCIAL_USE_LABELS_V1[state.commercialUse]}／実績掲載：${NATORI_PUBLICATION_POLICY_LABELS_V1[state.publicationPolicy]}`
               : undefined}
-            collapsible
+            collapsible={!isQuote}
             open={openSections.usage}
             onToggle={(next) => setOpenSections((current) => ({ ...current, usage: next }))}
           >
             <fieldset id="pf-usage-types" tabIndex={-1} {...errorAttributes("pf-usage-types")}>
               <legend className={labelClass}>使用目的（複数選択可）</legend>
-              <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+              <p className="mb-2 text-xs" style={{ color: c.textSoft }}>決まっていなければ空のままで大丈夫です。</p>
+              <div className="flex flex-wrap gap-2">
                 {NATORI_USAGE_TYPES_V1.filter((usage) => usage !== "original_character").map((usage) => (
-                  <label key={usage} className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm" style={{ color: c.textSoft }}>
+                  <label key={usage} className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full border-2 px-3 text-sm font-bold"
+                    style={{ color: c.text, borderColor: state.usageTypes.includes(usage) ? c.formBorderActive : c.formBorder, background: state.usageTypes.includes(usage) ? c.surfaceSubtle : c.surface }}>
                     <input type="checkbox" checked={state.usageTypes.includes(usage)} onChange={() => toggleUsageType(usage)} className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0" />
                     {NATORI_USAGE_TYPE_LABELS_V1[usage]}
                   </label>
@@ -1066,7 +1105,7 @@ export default function PortfolioStructuredCommissionForm({
             summary={state.budgetKind !== "undecided" || state.deadlineKind !== "undecided"
               ? `${NATORI_BUDGET_KIND_LABELS_V1[state.budgetKind]}／${NATORI_DEADLINE_KIND_LABELS_V1[state.deadlineKind]}`
               : undefined}
-            collapsible
+            collapsible={!isQuote}
             open={openSections.budget}
             onToggle={(next) => setOpenSections((current) => ({ ...current, budget: next }))}
           >
@@ -1238,15 +1277,20 @@ export default function PortfolioStructuredCommissionForm({
             </div>
           </FormSection>
 
-          </div>
-          <div hidden={state.inquiryMode === "quote" && step !== 0}>
+    </>
+  );
+
+  const detailSections = (
+    <>
           <details
+            className="group/char border-b pb-4"
+            style={{ borderColor: c.borderSubtle }}
             open={detailsOpen}
             onToggle={(event) => setDetailsOpen(event.currentTarget.open)}
           >
-            <summary className="pf-cute-focus cursor-pointer text-sm font-bold">
-              キャラクター・イメージの詳細を入力する
-              <OptionalBadge />
+            <summary className="pf-cute-focus flex min-h-[44px] cursor-pointer list-none items-center text-base font-black [&::-webkit-details-marker]:hidden">
+              <span className="min-w-0">キャラクター・イメージの詳細を入力する<OptionalBadge /></span>
+              <span aria-hidden="true" className="ml-auto group-open/char:rotate-180">⌄</span>
             </summary>
             <div className="mt-3 space-y-3">
               <div>
@@ -1480,7 +1524,25 @@ export default function PortfolioStructuredCommissionForm({
               ) : null}
             </fieldset>
           </FormSection>
-          </div>
+    </>
+  );
+
+  // 相談モードだけ「詳しい条件を追加する」の折りたたみ 1 段にまとめる。見積もりモードは平らに並べる。
+  const optionalSection = (
+    <details key="optional"
+        open={optionalOpen}
+        onToggle={(event) => setOptionalOpen(event.currentTarget.open)}
+        className="group/optional"
+      >
+        <summary className="pf-cute-focus flex min-h-[44px] cursor-pointer list-none items-center gap-2 font-bold [&::-webkit-details-marker]:hidden">
+          {massProductionSelected ? <>量産イラストの依頼内容<RequiredBadge /></> : <>詳しい条件を追加する<OptionalBadge /></>}
+          <span aria-hidden="true" className="ml-auto group-open/optional:rotate-180">⌄</span>
+        </summary>
+        {massProductionSelected ? <p className="mt-2 text-sm" style={{ color: c.textSoft }}>デザインと表情を選んでください。</p> : null}
+        <div className="mt-4 space-y-4">
+          {requestTypeSection}
+          {conditionSections}
+          {detailSections}
         </div>
       </details>
   );
@@ -1516,7 +1578,7 @@ export default function PortfolioStructuredCommissionForm({
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-bold" style={{ color: c.accentText }}>
-            ステップ {step + 1} / {stepLabels.length}
+            ステップ {step + 1} / {stepLabels.length}{step === 0 ? `・${isQuote ? "3" : "2"}分くらい` : ""}
           </p>
           <h3 ref={stepHeadingRef} className="mt-1 scroll-mt-24 text-lg font-black" tabIndex={-1}>{stepTitle}</h3>
         </div>
@@ -1549,8 +1611,13 @@ export default function PortfolioStructuredCommissionForm({
           </div>
         </fieldset>
       )}
-      <div hidden={step === lastStep || (state.inquiryMode === "quote" && step !== 0)}>{messageSection}</div>
-      <div hidden={step === lastStep}>{optionalSection}</div>
+      {isQuote ? <>
+        <div hidden={step !== 0} className="space-y-4">{requestTypeSection}{messageSection}{detailSections}</div>
+        <div hidden={step !== 1} className="space-y-4">{conditionSections}</div>
+      </> : <>
+        <div hidden={step === lastStep}>{messageSection}</div>
+        <div hidden={step === lastStep}>{optionalSection}</div>
+      </>}
       {/* 連絡先は内容と資料のあとに聞く（何を頼むか決めてから名前を書くほうが入りやすい）。 */}
       <div hidden={step === lastStep || (state.inquiryMode === "quote" && step !== 1)}>
         <FormSection title="ご連絡先" description={NATORI_INTAKE_COPY.noAccount}>

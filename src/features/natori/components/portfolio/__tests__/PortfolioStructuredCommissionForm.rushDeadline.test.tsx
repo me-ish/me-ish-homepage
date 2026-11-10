@@ -55,8 +55,11 @@ describe("Phase 5 rush deadline terms survive confirmation and editing", () => {
     if (mode === "quote") await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
     fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: "Synthetic rush client" } });
     fireEvent.change(screen.getByLabelText(/メールアドレス/), { target: { value: "client@rush-phase5.invalid" } });
-    await openDetails(mode === "quote" ? "選べる詳細項目" : "詳しい条件を追加する");
-    await openDetails("予算・納期");
+    // 見積もりモードの「予算・納期」は折りたたまずに並んでいる。
+    if (mode !== "quote") {
+      await openDetails("詳しい条件を追加する");
+      await openDetails("予算・納期");
+    }
     const deadlineKind = screen.getByLabelText("希望納期") as HTMLSelectElement;
     expect(Array.from(deadlineKind.options).find((option) => option.value === "rush_consultation")?.textContent).toBe("お急ぎ希望（+2,000円／要相談）");
     await userEvent.selectOptions(deadlineKind, "rush_consultation");

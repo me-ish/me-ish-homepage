@@ -67,7 +67,7 @@ async function main(){
  }
  async function assertActualEnvelope(page){
   await page.getByRole('checkbox',{name:'オリジナルキャラクター',exact:true}).check();await page.getByLabel(/作品の公開可否/).selectOption('delayed');await page.getByLabel('公開可能日必須',{exact:true}).fill('2026-11-15');
-  const budget=page.locator('summary').filter({hasText:/^予算・納期/}).locator('..');if(!await budget.evaluate(el=>el.open))await budget.locator('summary').first().click();
+  const budgetSummary=page.locator('summary').filter({hasText:/^予算・納期/});if(await budgetSummary.count()>0){const budget=budgetSummary.first().locator('..');if(!await budget.evaluate(el=>el.open))await budgetSummary.first().click();}
   await page.getByLabel('ご予算',{exact:true}).selectOption('range');await page.getByLabel(/下限（円）/).fill('10000');await page.getByLabel('上限（円・任意）',{exact:true}).fill('15000');await page.getByLabel('希望納期',{exact:true}).selectOption('preferred_date');await page.getByLabel(/希望日/).fill('2026-12-01');await page.getByLabel('納期の補足（任意）',{exact:true}).fill('イベント前まで');
 
   await page.getByRole('button',{name:'内容を確認する'}).click();
