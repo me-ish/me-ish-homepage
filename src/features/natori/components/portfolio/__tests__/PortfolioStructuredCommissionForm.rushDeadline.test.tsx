@@ -2,7 +2,7 @@
 // Actual intake component and hashing; deferred mock fetch never leaves the process.
 import { webcrypto } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import PortfolioCommissionForm from "@/features/natori/components/portfolio/PortfolioCommissionForm";
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
@@ -60,9 +60,8 @@ describe("Phase 5 rush deadline terms survive confirmation and editing", () => {
       await openDetails("詳しい条件を追加する");
       await openDetails("予算・納期");
     }
-    const deadlineKind = screen.getByLabelText("希望納期") as HTMLSelectElement;
-    expect(Array.from(deadlineKind.options).find((option) => option.value === "rush_consultation")?.textContent).toBe("お急ぎ希望（+2,000円／要相談）");
-    await userEvent.selectOptions(deadlineKind, "rush_consultation");
+    const rushChip = within(screen.getByRole("group", { name: "希望納期" })).getByRole("radio", { name: "お急ぎ（+2,000円／要相談）" }) as HTMLInputElement;
+    await userEvent.click(rushChip);
     const dateInput = screen.getByLabelText(/希望日/) as HTMLInputElement;
     expect(dateInput.required).toBe(false);
     if (date) fireEvent.change(dateInput, { target: { value: date } });
@@ -81,7 +80,7 @@ describe("Phase 5 rush deadline terms survive confirmation and editing", () => {
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", {
       name: mode === "quote" ? "ご希望の条件と連絡先" : "ご相談内容を教えてください",
     })));
-    expect((screen.getByLabelText("希望納期") as HTMLSelectElement).value).toBe("rush_consultation");
+    expect((within(screen.getByRole("group", { name: "希望納期" })).getByRole("radio", { name: "お急ぎ（+2,000円／要相談）" }) as HTMLInputElement).checked).toBe(true);
     expect((screen.getByLabelText(/希望日/) as HTMLInputElement).value).toBe(date ?? "");
     expect((screen.getByLabelText("納期の補足（任意）") as HTMLInputElement).value).toBe("イベント前まで");
     await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));

@@ -228,8 +228,8 @@ async function main() {
         await page.getByRole('button', { name: '条件・連絡先へ', exact: true }).click();
         await page.locator('#pf-name').fill('Synthetic Phase 7 client'); await page.locator('#pf-email').fill('client@phase7.invalid');
         await (await revealField(page, '#pf-commercial')).selectOption('yes'); await page.locator('#pf-publication').selectOption('delayed'); await page.locator('#pf-publication-allowed-from').fill('2026-11-15');
-        await (await revealField(page, '#pf-budget-kind')).selectOption('fixed'); await page.locator('#pf-budget-fixed').fill('12000');
-        await page.locator('#pf-deadline-kind').selectOption('preferred_date'); await page.locator('#pf-deadline-date').fill('2026-11-15');
+        await page.locator('#pf-budget-kind').getByRole('radio', { name: '金額を入力', exact: true }).check(); await page.locator('#pf-budget-fixed').fill('12000');
+        await page.locator('#pf-deadline-kind').getByRole('radio', { name: '希望の日付がある', exact: true }).check(); await page.locator('#pf-deadline-date').fill('2026-11-15');
         await page.getByRole('button', { name: '内容を確認する', exact: true }).click(); const confirmation = page.getByRole('region', { name: '送信前の確認' });
         for (const text of ['Important final condition: no AI training', '全身', '商用利用する', '2026年11月15日', '12,000', 'Synthetic Phase 7 client', 'client@phase7.invalid']) await expect(confirmation).toContainText(text);
         await screenshot(page, ids[2], width, 'confirmation'); await noOverflow(page);

@@ -57,6 +57,7 @@ async function main(){
  }finally{await pre.close();}
  const cases=[],test=(name,fn)=>cases.push({name,fn});test.info=()=>({outputPath:name=>{check(/^phase5-[a-z0-9-]+\.png$/.test(name),'SCREENSHOT_PATH');return '/results/'+name;}});
  async function prepareActualEnvelope(page){
+  await page.locator('details:has(#pf-request-type)').evaluate(element=>{element.open=true;});
   await page.getByLabel('ご依頼の種類',{exact:true}).selectOption('other');await page.getByLabel(/ご依頼の種類（その他の内容）/).fill('hidden old request');await page.getByLabel('ご依頼の種類',{exact:true}).selectOption('illustration');
   await page.getByLabel('制作範囲',{exact:true}).selectOption('other');await page.getByLabel(/制作範囲（その他の内容）/).fill('hidden old scope');await page.getByLabel('制作範囲',{exact:true}).selectOption('full_body');
   await page.getByLabel('補足（任意）',{exact:true}).fill('笑顔・泣き顔');
@@ -68,7 +69,7 @@ async function main(){
  async function assertActualEnvelope(page){
   await page.getByRole('checkbox',{name:'オリジナルキャラクター',exact:true}).check();await page.getByLabel(/作品の公開可否/).selectOption('delayed');await page.getByLabel('公開可能日必須',{exact:true}).fill('2026-11-15');
   const budgetSummary=page.locator('summary').filter({hasText:/^予算・納期/});if(await budgetSummary.count()>0){const budget=budgetSummary.first().locator('..');if(!await budget.evaluate(el=>el.open))await budgetSummary.first().click();}
-  await page.getByLabel('ご予算',{exact:true}).selectOption('range');await page.getByLabel(/下限（円）/).fill('10000');await page.getByLabel('上限（円・任意）',{exact:true}).fill('15000');await page.getByLabel('希望納期',{exact:true}).selectOption('preferred_date');await page.getByLabel(/希望日/).fill('2026-12-01');await page.getByLabel('納期の補足（任意）',{exact:true}).fill('イベント前まで');
+  await page.getByRole('group',{name:'ご予算',exact:true}).getByRole('radio',{name:'10,000〜20,000円',exact:true}).check();await page.getByRole('group',{name:'希望納期',exact:true}).getByRole('radio',{name:'希望の日付がある',exact:true}).check();await page.getByLabel(/希望日/).fill('2026-12-01');await page.getByLabel('納期の補足（任意）',{exact:true}).fill('イベント前まで');
 
   await page.getByRole('button',{name:'内容を確認する'}).click();
   const reviewText=await page.getByRole('region',{name:'送信前の確認',exact:true}).innerText();
@@ -76,7 +77,7 @@ async function main(){
   await page.getByRole('button',{name:'見積もりを依頼する'}).click();const response=await responsePromise;
   check(response.status()===200,'REAL_SUBMIT_STATUS_'+response.status());const accepted=await response.json();check(accepted.accepted&&typeof accepted.receipt==='string','REAL_ACCEPTANCE');
   const request=response.request(),form=await new Request(endpoint,{method:'POST',headers:{'content-type':request.headers()['content-type']},body:request.postDataBuffer()}).formData();const requestData=JSON.parse(String(form.get('requestData')));
-  const expected={schemaVersion:1,formVersion:'etorie-request-v1',inquiryMode:'quote',requestType:'illustration',requestTypeOther:null,commissionScope:'full_body',commissionScopeOther:null,options:[{id:'expression_variation',label:'表情差分',quantity:2,notes:'笑顔・泣き顔'}],usageTypes:['original_character'],usageTypeOther:null,commercialUse:'yes',publicationPolicy:'delayed',publicationAllowedFrom:'2026-11-15',budget:{kind:'range',min:10000,max:15000,currency:'JPY'},deadline:{kind:'preferred_date',date:'2026-12-01',note:'イベント前まで'},characterFeatures:'水色の髪',expressionMood:'笑顔',composition:'二人並び',colorDirection:'青',referenceNotes:'画像の服装',message:'Synthetic complete quote request',legacySource:null};
+  const expected={schemaVersion:1,formVersion:'etorie-request-v1',inquiryMode:'quote',requestType:'illustration',requestTypeOther:null,commissionScope:'full_body',commissionScopeOther:null,options:[{id:'expression_variation',label:'表情差分',quantity:2,notes:'笑顔・泣き顔'}],usageTypes:['original_character'],usageTypeOther:null,commercialUse:'yes',publicationPolicy:'delayed',publicationAllowedFrom:'2026-11-15',budget:{kind:'range',min:10000,max:20000,currency:'JPY'},deadline:{kind:'preferred_date',date:'2026-12-01',note:'イベント前まで'},characterFeatures:'水色の髪',expressionMood:'笑顔',composition:'二人並び',colorDirection:'青',referenceNotes:'画像の服装',message:'Synthetic complete quote request',legacySource:null};
   expect(requestData).toEqual(expected);expect(JSON.parse(String(form.get('referenceLinks')))).toEqual([{url:'https://example.com/phase5-reference',label:'衣装の設定資料'}]);check(form.getAll('refImages').length===1&&form.getAll('refImages')[0].name==='costume.png','ACTUAL_REFERENCE_IMAGE');
   check(requestData.options.some(option=>option.quantity===2&&option.label.includes('表情差分')),'RAW_INTEGER_AND_OPTION');
   const op=await admin.from('natori_intake_operations').select('project_id,status').eq('owner_id',owner).eq('operation_id',accepted.receipt).single();check(!op.error&&op.data.status==='completed','ATOMIC_OPERATION');

@@ -62,9 +62,12 @@ describe("Phase 5 current-step validation", () => {
   it("validates contact and current conditions independently of invalid earlier production", () => {
     const input = state({ inquiryMode: "quote", requestType: "other", requestTypeOther: "", usageTypes: ["other"], usageTypeOther: "", publicationPolicy: "delayed", publicationAllowedFrom: "", referenceLinks: [{ url: "ftp://invalid.example", label: "" }] });
     const paths = errorPaths(input, 1);
-    expect(paths).toEqual(expect.arrayContaining(["clientName", "clientEmail", "requestData.usageTypeOther", "requestData.publicationAllowedFrom"]));
+    expect(paths).toEqual(expect.arrayContaining(["clientName", "clientEmail", "requestData.publicationAllowedFrom"]));
     expect(paths).not.toContain("requestData.requestTypeOther");
     expect(paths).not.toContain("referenceLinks.0.url");
+    // 使いみち（使用目的）は 1 画面目で聞くので、その他の内容は 1 画面目で検証する。
+    expect(paths).not.toContain("requestData.usageTypeOther");
+    expect(errorPaths(input, 0)).toContain("requestData.usageTypeOther");
   });
 
   it("never treats a valid conditions projection as a valid complete request", () => {

@@ -66,11 +66,11 @@ test.describe("Natori public intake rollout", () => {
     await page.goto(`${DEMO_PATH}?structured=1`);
     await openInquiry(page, "quote");
     await expect(page.getByRole("radio", { name: "見積もりを希望" })).toBeChecked();
-    await expect(page.getByLabel("ご依頼の種類")).toBeVisible();
-    await expect(page.getByLabel("ご予算")).toBeHidden();
+    await expect(page.getByRole("group", { name: /描く範囲/ })).toBeVisible();
+    await expect(page.getByRole("group", { name: "ご予算" })).toBeHidden();
     await page.getByRole("button", { name: "条件・連絡先へ" }).click();
     await expect(page.getByRole("heading", { name: "ご希望の条件と連絡先" })).toBeFocused();
-    await expect(page.getByLabel("ご予算")).toBeVisible();
+    await expect(page.getByRole("group", { name: "ご予算" })).toBeVisible();
     await expect(page.getByLabel(/お名前/)).toBeVisible();
     await fillContact(page, "quote");
     await page.getByLabel("商用利用").selectOption("yes");
@@ -92,6 +92,8 @@ test.describe("Natori public intake rollout", () => {
       await openInquiry(page, "quote");
       const checkbox = page.getByRole("checkbox", { name: /表情を追加する（表情差分）/ });
       const cardLabel = page.locator("label").filter({ has: checkbox });
+      // 見積もりモードに切り替えた直後の再描画を待ってから位置を測る。
+      await expect(cardLabel).toBeVisible();
       const box = await cardLabel.boundingBox();
       if (!box) throw new Error("option card label is not visible");
       // Actual pointer coordinates inside the label's blank padding, outside checkbox/text.
@@ -153,6 +155,8 @@ test.describe("Natori public intake rollout", () => {
     await page.setViewportSize({ width: 360, height: 844 });
     await page.goto(`${DEMO_PATH}?structured=1`);
     await openInquiry(page, "quote");
+    // 種類と範囲のプルダウンは「細かく選ぶ」の中にある。
+    await page.locator("details:has(#pf-request-type)").evaluate((element) => { (element as HTMLDetailsElement).open = true; });
     await page.getByLabel("ご依頼の種類", { exact: true }).selectOption("other");
     await page.getByLabel(/ご依頼の種類（その他の内容）/).fill("イベント表紙");
     await page.getByRole("checkbox", { name: /表情を追加する（表情差分）/ }).check();
