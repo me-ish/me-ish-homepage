@@ -12,8 +12,8 @@ import {canonicalizeIntake,intakeTextFields} from "@/features/natori/lib/intakeO
 const track=vi.hoisted(()=>vi.fn());
 vi.mock("@/features/natori/data/pageEvents",()=>({trackNatoriPageEvent:track}));
 const fetchMock=vi.fn();
-beforeEach(()=>{vi.clearAllMocks();sessionStorage.clear();vi.stubGlobal("crypto",webcrypto);vi.stubGlobal("fetch",fetchMock);});
-afterEach(()=>{cleanup();sessionStorage.clear();vi.unstubAllGlobals();});
+beforeEach(()=>{vi.clearAllMocks();sessionStorage.clear(); localStorage.clear();vi.stubGlobal("crypto",webcrypto);vi.stubGlobal("fetch",fetchMock);});
+afterEach(()=>{cleanup();sessionStorage.clear(); localStorage.clear();vi.unstubAllGlobals();});
 const samples=[
  {raw:"https://EXAMPLE.com:443/refs#pose",url:"https://example.com/refs"},
  {raw:"https://例え.テスト/資料?向き=右#ポーズ",url:"https://xn--r8jz45g.xn--zckzah/%E8%B3%87%E6%96%99?%E5%90%91%E3%81%8D=%E5%8F%B3"},

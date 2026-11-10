@@ -5,7 +5,7 @@ import PortfolioContactPage from "../PortfolioContactPage";
 import { defaultPortfolioContent, planChoiceLabel } from "@/features/natori/constants/portfolioContent";
 
 vi.mock("../portfolioFonts", () => ({ portfolioFontEn: { variable: "" }, portfolioFontJp: { variable: "", className: "" } }));
-afterEach(cleanup);
+afterEach(() => { cleanup(); localStorage.clear(); });
 
 it("restores a legacy plan selected from the pricing page", () => {
   const plan = { ...defaultPortfolioContent.plans[0], id: null };

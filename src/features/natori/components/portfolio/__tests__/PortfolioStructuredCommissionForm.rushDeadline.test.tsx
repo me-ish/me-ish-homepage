@@ -24,11 +24,11 @@ beforeEach(() => {
   vi.clearAllMocks();
   fetchMock.mockReset();
   fetchMock.mockReturnValue(new Promise<Response>(() => undefined));
-  sessionStorage.clear();
+  sessionStorage.clear(); localStorage.clear();
   vi.stubGlobal("crypto", webcrypto);
   vi.stubGlobal("fetch", fetchMock);
 });
-afterEach(() => { cleanup(); sessionStorage.clear(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); sessionStorage.clear(); localStorage.clear(); vi.unstubAllGlobals(); });
 
 async function openDetails(title: string): Promise<void> {
   const details = Array.from(document.querySelectorAll("details")).find((element) =>
