@@ -27,7 +27,9 @@ export const PORTFOLIO_QUOTE_NEEDS_CONTENT_MESSAGE = "描く範囲を選ぶか�
  */
 export function portfolioQuoteNeedsContent(state: PortfolioRequestFormState): boolean {
   if (state.inquiryMode !== "quote") return false;
-  if (state.requestType !== "undecided" || state.commissionScope !== "undecided") return false;
+  // 画面で選べるのは範囲のカードと SD・量産イラスト・それ以外だけ。
+  // 古い下書きに残った種類（一枚絵・立ち絵・アイコン）だけでは「選んだ」ことにしない。
+  if (state.commissionScope !== "undecided" || state.requestType === "sd" || state.requestType === "other") return false;
   return [state.message, state.characterFeatures, state.expressionMood, state.composition,
     state.colorDirection, state.referenceNotes].every((value) => value.trim().length === 0);
 }

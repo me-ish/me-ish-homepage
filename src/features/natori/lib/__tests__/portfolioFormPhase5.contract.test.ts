@@ -44,6 +44,9 @@ describe("Phase 5 current-step validation", () => {
     // 範囲を選ぶか、ひとこと書けば未定のままでも進める。
     expect(errorPaths({ ...input, requestType: "illustration", commissionScope: "full_body" }, 0)).toEqual([]);
     expect(errorPaths({ ...input, message: "うちの子をお願いします" }, 0)).toEqual([]);
+    // 古い下書きに残った種類だけ（範囲なし・本文なし）は、選んだことにしない。
+    expect(errorPaths({ ...input, requestType: "illustration" }, 0)).toEqual(["requestData.requestType"]);
+    expect(errorPaths({ ...input, requestType: "sd" }, 0)).toEqual([]);
     expect(validatePortfolioForm(input, choices, "", "").success).toBe(false);
   });
 
