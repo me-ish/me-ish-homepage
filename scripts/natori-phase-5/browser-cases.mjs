@@ -19,6 +19,7 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
       await expect(checkbox).not.toBeChecked();
       await page.keyboard.press("Space");
       await expect(checkbox).toBeChecked();
+      await page.locator("#pf-plan-picker label").filter({ has: page.locator('input[value="full_body"]') }).click();
       const quantity = page.getByLabel("追加する表情の数");
       await quantity.fill("2.5");
       await page.getByRole("button", { name: "条件・連絡先へ" }).click();
@@ -73,14 +74,11 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
     await page.goto(`${DEMO_PATH}?structured=1`);
     await openInquiry(page, "見積もりをお願いしたい");
     checkpoint('EDIT_INPUTS');
-    // 種類と範囲のプルダウンは「細かく選ぶ」の中にある。
-    // 見積もりへの切り替え直後は描き直しで閉じることがあるので、プルダウンが見えるまで開き直す。
-    await expect(async () => {
-      await page.locator("#pf-fine-select").evaluate((element) => { element.open = true; });
-      await expect(page.locator("#pf-request-type")).toBeVisible({ timeout: 1000 });
-    }).toPass();
-    await page.getByLabel("ご依頼の種類", { exact: true }).selectOption("other");
-    await page.getByLabel(/ご依頼の種類（その他の内容）/).fill("イベント表紙");
+    // 種類のプルダウンは無い。「描く範囲」のカードとチップだけで選ぶ。
+    const picker = page.locator("#pf-plan-picker");
+    await expect(picker).toBeVisible();
+    await picker.getByRole("radio", { name: "それ以外", exact: true }).check();
+    await page.getByLabel(/描いてほしいもの（それ以外の内容）/).fill("イベント表紙");
     await page.getByRole("checkbox", { name: /表情を追加する（表情差分）/ }).check();
     await page.getByLabel("追加する表情の数").fill("2");
     await page.getByLabel("補足（任意）", { exact: true }).fill("笑顔・泣き顔");
@@ -119,15 +117,14 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
     await confirmation.getByRole("button", { name: "資料を修正する" }).click();
     await expect(page.getByLabel("参考URL 1", { exact: true })).toBeVisible();
     await expect(page.getByLabel("参考URL 1", { exact: true })).toHaveValue("https://example.com/reference");
-    const requestType = page.getByLabel("ご依頼の種類", { exact: true });
-    await checkpoint('SELECT_TYPE', requestType);
-    await expect(requestType.locator('option[value="icon"]')).toHaveCount(0);
-    await expect(requestType.locator('option[value="illustration"]')).toHaveCount(1);
-    await expect(requestType).toBeVisible();
-    await expect(requestType).toBeEnabled();
-    await requestType.selectOption("illustration", { timeout: 5000 });
-    await checkpoint('OTHER_GONE', page.getByLabel(/ご依頼の種類（その他の内容）/));
-    await expect(page.getByLabel(/ご依頼の種類（その他の内容）/)).toHaveCount(0);
+    const rangePicker = page.locator("#pf-plan-picker");
+    await checkpoint('SELECT_TYPE', rangePicker);
+    await expect(rangePicker).toBeVisible();
+    await expect(page.getByLabel("ご依頼の種類", { exact: true })).toHaveCount(0);
+    await expect(rangePicker.getByRole("radio", { name: "立ち絵", exact: true })).toHaveCount(0);
+    await rangePicker.locator("label").filter({ has: page.locator('input[value="bust_up"]') }).click();
+    await checkpoint('OTHER_GONE', page.getByLabel(/描いてほしいもの（それ以外の内容）/));
+    await expect(page.getByLabel(/描いてほしいもの（それ以外の内容）/)).toHaveCount(0);
     const conditionsNext = page.getByRole("button", { name: "条件・連絡先へ" });
     await checkpoint('NEXT_CONDITIONS', conditionsNext);
     await conditionsNext.click();
@@ -136,7 +133,8 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
     await reviewNext.click();
     checkpoint('EDIT_FINAL_REVIEW');
     await expect(confirmation).not.toContainText("イベント表紙");
-    await expect(confirmation).toContainText("一枚絵");
+    await expect(confirmation).toContainText("胸上");
+    await expect(confirmation).not.toContainText("依頼種類");
     checkpoint('EDIT_OVERFLOW');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: test.info().outputPath("phase5-review-360.png"), fullPage: true });
@@ -151,11 +149,11 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
     const selected = url.searchParams.get("plan");
     url.searchParams.set("structured", "1");
     await page.goto(url.toString());
-    const labels = { bust_up: "胸上", waist_up: "膝〜腰上", full_body: "全身", sd: "SDキャラクター" };
-    if (!selected || !labels[selected]) throw new Error("unexpected pricing plan fixture");
-    await expect(page.getByText(/料金から選んだ内容：/)).toContainText(labels[selected]);
-    const input = page.getByLabel(selected === "sd" ? "ご依頼の種類" : "制作範囲", { exact: true });
-    await expect(input).toHaveValue(selected);
+    if (!selected || !["bust_up", "waist_up", "full_body", "sd"].includes(selected)) throw new Error("unexpected pricing plan fixture");
+    await expect(page.getByText(/料金から選んだ内容：/)).toBeVisible();
+    // 料金表で選んだ範囲のカードが選ばれている（種類のプルダウンは無い）。
+    await expect(page.locator(`#pf-plan-picker input[name="pf-plan"][value="${selected}"]`)).toBeChecked();
+    await expect(page.getByLabel("ご依頼の種類", { exact: true })).toHaveCount(0);
   });
 
 }

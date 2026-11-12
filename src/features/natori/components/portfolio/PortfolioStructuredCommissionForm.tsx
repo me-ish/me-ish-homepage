@@ -18,7 +18,7 @@ import { NATORI_INTAKE_WRITING_PROMPTS } from "@/features/natori/constants/intak
 import { insertWritingPrompt } from "@/features/natori/lib/intakeWritingPrompts";
 import { NATORI_INTAKE_BUDGET_CHIPS, NATORI_INTAKE_DEADLINE_CHIP_LABELS } from "@/features/natori/constants/intakeBudgetChips";
 import { applyPortfolioBudgetChip, portfolioBudgetChipId } from "@/features/natori/lib/portfolioBudgetChips";
-import { applyPortfolioPlanPick, portfolioBaseEstimate, portfolioPlanPickValue, type PortfolioPlanPick } from "@/features/natori/lib/portfolioPlanPicker";
+import { applyPortfolioPlanPick, portfolioBaseEstimate, portfolioPlanChoiceLabel, portfolioPlanPickValue, type PortfolioPlanPick } from "@/features/natori/lib/portfolioPlanPicker";
 import PlanPicker from "./intake/PlanPicker";
 import ChoiceChip from "./intake/ChoiceChip";
 import { MASS_PRODUCTION_COMMERCIAL_AMOUNT, MASS_PRODUCTION_VARIANTS } from "@/features/natori/constants/massProductionIllustration";
@@ -37,7 +37,6 @@ import {
   massProductionOptionChoices,
   portfolioOptionAllowsQuantity,
   portfolioOptionChoices,
-  portfolioRequestTypeChoiceValue,
   pruneHiddenPortfolioRequestFields,
   type PortfolioRequestTypeChoiceValue,
   type PortfolioRequestFormState,
@@ -48,17 +47,13 @@ import {
 import {
   NATORI_BUDGET_KIND_LABELS_V1,
   NATORI_COMMERCIAL_USE_LABELS_V1,
-  NATORI_COMMISSION_SCOPE_LABELS_V1,
   NATORI_DEADLINE_KIND_LABELS_V1,
   NATORI_INQUIRY_MODE_LABELS_V1,
   NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL,
   NATORI_PUBLICATION_POLICY_LABELS_V1,
-  NATORI_REQUEST_TYPE_LABELS_V1,
   NATORI_USAGE_TYPE_LABELS_V1,
 } from "@/features/natori/lib/requestPresentation";
 import {
-  NATORI_COMMISSION_SCOPES_V1,
-  NATORI_REQUEST_TYPES_V1,
   NATORI_USAGE_TYPES_V1,
   type NatoriDeadlineV1,
   type NatoriInquiryModeV1,
@@ -70,7 +65,7 @@ import IntakeRecoveryPanel from "./IntakeRecoveryPanel";
 import { useIntakeDraft } from "./intake/useIntakeDraft";
 import { suggestEmailDomain } from "@/features/natori/lib/emailTypoSuggestion";
 import { restoreStructuredIntakeFields } from "../../lib/restoreIntakeForm";
-import { portfolioConfirmationSections, readFrozenPortfolioSubmission, validatePortfolioForm, validatePortfolioStep } from "@/features/natori/lib/portfolioFormValidation";
+import { portfolioConfirmationSections, portfolioQuoteNeedsContent, readFrozenPortfolioSubmission, validatePortfolioForm, validatePortfolioStep } from "@/features/natori/lib/portfolioFormValidation";
 import PortfolioLegalNotice from "./PortfolioLegalNotice";
 import PortfolioFormStyles, { portfolioFormColors as c } from "./PortfolioFormStyles";
 
@@ -232,6 +227,8 @@ export default function PortfolioStructuredCommissionForm({
   const [serverFieldErrors, setServerFieldErrors] = useState<ServerFieldError[]>([]);
   const [refImages, setRefImages] = useState<RefImageEntry[]>([]);
   const [refImageError, setRefImageError] = useState<string | null>(null);
+  // 下書きを戻したときの「相談／見積もり」。入口の既定（相談）で上書きしないために覚えておく。
+  const restoredDraftModeRef = useRef<NatoriInquiryModeV1 | null>(null);
   // 下書きはこの端末だけに置く。お名前・メール・画像は保存しない。デモでは保存しない。
   const draft = useIntakeDraft({
     enabled: !demoMode,
@@ -241,6 +238,7 @@ export default function PortfolioStructuredCommissionForm({
     canRestore: () => !restoredFromOperationRef.current && !initialPlan && !initialMessage && !fromPlan,
     // 復元したら最初の画面から見直してもらう（途中の画面に飛ぶと、何が戻ったか分かりにくい）。
     onRestore: (saved) => {
+      restoredDraftModeRef.current = saved.state.inquiryMode;
       setState(saved.state);
       setStep(0);
     },
@@ -258,7 +256,6 @@ export default function PortfolioStructuredCommissionForm({
   };
   const [massProductionNotice, setMassProductionNotice] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [fineOpen, setFineOpen] = useState(false);
   const [optionalOpen, setOptionalOpen] = useState(false);
   const [openSections, setOpenSections] = useState({
     requestType: false,
@@ -287,8 +284,11 @@ export default function PortfolioStructuredCommissionForm({
 
   useEffect(() => {
     if (!opening || !initialMode) return;
-    setState((current) => ({ ...current, inquiryMode: initialMode }));
-    if (initialMode === "quote" || fromPlan) {
+    // 「相談・見積もり」ボタンから戻ってきたときは入口の既定が「相談」になる。
+    // 見積もりで書いた下書きを戻した直後なら、そのまま見積もりで開く（選んだ内容が畳まれて消えたように見えるため）。
+    const mode = initialMode === "consultation" && restoredDraftModeRef.current === "quote" ? "quote" : initialMode;
+    setState((current) => ({ ...current, inquiryMode: mode }));
+    if (mode === "quote" || fromPlan) {
       setOptionalOpen(true);
       setOpenSections((current) => ({ ...current, requestType: true }));
     }
@@ -337,8 +337,8 @@ export default function PortfolioStructuredCommissionForm({
     () => massProductionSelected ? massProductionOptionChoices() : portfolioOptionChoices(content),
     [content, massProductionSelected],
   );
-  const requestTypeChoice = portfolioRequestTypeChoiceValue(state);
   const planPick = portfolioPlanPickValue(state);
+  const planChoiceLabel = portfolioPlanChoiceLabel(state, content.plans);
   const validatedSubmission = useMemo(
     () => validatePortfolioForm(state, optionChoices, clientName, clientEmail),
     [state, optionChoices, clientName, clientEmail],
@@ -380,7 +380,6 @@ export default function PortfolioStructuredCommissionForm({
   const openErrorSections = (errors: ServerFieldError[]) => {
     const targets = errors.map((error) => portfolioErrorTarget(error.path, state, optionChoices));
     const sections = targets.map((target) => target.section);
-    if (targets.some((target) => target.id === "pf-request-type" || target.id === "pf-scope")) setFineOpen(true);
     if (sections.some(Boolean)) setOptionalOpen(true);
     if (sections.includes("details")) setDetailsOpen(true);
     setOpenSections((current) => ({
@@ -453,6 +452,11 @@ export default function PortfolioStructuredCommissionForm({
   };
 
   const pickPlan = (pick: PortfolioPlanPick) => {
+    // 量産イラストは受付停止の案内やデザイン欄の開き方が決まっているので、同じ処理を通す。
+    if (pick === "mass_production") {
+      changeRequestType(NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE);
+      return;
+    }
     setMassProductionNotice(false);
     setState((current) => applyPortfolioPlanPick(current, pick));
   };
@@ -830,115 +834,55 @@ export default function PortfolioStructuredCommissionForm({
     </div>
   );
 
+  // 範囲を選ぶか、ひとこと書いたら、その場で注意を消す（次に進むまで残ると直っていないように見える）。
+  const planPickerError = portfolioQuoteNeedsContent(state) ? serverErrorFor("requestData.requestType") : undefined;
+
   const requestTypeSection = (
           <FormSection
-            title={isQuote ? "描くもの" : "依頼の種類"}
-            summary={state.requestType !== "undecided" || state.commissionScope !== "undecided"
-              ? [massProductionSelected ? NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL : NATORI_REQUEST_TYPE_LABELS_V1[state.requestType],
-                massProductionSelected ? state.commissionScopeOther : NATORI_COMMISSION_SCOPE_LABELS_V1[state.commissionScope]].filter(Boolean).join("／")
-              : undefined}
+            title="描くもの"
+            summary={planPick !== null && planPick !== "undecided" ? planChoiceLabel ?? undefined : undefined}
             description={massProductionSelected ? "「おばけ」か「魔女」を選び、ご希望の表情をご記入ください。" : undefined}
             collapsible={!isQuote}
             required={massProductionSelected}
             open={openSections.requestType}
             onToggle={(next) => setOpenSections((current) => ({ ...current, requestType: next }))}
           >
-            <PlanPicker plans={content.plans} works={content.works} value={planPick} onPick={pickPlan} />
-            <details
-              id="pf-fine-select"
-              className="group/fine"
-              open={fineOpen || massProductionSelected || massProductionNotice}
-              onToggle={(event) => setFineOpen(event.currentTarget.open)}
-            >
-              <summary className="pf-cute-focus inline-flex min-h-[44px] cursor-pointer list-none items-center gap-1 text-sm font-bold underline decoration-2 underline-offset-4 [&::-webkit-details-marker]:hidden"
-                style={{ color: c.textSoft }}>
-                細かく選ぶ（立ち絵の胸上など）
-                <span aria-hidden="true" className="group-open/fine:rotate-180">⌄</span>
-              </summary>
-            <div className="mt-2 grid gap-4">
-              <div>
-                <label htmlFor="pf-request-type" className={labelClass}>
-                  ご依頼の種類
-                </label>
-                <select
-                  id="pf-request-type"
-                  {...errorAttributes("pf-request-type")}
-                  value={requestTypeChoice}
-                  onChange={(event) =>
-                    changeRequestType(event.target.value as PortfolioRequestTypeChoiceValue)
-                  }
-                  className={inputClass}
-                  aria-describedby={massProductionNotice ? "pf-mass-production-notice" : undefined}
-                >
-                  {NATORI_REQUEST_TYPES_V1.filter((type) => type !== "other").map((type) => (
-                    <option key={type} value={type}>
-                      {type === "sd" ? "SDキャラクター（ちびキャラ）" : NATORI_REQUEST_TYPE_LABELS_V1[type]}
-                    </option>
-                  ))}
-                  <option value={NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE}>
-                    {NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL}
-                  </option>
-                  <option value="other">{NATORI_REQUEST_TYPE_LABELS_V1.other}</option>
-                </select>
-                {massProductionNotice ? (
-                  <div
-                    id="pf-mass-production-notice"
-                    role="alert"
-                    className="mt-2 rounded-lg border-2 px-3 py-2 text-sm font-bold"
-                    style={{
-                      borderColor: c.formBorder,
-                      background: c.surfaceSubtle,
-                      color: c.text,
-                    }}
+            <PlanPicker plans={content.plans} works={content.works} value={planPick} onPick={pickPlan}
+              invalid={planPickerError ? true : undefined} describedBy={planPickerError ? "pf-plan-picker-error" : undefined} />
+            <FieldError id="pf-plan-picker-error" message={planPickerError} />
+            {massProductionNotice ? (
+              <div
+                id="pf-mass-production-notice"
+                role="alert"
+                className="mt-2 rounded-lg border-2 px-3 py-2 text-sm font-bold"
+                style={{
+                  borderColor: c.formBorder,
+                  background: c.surfaceSubtle,
+                  color: c.text,
+                }}
+              >
+                現在、量産イラストは受け付けていません。再開・詳細は
+                {xLink ? (
+                  <a
+                    href={xLink.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pf-cute-focus mx-1 underline decoration-2 underline-offset-4 hover:opacity-70"
+                    style={{ color: c.formBorderActive }}
                   >
-                    現在、量産イラストは受け付けていません。再開・詳細は
-                    {xLink ? (
-                      <a
-                        href={xLink.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="pf-cute-focus mx-1 underline decoration-2 underline-offset-4 hover:opacity-70"
-                        style={{ color: c.formBorderActive }}
-                      >
-                        X
-                      </a>
-                    ) : (
-                      "X"
-                    )}
-                    をご確認ください。
-                  </div>
-                ) : null}
+                    X
+                  </a>
+                ) : (
+                  "X"
+                )}
+                をご確認ください。
               </div>
-              {!massProductionSelected ? (
-              <div>
-                <label htmlFor="pf-scope" className={labelClass}>
-                  制作範囲
-                </label>
-                <select
-                  id="pf-scope"
-                  {...errorAttributes("pf-scope")}
-                  value={state.commissionScope}
-                  onChange={(event) =>
-                    update({ commissionScope: event.target.value as typeof state.commissionScope })
-                  }
-                  disabled={massProductionSelected}
-                  className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-70`}
-                >
-                  {NATORI_COMMISSION_SCOPES_V1.map((scope) => (
-                    <option key={scope} value={scope}>
-                      {NATORI_COMMISSION_SCOPE_LABELS_V1[scope]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              ) : null}
-            </div>
-            </details>
+            ) : null}
 
             {state.requestType === "other" && !massProductionSelected ? (
               <div>
                 <label htmlFor="pf-request-type-other" className={labelClass}>
-                  ご依頼の種類（その他の内容）<RequiredBadge />
+                  描いてほしいもの（それ以外の内容）<RequiredBadge />
                 </label>
                 <input
                   id="pf-request-type-other"
@@ -1651,7 +1595,7 @@ export default function PortfolioStructuredCommissionForm({
         {step > 0 && <button type="button" onClick={() => goToStep(step - 1)} className="pf-cute-focus min-h-[44px] text-sm font-bold underline">戻る</button>}
       </div>
       {(fromPlan || planOrigin) ? <p className="rounded-lg px-3 py-2 text-sm" style={{ background: c.surfaceSubtle, color: c.textSoft }}>
-        料金から選んだ内容：{massProductionSelected ? NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL : NATORI_REQUEST_TYPE_LABELS_V1[state.requestType]}／{massProductionSelected ? state.commissionScopeOther || "デザインは未選択" : NATORI_COMMISSION_SCOPE_LABELS_V1[state.commissionScope]}。入力画面で変更できます。
+        料金から選んだ内容：{planChoiceLabel ?? "未定"}。入力画面で変更できます。
       </p> : null}
       {draft.restored ? <div role="status" className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg px-3 py-2 text-sm" style={{ background: c.surfaceSubtle, color: c.text }}>
         <span>前回の下書きを復元しました。{draft.restored.hadImages ? "参考画像は選び直してください。" : ""}</span>

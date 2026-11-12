@@ -14,9 +14,10 @@ const fieldTargets: Record<string, FieldTarget> = {
   clientName: { id: "pf-name" },
   clientEmail: { id: "pf-email" },
   "requestData.message": { id: "pf-message" },
-  "requestData.requestType": { id: "pf-request-type", section: "requestType" },
+  // 種類と範囲は「描く範囲」のカードでまとめて選ぶ。
+  "requestData.requestType": { id: "pf-plan-picker", section: "requestType" },
   "requestData.requestTypeOther": { id: "pf-request-type-other", section: "requestType" },
-  "requestData.commissionScope": { id: "pf-scope", section: "requestType" },
+  "requestData.commissionScope": { id: "pf-plan-picker", section: "requestType" },
   "requestData.commissionScopeOther": { id: "pf-scope-other", section: "requestType" },
   "requestData.usageTypes": { id: "pf-usage-types", section: "usage" },
   "requestData.usageTypeOther": { id: "pf-usage-other", section: "usage" },

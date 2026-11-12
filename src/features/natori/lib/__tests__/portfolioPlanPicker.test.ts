@@ -5,10 +5,12 @@ import {
   applyPortfolioPlanPick,
   parsePortfolioPlanPrice,
   portfolioBaseEstimate,
+  portfolioPlanChoiceLabel,
   portfolioPlanPickValue,
 } from "../portfolioPlanPicker";
 import { applyPortfolioBudgetChip, portfolioBudgetChipId } from "../portfolioBudgetChips";
 import {
+  applyPortfolioPlanSelection,
   applyPortfolioRequestTypeSelection,
   buildNatoriRequestDataV1,
   createInitialPortfolioRequestFormState,
@@ -44,17 +46,44 @@ describe("描く範囲カード", () => {
     expect(applyPortfolioPlanPick(consult, "sd").inquiryMode).toBe("consultation");
   });
 
-  it("「細かく選ぶ」でしか作れない組み合わせはどのカードにも当たらない", () => {
-    const standingBust = { ...applyPortfolioPlanPick(initial(), "standing"), commissionScope: "bust_up" as const };
-    expect(portfolioPlanPickValue(standingBust)).toBe("standing");
+  it("以前の下書きに残る立ち絵・アイコンは、範囲のカードとして扱う", () => {
+    const standingBust = { ...initial(), requestType: "standing" as const, commissionScope: "bust_up" as const };
+    expect(portfolioPlanPickValue(standingBust)).toBe("bust_up");
+    expect(portfolioBaseEstimate(standingBust, defaultPortfolioContent.plans)?.amount).toBe(
+      parsePortfolioPlanPrice(defaultPortfolioContent.plans.find((plan) => plan.id === "bust_up")!.price),
+    );
     const illustrationOnly = { ...initial(), requestType: "illustration" as const };
     expect(portfolioPlanPickValue(illustrationOnly)).toBeNull();
   });
 
-  it("量産イラストはカードに出さない", () => {
-    const mass = applyPortfolioRequestTypeSelection(initial(), NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE);
-    expect(portfolioPlanPickValue(mass)).toBeNull();
+  it("量産イラストはチップで選べて、料金の目安は出さない", () => {
+    const mass = applyPortfolioPlanPick(initial(), "mass_production");
+    expect(mass).toEqual(applyPortfolioRequestTypeSelection(initial(), NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE));
+    expect(portfolioPlanPickValue(mass)).toBe("mass_production");
     expect(portfolioBaseEstimate(mass, defaultPortfolioContent.plans)).toBeNull();
+  });
+
+  it("SD・それ以外を選ぶと、前に選んだ範囲は残さない", () => {
+    const full = applyPortfolioPlanPick(initial(), "full_body");
+    expect(applyPortfolioPlanPick(full, "sd").commissionScope).toBe("undecided");
+    expect(applyPortfolioPlanPick(full, "other").commissionScope).toBe("undecided");
+  });
+
+  it("料金表から来ても、カードで選んでも、同じ内容になる", () => {
+    for (const plan of ["sd", "bust_up", "waist_up", "full_body"] as const) {
+      const viaLink = applyPortfolioPlanSelection(initial(), plan);
+      const viaCard = applyPortfolioPlanPick({ ...initial(), inquiryMode: "quote" }, plan);
+      expect(buildNatoriRequestDataV1(viaLink, [])).toEqual(buildNatoriRequestDataV1(viaCard, []));
+    }
+  });
+
+  it("選んでいる内容をカードと同じ言葉で表す", () => {
+    const plans = defaultPortfolioContent.plans;
+    expect(portfolioPlanChoiceLabel(applyPortfolioPlanPick(initial(), "full_body"), plans)).toBe(
+      plans.find((plan) => plan.id === "full_body")!.name,
+    );
+    expect(portfolioPlanChoiceLabel(initial(), plans)).toBe("まだ決めていない");
+    expect(portfolioPlanChoiceLabel({ ...applyPortfolioPlanPick(initial(), "other"), requestTypeOther: "ロゴ" }, plans)).toBe("それ以外（ロゴ）");
   });
 
   it("カードで選んでも送るデータは旧 UI の選択と同じ", () => {
@@ -71,8 +100,8 @@ describe("料金の目安（基本料金だけ）", () => {
     expect(estimate).toEqual({ planName: plan.name, amount: parsePortfolioPlanPrice(plan.price) });
   });
 
-  it("立ち絵・その他・未定では出さない", () => {
-    for (const pick of ["standing", "other", "undecided"] as const) {
+  it("量産・それ以外・未定では出さない", () => {
+    for (const pick of ["mass_production", "other", "undecided"] as const) {
       expect(portfolioBaseEstimate(applyPortfolioPlanPick(initial(), pick), defaultPortfolioContent.plans)).toBeNull();
     }
   });

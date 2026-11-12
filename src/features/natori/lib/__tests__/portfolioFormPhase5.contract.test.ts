@@ -37,9 +37,13 @@ describe("Phase 5 current-step validation", () => {
     expect(input.budgetMin).toBe("bad");
   });
 
-  it("allows undecided production without adding requirements from the next step", () => {
+  it("asks an empty quote for a scope or a word, without adding requirements from the next step", () => {
     const input = state({ inquiryMode: "quote", message: "", publicationPolicy: "delayed", publicationAllowedFrom: "", budgetKind: "fixed", budgetMin: "bad" });
-    expect(errorPaths(input, 0)).toEqual([]);
+    expect(errorPaths(input, 0)).toEqual(["requestData.requestType"]);
+    expect(portfolioErrorTarget("requestData.requestType", input, choices)).toEqual({ id: "pf-plan-picker", section: "requestType" });
+    // 範囲を選ぶか、ひとこと書けば未定のままでも進める。
+    expect(errorPaths({ ...input, requestType: "illustration", commissionScope: "full_body" }, 0)).toEqual([]);
+    expect(errorPaths({ ...input, message: "うちの子をお願いします" }, 0)).toEqual([]);
     expect(validatePortfolioForm(input, choices, "", "").success).toBe(false);
   });
 

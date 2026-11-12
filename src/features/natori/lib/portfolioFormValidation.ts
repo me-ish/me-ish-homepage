@@ -19,15 +19,35 @@ export type PortfolioFormValidation =
   | { success: true; data: NatoriRequestSubmissionV1; referenceLinks: PortfolioReferenceLinkRow[] }
   | { success: false; errors: NatoriRequestFieldError[] };
 
+export const PORTFOLIO_QUOTE_NEEDS_CONTENT_MESSAGE = "描く範囲を選ぶか、描いてほしいものをひとことご記入ください。";
+
+/**
+ * 「見積もりを希望」なのに、範囲も選ばず何も書いていない状態。
+ * 名前とメールだけの見積もり依頼は先生が見積もれないので、送る前に止める（受付側の条件は変えない）。
+ */
+export function portfolioQuoteNeedsContent(state: PortfolioRequestFormState): boolean {
+  if (state.inquiryMode !== "quote") return false;
+  if (state.requestType !== "undecided" || state.commissionScope !== "undecided") return false;
+  return [state.message, state.characterFeatures, state.expressionMood, state.composition,
+    state.colorDirection, state.referenceNotes].every((value) => value.trim().length === 0);
+}
+
+const quoteNeedsContentError = (): NatoriRequestFieldError => ({
+  path: "requestData.requestType", message: PORTFOLIO_QUOTE_NEEDS_CONTENT_MESSAGE,
+});
+
 export function validatePortfolioForm(
   state: PortfolioRequestFormState,
   choices: PortfolioOptionChoice[],
   clientName: string,
   clientEmail: string,
+  /** 画面ごとの確認では、ほかの画面の値を空にして呼ぶので「中身があるか」は呼び出し側で見る。 */
+  checkQuoteContent = true,
 ): PortfolioFormValidation {
   // Validate the selected raw values before the builder can normalize them.
   const quantityErrors = collectPortfolioQuantityErrors(state, choices);
   if (quantityErrors.length > 0) return { success: false, errors: quantityErrors };
+  if (checkQuoteContent && portfolioQuoteNeedsContent(state)) return { success: false, errors: [quoteNeedsContentError()] };
   const parsed = natoriRequestSubmissionV1Schema.safeParse({
     clientName, clientEmail, requestData: buildNatoriRequestDataV1(state, choices),
   });
@@ -77,8 +97,11 @@ export function validatePortfolioStep(
       usageTypes: state.usageTypes.filter((usage) => usage === "original_character"), usageTypeOther: "",
     };
   }
-  const result = validatePortfolioForm(current, choices, name, email);
-  return result.success ? [] : result.errors;
+  const result = validatePortfolioForm(current, choices, name, email, false);
+  const errors = result.success ? [] : result.errors;
+  // 1 画面目で止める。2 画面目に進んでから戻されると、何を足せばいいか分かりにくい。
+  if (step === 0 && portfolioQuoteNeedsContent(state)) return [quoteNeedsContentError(), ...errors];
+  return errors;
 }
 
 /** Read the original frozen answers without rebuilding labels from current content. */
@@ -112,6 +135,11 @@ export function portfolioConfirmationSections(request: NatoriRequestDataV1): Nat
     const section = view.sections.find((item) => item.key === key);
     if (!section) return [];
     const fields = section.fields.filter((field) => {
+      // 依頼者は「描く範囲」だけを選ぶ。種類は範囲のカードでは決まった値なので、確認画面には出さない。
+      if (field.key === "requestType") return request.requestType !== "illustration" && request.requestType !== "undecided";
+      if (field.key === "commissionScope") {
+        return request.commissionScope !== "undecided" || request.requestType === "undecided" || request.requestType === "illustration";
+      }
       if (field.key === "options") return request.options.length > 0;
       const detail = detailKeys.find((item) => item === field.key);
       return detail === undefined || request[detail].trim().length > 0;

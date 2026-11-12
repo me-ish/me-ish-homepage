@@ -68,6 +68,12 @@ test.describe("Natori public intake rollout", () => {
     await expect(page.getByRole("radio", { name: "見積もりを希望" })).toBeChecked();
     await expect(page.getByRole("group", { name: /描く範囲/ })).toBeVisible();
     await expect(page.getByRole("group", { name: "ご予算" })).toBeHidden();
+    // 見積もりは、描く範囲を選ぶか、ひとこと書くまで先へ進めない。
+    await page.getByRole("button", { name: "条件・連絡先へ" }).click();
+    await expect(page.locator("#pf-plan-picker")).toBeFocused();
+    await expect(page.locator("#pf-plan-picker")).toHaveAttribute("aria-invalid", "true");
+    await expect(page.getByText("描く範囲を選ぶか、描いてほしいものをひとことご記入ください。").first()).toBeVisible();
+    await page.locator("#pf-plan-picker label").filter({ has: page.locator('input[value="full_body"]') }).click();
     await page.getByRole("button", { name: "条件・連絡先へ" }).click();
     await expect(page.getByRole("heading", { name: "ご希望の条件と連絡先" })).toBeFocused();
     await expect(page.getByRole("group", { name: "ご予算" })).toBeVisible();
@@ -104,6 +110,7 @@ test.describe("Natori public intake rollout", () => {
       await expect(checkbox).not.toBeChecked();
       await page.keyboard.press("Space");
       await expect(checkbox).toBeChecked();
+      await page.locator("#pf-plan-picker label").filter({ has: page.locator('input[value="full_body"]') }).click();
       const quantity = page.getByLabel("追加する表情の数");
       await quantity.fill("2.5");
       await page.getByRole("button", { name: "条件・連絡先へ" }).click();
@@ -155,14 +162,11 @@ test.describe("Natori public intake rollout", () => {
     await page.setViewportSize({ width: 360, height: 844 });
     await page.goto(`${DEMO_PATH}?structured=1`);
     await openInquiry(page, "quote");
-    // 種類と範囲のプルダウンは「細かく選ぶ」の中にある。
-    // 見積もりへの切り替え直後は描き直しで閉じることがあるので、プルダウンが見えるまで開き直す。
-    await expect(async () => {
-      await page.locator("#pf-fine-select").evaluate((element) => { (element as HTMLDetailsElement).open = true; });
-      await expect(page.locator("#pf-request-type")).toBeVisible({ timeout: 1000 });
-    }).toPass();
-    await page.getByLabel("ご依頼の種類", { exact: true }).selectOption("other");
-    await page.getByLabel(/ご依頼の種類（その他の内容）/).fill("イベント表紙");
+    // 種類のプルダウンは無い。「描く範囲」のカードとチップだけで選ぶ。
+    const picker = page.locator("#pf-plan-picker");
+    await expect(picker).toBeVisible();
+    await picker.getByRole("radio", { name: "それ以外", exact: true }).check();
+    await page.getByLabel(/描いてほしいもの（それ以外の内容）/).fill("イベント表紙");
     await page.getByRole("checkbox", { name: /表情を追加する（表情差分）/ }).check();
     await page.getByLabel("追加する表情の数").fill("2");
     await page.getByLabel("補足（任意）", { exact: true }).fill("笑顔・泣き顔");
@@ -195,12 +199,14 @@ test.describe("Natori public intake rollout", () => {
     await confirmation.getByRole("button", { name: "資料を修正する" }).click();
     await expect(page.getByLabel("参考URL 1", { exact: true })).toBeVisible();
     await expect(page.getByLabel("参考URL 1", { exact: true })).toHaveValue("https://example.com/reference");
-    await page.getByLabel("ご依頼の種類", { exact: true }).selectOption("illustration", { timeout: 5000 });
-    await expect(page.getByLabel(/ご依頼の種類（その他の内容）/)).toHaveCount(0);
+    await expect(page.getByLabel("ご依頼の種類", { exact: true })).toHaveCount(0);
+    await page.locator("#pf-plan-picker label").filter({ has: page.locator('input[value="bust_up"]') }).click();
+    await expect(page.getByLabel(/描いてほしいもの（それ以外の内容）/)).toHaveCount(0);
     await page.getByRole("button", { name: "条件・連絡先へ" }).click();
     await page.getByRole("button", { name: "内容を確認する" }).click();
     await expect(confirmation).not.toContainText("イベント表紙");
-    await expect(confirmation).toContainText("一枚絵");
+    await expect(confirmation).toContainText("胸上");
+    await expect(confirmation).not.toContainText("依頼種類");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: test.info().outputPath("phase5-review-360.png"), fullPage: true });
   });
@@ -214,11 +220,11 @@ test.describe("Natori public intake rollout", () => {
     const selected = url.searchParams.get("plan");
     url.searchParams.set("structured", "1");
     await page.goto(url.toString());
-    const labels: Record<string, string> = { bust_up: "胸上", waist_up: "膝〜腰上", full_body: "全身", sd: "SDキャラクター" };
-    if (!selected || !labels[selected]) throw new Error("unexpected pricing plan fixture");
-    await expect(page.getByText(/料金から選んだ内容：/)).toContainText(labels[selected]);
-    const input = page.getByLabel(selected === "sd" ? "ご依頼の種類" : "制作範囲", { exact: true });
-    await expect(input).toHaveValue(selected);
+    if (!selected || !["bust_up", "waist_up", "full_body", "sd"].includes(selected)) throw new Error("unexpected pricing plan fixture");
+    await expect(page.getByText(/料金から選んだ内容：/)).toBeVisible();
+    // 料金表で選んだ範囲のカードが選ばれている（種類のプルダウンは無い）。
+    await expect(page.locator(`#pf-plan-picker input[name="pf-plan"][value="${selected}"]`)).toBeChecked();
+    await expect(page.getByLabel("ご依頼の種類", { exact: true })).toHaveCount(0);
   });
 
   test("mobile plan and hero links open a dedicated contact page", async ({ page }) => {

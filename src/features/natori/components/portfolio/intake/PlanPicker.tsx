@@ -1,7 +1,7 @@
 "use client";
 
 // features/natori/components/portfolio/intake/PlanPicker.tsx
-// 「描く範囲」カード（SD／胸上／膝〜腰上／全身）と、立ち絵・その他・未定のチップ。
+// 「描く範囲」カード（SD／胸上／膝〜腰上／全身）と、量産イラスト・それ以外・未定のチップ。
 // 選択はフォーム state から作る派生表示で、選ぶと onPick で state を書き換える。
 import {
   PORTFOLIO_PLAN_PICK_CARDS,
@@ -41,14 +41,19 @@ export default function PlanPicker({
   works,
   value,
   onPick,
+  invalid,
+  describedBy,
 }: {
   plans: readonly PortfolioPlan[];
   works: PortfolioWork[];
   value: PortfolioPlanPick | null;
   onPick: (pick: PortfolioPlanPick) => void;
+  /** 入力エラーの移動先になったとき */
+  invalid?: boolean;
+  describedBy?: string;
 }) {
   return (
-    <fieldset>
+    <fieldset id="pf-plan-picker" tabIndex={-1} aria-invalid={invalid || undefined} aria-describedby={describedBy} className="scroll-mt-24 outline-none">
       <legend className="mb-1.5 flex items-center text-sm font-bold">
         描く範囲
         <span className="ml-2 rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: c.surfaceSubtle, color: c.textSoft }}>

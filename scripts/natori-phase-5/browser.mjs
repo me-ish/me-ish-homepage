@@ -57,9 +57,10 @@ async function main(){
  }finally{await pre.close();}
  const cases=[],test=(name,fn)=>cases.push({name,fn});test.info=()=>({outputPath:name=>{check(/^phase5-[a-z0-9-]+\.png$/.test(name),'SCREENSHOT_PATH');return '/results/'+name;}});
  async function prepareActualEnvelope(page){
-  await expect(async()=>{await page.locator('#pf-fine-select').evaluate(element=>{element.open=true;});await expect(page.locator('#pf-request-type')).toBeVisible({timeout:1000});}).toPass();
-  await page.getByLabel('ご依頼の種類',{exact:true}).selectOption('other');await page.getByLabel(/ご依頼の種類（その他の内容）/).fill('hidden old request');await page.getByLabel('ご依頼の種類',{exact:true}).selectOption('illustration');
-  await page.getByLabel('制作範囲',{exact:true}).selectOption('other');await page.getByLabel(/制作範囲（その他の内容）/).fill('hidden old scope');await page.getByLabel('制作範囲',{exact:true}).selectOption('full_body');
+  // 種類のプルダウンは無い。「描く範囲」のカードとチップだけで選ぶ。
+  const picker=page.locator('#pf-plan-picker');await expect(picker).toBeVisible();
+  await picker.getByRole('radio',{name:'それ以外',exact:true}).check();await page.getByLabel(/描いてほしいもの（それ以外の内容）/).fill('hidden old request');
+  await picker.locator('label').filter({has:page.locator('input[value="full_body"]')}).click();await expect(page.getByLabel(/描いてほしいもの（それ以外の内容）/)).toHaveCount(0);
   await page.getByLabel('補足（任意）',{exact:true}).fill('笑顔・泣き顔');
   const details=page.locator('summary').filter({hasText:/^キャラクター・イメージの詳細を入力する/}).locator('..');await details.locator('summary').first().click();
   for(const [label,value]of[['キャラクターの特徴','水色の髪'],['希望する表情・雰囲気','笑顔'],['構図のイメージ','二人並び'],['色のイメージ','青'],['資料についての補足','画像の服装']])await page.getByLabel(label,{exact:true}).fill(value);

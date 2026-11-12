@@ -252,8 +252,10 @@ export function applyPortfolioPlanSelection(
       inquiryMode: "quote",
       requestType: "sd",
       requestTypeOther: "",
+      commissionScope: "undecided",
+      commissionScopeOther: "",
       ...(isMassProductionIllustrationSelection(state)
-        ? { commissionScope: "undecided" as const, commissionScopeOther: "", optionSelections: {}, commercialUse: "unknown" as const, expressionMood: "" }
+        ? { optionSelections: {}, commercialUse: "unknown" as const, expressionMood: "" }
         : {}),
     });
   }
@@ -261,9 +263,12 @@ export function applyPortfolioPlanSelection(
     return pruneHiddenPortfolioRequestFields({
       ...state,
       inquiryMode: "quote",
+      // フォームのカードで選んだときと同じ種類にそろえる（料金表から来たときだけ「未定」になっていた）。
+      requestType: "illustration",
+      requestTypeOther: "",
       commissionScope: planId,
       ...(isMassProductionIllustrationSelection(state)
-        ? { requestType: "undecided" as const, requestTypeOther: "", optionSelections: {}, commercialUse: "unknown" as const, expressionMood: "" }
+        ? { optionSelections: {}, commercialUse: "unknown" as const, expressionMood: "" }
         : {}),
     });
   }

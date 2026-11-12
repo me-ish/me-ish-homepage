@@ -223,7 +223,7 @@ async function main() {
       });
       await test(ids[2], width, async () => {
         await page.goto(app + '/ja/fixture-phase7/intake');
-        await (await revealField(page, '#pf-request-type')).selectOption('illustration'); await (await revealField(page, '#pf-scope')).selectOption('full_body');
+        await page.locator('#pf-plan-picker label').filter({ has: page.locator('input[value="full_body"]') }).click();
         await page.locator('#pf-message').fill('Synthetic original request\nLine 2: preserve character\nLine 3: preserve expression\nLine 4: preserve usage\nLine 5: preserve publication\nImportant final condition: no AI training');
         await page.getByRole('button', { name: '条件・連絡先へ', exact: true }).click();
         await page.locator('#pf-name').fill('Synthetic Phase 7 client'); await page.locator('#pf-email').fill('client@phase7.invalid');
