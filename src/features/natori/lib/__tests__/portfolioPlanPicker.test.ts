@@ -20,8 +20,8 @@ import {
 const initial = () => ({ ...createInitialPortfolioRequestFormState(), inquiryMode: "quote" as const, message: "テスト" });
 
 describe("描く範囲カード", () => {
-  it("初期状態は「まだ決めていない」", () => {
-    expect(portfolioPlanPickValue(initial())).toBe("undecided");
+  it("初期状態は何も選ばれていない（「まだ決めていない」は置かない）", () => {
+    expect(portfolioPlanPickValue(initial())).toBeNull();
   });
 
   it("胸上・膝〜腰上・全身はイラスト＋制作範囲になる", () => {
@@ -82,7 +82,7 @@ describe("描く範囲カード", () => {
     expect(portfolioPlanChoiceLabel(applyPortfolioPlanPick(initial(), "full_body"), plans)).toBe(
       plans.find((plan) => plan.id === "full_body")!.name,
     );
-    expect(portfolioPlanChoiceLabel(initial(), plans)).toBe("まだ決めていない");
+    expect(portfolioPlanChoiceLabel(initial(), plans)).toBeNull();
     expect(portfolioPlanChoiceLabel({ ...applyPortfolioPlanPick(initial(), "other"), requestTypeOther: "ロゴ" }, plans)).toBe("それ以外（ロゴ）");
   });
 
@@ -100,10 +100,11 @@ describe("料金の目安（基本料金だけ）", () => {
     expect(estimate).toEqual({ planName: plan.name, amount: parsePortfolioPlanPrice(plan.price) });
   });
 
-  it("量産・それ以外・未定では出さない", () => {
-    for (const pick of ["mass_production", "other", "undecided"] as const) {
+  it("量産・それ以外・未選択では出さない", () => {
+    for (const pick of ["mass_production", "other"] as const) {
       expect(portfolioBaseEstimate(applyPortfolioPlanPick(initial(), pick), defaultPortfolioContent.plans)).toBeNull();
     }
+    expect(portfolioBaseEstimate(initial(), defaultPortfolioContent.plans)).toBeNull();
   });
 
   it("金額として読めない料金は出さない", () => {

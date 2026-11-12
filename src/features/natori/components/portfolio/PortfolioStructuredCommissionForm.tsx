@@ -840,7 +840,7 @@ export default function PortfolioStructuredCommissionForm({
   const requestTypeSection = (
           <FormSection
             title="描くもの"
-            summary={planPick !== null && planPick !== "undecided" ? planChoiceLabel ?? undefined : undefined}
+            summary={planPick !== null ? planChoiceLabel ?? undefined : undefined}
             description={massProductionSelected ? "「おばけ」か「魔女」を選び、ご希望の表情をご記入ください。" : undefined}
             collapsible={!isQuote}
             required={massProductionSelected}
@@ -848,6 +848,7 @@ export default function PortfolioStructuredCommissionForm({
             onToggle={(next) => setOpenSections((current) => ({ ...current, requestType: next }))}
           >
             <PlanPicker plans={content.plans} works={content.works} value={planPick} onPick={pickPlan}
+              massProductionOpen={content.massProductionIllustrationOpen}
               invalid={planPickerError ? true : undefined} describedBy={planPickerError ? "pf-plan-picker-error" : undefined} />
             <FieldError id="pf-plan-picker-error" message={planPickerError} />
             {massProductionNotice ? (

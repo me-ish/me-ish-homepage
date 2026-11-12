@@ -3,6 +3,7 @@
 // カードは state から作る派生表示で、選んだときは state だけを書き換える。
 // 依頼者には「ご依頼の種類」を選ばせない（2026-11-12）。値段は範囲で決まり、使いみちは別に聞いているため。
 // 保存する種類は、範囲のカードなら illustration、SD は sd、量産・それ以外は other のまま。
+// 「まだ決めていない」は置かない（2026-11-12）。何も選ばなければ未定のまま送られ、迷ったら「それ以外」に書ける。
 import {
   NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE,
   applyPortfolioRequestTypeSelection,
@@ -13,7 +14,7 @@ import {
 import type { PortfolioPlan } from "@/features/natori/types/portfolio";
 
 export const PORTFOLIO_PLAN_PICK_CARDS = ["sd", "bust_up", "waist_up", "full_body"] as const;
-export const PORTFOLIO_PLAN_PICK_CHIPS = ["mass_production", "other", "undecided"] as const;
+export const PORTFOLIO_PLAN_PICK_CHIPS = ["mass_production", "other"] as const;
 
 export type PortfolioPlanPickCard = (typeof PORTFOLIO_PLAN_PICK_CARDS)[number];
 export type PortfolioPlanPick = PortfolioPlanPickCard | (typeof PORTFOLIO_PLAN_PICK_CHIPS)[number];
@@ -21,13 +22,12 @@ export type PortfolioPlanPick = PortfolioPlanPickCard | (typeof PORTFOLIO_PLAN_P
 export const PORTFOLIO_PLAN_PICK_CHIP_LABELS: Readonly<Record<(typeof PORTFOLIO_PLAN_PICK_CHIPS)[number], string>> = {
   mass_production: "量産イラスト",
   other: "それ以外",
-  undecided: "まだ決めていない",
 };
 
 const SCOPE_CARDS = new Set<string>(["bust_up", "waist_up", "full_body"]);
 
 /**
- * 今の state がどのカード／チップに当たるか。どれにも当たらない組み合わせは null。
+ * 今の state がどのカード／チップに当たるか。まだ何も選んでいないときと、どれにも当たらない組み合わせは null。
  * 以前の下書きに残る「立ち絵」「SNSアイコン」は、範囲が決まっていればその範囲のカードとして扱う。
  */
 export function portfolioPlanPickValue(state: PortfolioRequestFormState): PortfolioPlanPick | null {
@@ -35,7 +35,6 @@ export function portfolioPlanPickValue(state: PortfolioRequestFormState): Portfo
   if (state.requestType === "sd") return "sd";
   if (state.requestType === "other") return "other";
   if (SCOPE_CARDS.has(state.commissionScope)) return state.commissionScope as PortfolioPlanPick;
-  if (state.requestType === "undecided" && state.commissionScope === "undecided") return "undecided";
   return null;
 }
 
@@ -47,10 +46,6 @@ export function applyPortfolioPlanPick(
   if (pick === "bust_up" || pick === "waist_up" || pick === "full_body") {
     const typed = applyPortfolioRequestTypeSelection(state, "illustration");
     return pruneHiddenPortfolioRequestFields({ ...typed, commissionScope: pick, commissionScopeOther: "" });
-  }
-  if (pick === "undecided") {
-    const typed = applyPortfolioRequestTypeSelection(state, "undecided");
-    return pruneHiddenPortfolioRequestFields({ ...typed, commissionScope: "undecided", commissionScopeOther: "" });
   }
   if (pick === "mass_production") {
     return applyPortfolioRequestTypeSelection(state, NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE);
@@ -108,6 +103,5 @@ export function portfolioPlanChoiceLabel(
     const detail = state.requestTypeOther.trim();
     return detail ? `${PORTFOLIO_PLAN_PICK_CHIP_LABELS.other}（${detail}）` : PORTFOLIO_PLAN_PICK_CHIP_LABELS.other;
   }
-  if (pick === "undecided") return PORTFOLIO_PLAN_PICK_CHIP_LABELS.undecided;
   return plans.find((plan) => plan.id === pick)?.name.trim() || CARD_FALLBACK_NAMES[pick];
 }

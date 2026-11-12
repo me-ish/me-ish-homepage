@@ -63,7 +63,7 @@ function detailsBySummary(text: string): HTMLDetailsElement {
   return details;
 }
 
-/** 「描くもの」の選択肢（範囲カードと 量産イラスト／それ以外／まだ決めていない）。 */
+/** 「描くもの」の選択肢（範囲カードと 量産イラスト／それ以外）。 */
 const planRadio = (name: string | RegExp) =>
   within(document.getElementById("pf-plan-picker") as HTMLElement).getByRole("radio", { name, hidden: true }) as HTMLInputElement;
 
@@ -282,19 +282,32 @@ describe("条件付き入力", () => {
     });
   });
 
-  it("量産イラスト停止中は選択を変えず、Xへの案内を表示する", async () => {
+  it("量産イラスト停止中は選べない形で出し、押しても選ばれない", async () => {
     renderForm({ ...defaultPortfolioContent, massProductionIllustrationOpen: false });
 
-    await userEvent.click(planRadio("量産イラスト"));
+    const mass = planRadio(/量産イラスト/);
+    expect(mass.disabled).toBe(true);
+    expect(mass.closest("label")?.textContent).toContain("（受付停止中）");
+    await userEvent.click(mass);
 
-    expect(planRadio("量産イラスト").checked).toBe(false);
-    expect(planRadio("まだ決めていない").checked).toBe(true);
-    expect(
-      screen.getByText(/現在、量産イラストは受け付けていません。/)
-    ).toBeTruthy();
-    expect(screen.getByRole("link", { name: "X" }).getAttribute("href")).toBe(
-      "https://x.com/natonato_o"
-    );
+    expect(mass.checked).toBe(false);
+    expect(screen.queryByLabelText("デザイン必須")).toBeNull();
+    // ほかの選択肢はふだんどおり選べる
+    await userEvent.click(planRadio("それ以外"));
+    expect(planRadio("それ以外").checked).toBe(true);
+  });
+
+  it("量産イラスト受付中は選べる", () => {
+    renderForm();
+    expect(planRadio("量産イラスト").disabled).toBe(false);
+    expect(screen.queryByText("（受付停止中）")).toBeNull();
+  });
+
+  it("「まだ決めていない」は置かず、最初は何も選ばれていない", () => {
+    renderForm();
+    const picker = document.getElementById("pf-plan-picker") as HTMLElement;
+    expect(within(picker).queryByRole("radio", { name: "まだ決めていない", hidden: true })).toBeNull();
+    expect(within(picker).getAllByRole("radio", { hidden: true }).some((radio) => (radio as HTMLInputElement).checked)).toBe(false);
   });
 
   it("その他を選んだときだけ補足欄が現れ、戻すと値を送らない", async () => {
