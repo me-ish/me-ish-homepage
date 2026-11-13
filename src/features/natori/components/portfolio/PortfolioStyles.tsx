@@ -111,6 +111,12 @@ export default function PortfolioStyles() {
       @media (min-width: 768px) {
         .pf-portfolio-root :where(#gallery, #pricing, #flow, #about, #requests, #faq, #form) { scroll-margin-top: 88px; }
       }
+      /* スマホではサイト全体の基準が 14px なので、小さめの文字（text-sm）が 12px 台になる。
+         依頼者が読む画面だけ一段上げて、料金の注記や約束ごとを読み飛ばされにくくする。 */
+      @media (max-width: 639px) {
+        .pf-portfolio-root .text-sm { font-size: 1rem; line-height: 1.6; }
+        .pf-portfolio-root .text-xs { font-size: 0.875rem; line-height: 1.5; }
+      }
       @media (prefers-reduced-motion: reduce) {
         .pf-floaty, .pf-wobble { animation: none; }
         .pf-pin-card { transition: none; }
