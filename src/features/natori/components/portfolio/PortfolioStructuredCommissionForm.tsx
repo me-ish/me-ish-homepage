@@ -173,6 +173,13 @@ function FormSection({
   );
 }
 
+// 「題材（オリジナルキャラクター）」の欄は外した。古い下書きや送信の記録に残っていても、新しい送信には混ぜない。
+function withoutRemovedSubject(state: PortfolioRequestFormState): PortfolioRequestFormState {
+  return state.usageTypes.includes("original_character")
+    ? { ...state, usageTypes: state.usageTypes.filter((usage) => usage !== "original_character") }
+    : state;
+}
+
 export default function PortfolioStructuredCommissionForm({
   content,
   demoMode,
@@ -221,7 +228,9 @@ export default function PortfolioStructuredCommissionForm({
   }, !demoMode, fields => {
     restoredFromOperationRef.current = true;
     const restored = restoreStructuredIntakeFields(fields, content);
-    setClientName(restored.clientName); setClientEmail(restored.clientEmail); setState(restored.state);
+    setClientName(restored.clientName); setClientEmail(restored.clientEmail);
+    // 送信の記録そのもの（同じ内容での再送）は変えず、直せる状態に戻ったときの入力からだけ外した欄の値を落とす。
+    setState(withoutRemovedSubject(restored.state));
     setStep(restored.state.inquiryMode === "quote" ? 2 : 1);
   }, restoreOriginals);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -240,8 +249,7 @@ export default function PortfolioStructuredCommissionForm({
     // 復元したら最初の画面から見直してもらう（途中の画面に飛ぶと、何が戻ったか分かりにくい）。
     onRestore: (saved) => {
       restoredDraftModeRef.current = saved.state.inquiryMode;
-      // 「題材」の欄は外したので、前の下書きに残っていても送らない。
-      setState({ ...saved.state, usageTypes: saved.state.usageTypes.filter((usage) => usage !== "original_character") });
+      setState(withoutRemovedSubject(saved.state));
       setStep(0);
     },
   });
