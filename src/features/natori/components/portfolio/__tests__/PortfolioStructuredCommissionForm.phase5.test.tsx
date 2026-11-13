@@ -77,7 +77,7 @@ describe("Phase 5 confirmation and actual submitted values", () => {
     const view = renderForm();
     await fillMinimum("再読込後も同じ相談内容");
     await openPhase5Details("詳しい条件を追加する");
-    await openPhase5Details("依頼の種類");
+    await openPhase5Details("描くもの");
     await userEvent.click(screen.getByLabelText(/表情を追加する（表情差分）/));
     phase5Change("追加する表情の数", "2");
     phase5Change("補足（任意）", "受付時の補足");
@@ -118,15 +118,13 @@ describe("Phase 5 confirmation and actual submitted values", () => {
     fetchMock.mockReturnValue(new Promise<Response>(() => undefined));
     renderForm();
     if (mode === "quote") await userEvent.click(screen.getByLabelText("見積もりを希望"));
-    // 見積もりモードは「依頼の種類」「用途・条件」「予算・納期」を折りたたまずに並べる。
+    // 見積もりモードは「描くもの」「用途・条件」「予算・納期」を折りたたまずに並べる。
     if (mode !== "quote") {
       await openPhase5Details("詳しい条件を追加する");
-      await openPhase5Details("依頼の種類");
+      await openPhase5Details("描くもの");
     }
-    phase5Change("ご依頼の種類", "other");
-    phase5Change(/ご依頼の種類（その他の内容）/, " 表紙 ");
-    phase5Change("制作範囲", "other");
-    phase5Change(/制作範囲（その他の内容）/, " 二人の全身 ");
+    await userEvent.click(within(document.getElementById("pf-plan-picker") as HTMLElement).getByRole("radio", { name: "それ以外" }));
+    phase5Change(/描いてほしいもの（それ以外の内容）/, " 表紙 ");
     await userEvent.click(screen.getByLabelText(/表情を追加する（表情差分）/));
     phase5Change("追加する表情の数", "2");
     phase5Change("補足（任意）", " 笑顔・泣き顔 ");
@@ -160,7 +158,7 @@ describe("Phase 5 confirmation and actual submitted values", () => {
     phase5Change(/メールアドレス/, " client@example.com ");
     await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
     const confirmation = await screen.findByRole("region", { name: "送信前の確認" });
-    for (const value of ["その他（表紙）", "その他（二人の全身）", "表情差分 ×2（笑顔・泣き顔）", "水色の髪", "笑顔", "二人並び", "青", "画像の服装", "配信で使用 / その他（特番）", "商用利用する", "一定期間後なら公開してよい（2026年11月15日から）", "10,000円〜20,000円", "2026年12月1日 希望 / イベント前まで", "衣装の設定資料", "example.com", "costume.png", "テスト太郎", "client@example.com"]) {
+    for (const value of ["その他（表紙）", "表情差分 ×2（笑顔・泣き顔）", "水色の髪", "笑顔", "二人並び", "青", "画像の服装", "配信で使用 / その他（特番）", "商用利用する", "一定期間後なら公開してよい（2026年11月15日から）", "10,000円〜20,000円", "2026年12月1日 希望 / イベント前まで", "衣装の設定資料", "example.com", "costume.png", "テスト太郎", "client@example.com"]) {
       expect(confirmation.textContent).toContain(value);
     }
     expect(confirmation.textContent).not.toContain("相談内容なし");
@@ -181,11 +179,13 @@ describe("Phase 5 confirmation and actual submitted values", () => {
     const parsed = validateNatoriRequestDataV1(JSON.parse(String(form.get("requestData"))));
     expect(parsed.success).toBe(true);
     if (!parsed.success) throw new Error("actual submitted request is invalid");
-    expect(parsed.data).toMatchObject({ inquiryMode: mode, requestTypeOther: "表紙", commissionScopeOther: "二人の全身", options: [{ id: "expression_variation", label: "表情差分", quantity: 2, notes: "笑顔・泣き顔" }], characterFeatures: "水色の髪", expressionMood: "笑顔", composition: "二人並び", colorDirection: "青", referenceNotes: "画像の服装", commercialUse: "yes", publicationPolicy: "delayed", publicationAllowedFrom: "2026-11-15", budget: { kind: "range", min: 10000, max: 20000 }, deadline: { kind: "preferred_date", date: "2026-12-01", note: "イベント前まで" }, message: "" });
+    expect(parsed.data).toMatchObject({ inquiryMode: mode, requestType: "other", requestTypeOther: "表紙", commissionScope: "undecided", commissionScopeOther: null, options: [{ id: "expression_variation", label: "表情差分", quantity: 2, notes: "笑顔・泣き顔" }], characterFeatures: "水色の髪", expressionMood: "笑顔", composition: "二人並び", colorDirection: "青", referenceNotes: "画像の服装", commercialUse: "yes", publicationPolicy: "delayed", publicationAllowedFrom: "2026-11-15", budget: { kind: "range", min: 10000, max: 20000 }, deadline: { kind: "preferred_date", date: "2026-12-01", note: "イベント前まで" }, message: "" });
     const admin = buildNatoriInquiryRequestView(parsed.data);
     expect(admin.kind).toBe("structured");
     if (admin.kind !== "structured") throw new Error("admin reader cannot show actual submission");
-    for (const field of admin.sections.flatMap((section) => section.fields).filter((field) => field.value !== "未記入")) {
+    for (const field of admin.sections.flatMap((section) => section.fields).filter((field) => field.value !== "未記入")
+      // 「それ以外」を選んだときは描く範囲を聞かないので、確認画面には範囲の行を出さない。
+      .filter((field) => field.key !== "commissionScope")) {
       expect(confirmation.textContent).toContain(field.value);
     }
   });
@@ -195,7 +195,7 @@ describe("Phase 5 confirmation and actual submitted values", () => {
     renderForm();
     await fillMinimum();
     await openPhase5Details("詳しい条件を追加する");
-    await openPhase5Details("依頼の種類");
+    await openPhase5Details("描くもの");
     await userEvent.click(screen.getByLabelText(/表情を追加する（表情差分）/));
     const input = screen.getByLabelText("追加する表情の数") as HTMLInputElement;
     fireEvent.change(input, { target: { value: quantity } });
@@ -239,7 +239,7 @@ describe("Phase 5 option and image access", () => {
   it("uses the checkbox label for blank-card clicks and Space without including its quantity controls", async () => {
     renderForm();
     await openPhase5Details("詳しい条件を追加する");
-    await openPhase5Details("依頼の種類");
+    await openPhase5Details("描くもの");
     const checkbox = screen.getByRole("checkbox", { name: /表情を追加する（表情差分）/ }) as HTMLInputElement;
     const label = checkbox.closest("label");
     if (!label) throw new Error("option has no associated card label");

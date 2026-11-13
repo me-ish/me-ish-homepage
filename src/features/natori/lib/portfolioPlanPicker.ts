@@ -1,7 +1,11 @@
 // features/natori/lib/portfolioPlanPicker.ts
 // 依頼フォームの「描く範囲」カードと、フォーム state（ご依頼の種類・制作範囲）の対応。
 // カードは state から作る派生表示で、選んだときは state だけを書き換える。
+// 依頼者には「ご依頼の種類」を選ばせない（2026-11-12）。値段は範囲で決まり、使いみちは別に聞いているため。
+// 保存する種類は、範囲のカードなら illustration、SD は sd、量産・それ以外は other のまま。
+// 「まだ決めていない」は置かない（2026-11-12）。何も選ばなければ未定のまま送られ、迷ったら「それ以外」に書ける。
 import {
+  NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE,
   applyPortfolioRequestTypeSelection,
   isMassProductionIllustrationSelection,
   pruneHiddenPortfolioRequestFields,
@@ -10,32 +14,27 @@ import {
 import type { PortfolioPlan } from "@/features/natori/types/portfolio";
 
 export const PORTFOLIO_PLAN_PICK_CARDS = ["sd", "bust_up", "waist_up", "full_body"] as const;
-export const PORTFOLIO_PLAN_PICK_CHIPS = ["standing", "other", "undecided"] as const;
+export const PORTFOLIO_PLAN_PICK_CHIPS = ["mass_production", "other"] as const;
 
 export type PortfolioPlanPickCard = (typeof PORTFOLIO_PLAN_PICK_CARDS)[number];
 export type PortfolioPlanPick = PortfolioPlanPickCard | (typeof PORTFOLIO_PLAN_PICK_CHIPS)[number];
 
 export const PORTFOLIO_PLAN_PICK_CHIP_LABELS: Readonly<Record<(typeof PORTFOLIO_PLAN_PICK_CHIPS)[number], string>> = {
-  standing: "立ち絵",
+  mass_production: "量産イラスト",
   other: "それ以外",
-  undecided: "まだ決めていない",
 };
 
 const SCOPE_CARDS = new Set<string>(["bust_up", "waist_up", "full_body"]);
 
-/** 今の state がどのカード／チップに当たるか。どれにも当たらない組み合わせ（立ち絵の胸上など）は null。 */
+/**
+ * 今の state がどのカード／チップに当たるか。まだ何も選んでいないときと、どれにも当たらない組み合わせは null。
+ * 以前の下書きに残る「立ち絵」「SNSアイコン」は、範囲が決まっていればその範囲のカードとして扱う。
+ */
 export function portfolioPlanPickValue(state: PortfolioRequestFormState): PortfolioPlanPick | null {
-  if (isMassProductionIllustrationSelection(state)) return null;
+  if (isMassProductionIllustrationSelection(state)) return "mass_production";
   if (state.requestType === "sd") return "sd";
-  if (state.requestType === "standing") return "standing";
   if (state.requestType === "other") return "other";
-  if (
-    (state.requestType === "illustration" || state.requestType === "undecided") &&
-    SCOPE_CARDS.has(state.commissionScope)
-  ) {
-    return state.commissionScope as PortfolioPlanPick;
-  }
-  if (state.requestType === "undecided" && state.commissionScope === "undecided") return "undecided";
+  if (SCOPE_CARDS.has(state.commissionScope)) return state.commissionScope as PortfolioPlanPick;
   return null;
 }
 
@@ -48,11 +47,12 @@ export function applyPortfolioPlanPick(
     const typed = applyPortfolioRequestTypeSelection(state, "illustration");
     return pruneHiddenPortfolioRequestFields({ ...typed, commissionScope: pick, commissionScopeOther: "" });
   }
-  if (pick === "undecided") {
-    const typed = applyPortfolioRequestTypeSelection(state, "undecided");
-    return pruneHiddenPortfolioRequestFields({ ...typed, commissionScope: "undecided", commissionScopeOther: "" });
+  if (pick === "mass_production") {
+    return applyPortfolioRequestTypeSelection(state, NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE);
   }
-  return applyPortfolioRequestTypeSelection(state, pick);
+  // SD・それ以外は範囲を聞かない。前に選んだ範囲が残ると、確認画面と先生の画面に余計な行が出る。
+  const typed = applyPortfolioRequestTypeSelection(state, pick);
+  return pruneHiddenPortfolioRequestFields({ ...typed, commissionScope: "undecided", commissionScopeOther: "" });
 }
 
 /** 料金表の「3,000円」のような値を数値にする。読めなければ null。 */
@@ -79,4 +79,29 @@ export function portfolioBaseEstimate(
   if (!plan) return null;
   const amount = parsePortfolioPlanPrice(plan.price);
   return amount === null ? null : { planName: plan.name.trim() || pick, amount };
+}
+
+const CARD_FALLBACK_NAMES: Readonly<Record<PortfolioPlanPickCard, string>> = {
+  sd: "SDキャラ",
+  bust_up: "胸上",
+  waist_up: "膝〜腰上",
+  full_body: "全身",
+};
+
+/** いま選んでいる内容を、カードやチップと同じ言葉で表す（見出しの要約・料金表から来たときの案内に使う）。 */
+export function portfolioPlanChoiceLabel(
+  state: PortfolioRequestFormState,
+  plans: readonly PortfolioPlan[],
+): string | null {
+  const pick = portfolioPlanPickValue(state);
+  if (pick === null) return null;
+  if (pick === "mass_production") {
+    const design = state.commissionScopeOther.trim();
+    return design ? `${PORTFOLIO_PLAN_PICK_CHIP_LABELS.mass_production}（${design}）` : PORTFOLIO_PLAN_PICK_CHIP_LABELS.mass_production;
+  }
+  if (pick === "other") {
+    const detail = state.requestTypeOther.trim();
+    return detail ? `${PORTFOLIO_PLAN_PICK_CHIP_LABELS.other}（${detail}）` : PORTFOLIO_PLAN_PICK_CHIP_LABELS.other;
+  }
+  return plans.find((plan) => plan.id === pick)?.name.trim() || CARD_FALLBACK_NAMES[pick];
 }

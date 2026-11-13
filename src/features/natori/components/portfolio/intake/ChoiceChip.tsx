@@ -13,6 +13,7 @@ export default function ChoiceChip({
   onChange,
   children,
   id,
+  disabled,
 }: {
   type: "radio" | "checkbox";
   name?: string;
@@ -20,14 +21,17 @@ export default function ChoiceChip({
   onChange: () => void;
   children: ReactNode;
   id?: string;
+  /** 選べないとき（例：受付停止中）。灰色にして押せないようにする。 */
+  disabled?: boolean;
 }) {
   return (
     <label
-      className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full border-2 px-3 text-sm font-bold"
+      className={`flex min-h-[44px] items-center gap-2 rounded-full border-2 px-3 text-sm font-bold ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
       style={{
-        color: c.text,
+        color: disabled ? c.textSoft : c.text,
         borderColor: checked ? c.formBorderActive : c.formBorder,
-        background: checked ? c.surfaceSubtle : c.surface,
+        background: disabled ? c.surfaceSubtle : checked ? c.surfaceSubtle : c.surface,
+        borderStyle: disabled ? "dashed" : "solid",
       }}
     >
       <input
@@ -36,6 +40,7 @@ export default function ChoiceChip({
         name={name}
         checked={checked}
         onChange={onChange}
+        disabled={disabled}
         className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0"
       />
       {children}

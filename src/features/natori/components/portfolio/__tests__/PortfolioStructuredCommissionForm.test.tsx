@@ -11,7 +11,6 @@ vi.mock("@/features/natori/data/pageEvents", () => ({ trackNatoriPageEvent }));
 
 import PortfolioCommissionForm from "@/features/natori/components/portfolio/PortfolioCommissionForm";
 import { defaultPortfolioContent, PLAN_SELECT_EVENT } from "@/features/natori/constants/portfolioContent";
-import { NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE } from "@/features/natori/lib/portfolioRequestForm";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
 const fetchMock = vi.fn();
@@ -63,6 +62,10 @@ function detailsBySummary(text: string): HTMLDetailsElement {
   if (!details) throw new Error(`details not found: ${text}`);
   return details;
 }
+
+/** 「描くもの」の選択肢（範囲カードと 量産イラスト／それ以外）。 */
+const planRadio = (name: string | RegExp) =>
+  within(document.getElementById("pf-plan-picker") as HTMLElement).getByRole("radio", { name, hidden: true }) as HTMLInputElement;
 
 function submit() {
   fireEvent.submit(formElement());
@@ -154,7 +157,7 @@ describe("最低入力と送信", () => {
     await screen.findByText("送信ありがとうございます!");
   });
 
-  it("quote に切り替えても type / scope は未定のまま送信できる", async () => {
+  it("quote は範囲も内容も空なら送らず、ひとこと書けば未定のまま送信できる", async () => {
     renderForm();
     await userEvent.click(screen.getByLabelText("見積もりを希望"));
     await userEvent.type(screen.getByLabelText(/お名前/), "テスト太郎");
@@ -166,13 +169,19 @@ describe("最低入力と送信", () => {
     await userEvent.click(screen.getByLabelText("見積もりを希望"));
     expect(message.required).toBe(false);
     submit();
+    await waitFor(() => expect(document.activeElement?.id).toBe("pf-plan-picker"));
+    expect(document.getElementById("pf-plan-picker")?.getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getAllByText("描く範囲を選ぶか、描いてほしいものをひとことご記入ください。").length).toBeGreaterThan(0);
+    expect(fetchMock).not.toHaveBeenCalled();
 
+    await userEvent.type(message, "うちの子を描いてほしいです");
+    submit();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(submittedRequestData()).toMatchObject({
       inquiryMode: "quote",
       requestType: "undecided",
       commissionScope: "undecided",
-      message: "",
+      message: "うちの子を描いてほしいです",
     });
   });
 
@@ -238,16 +247,12 @@ describe("条件付き入力", () => {
     renderForm();
     await userEvent.click(screen.getByLabelText("見積もりを希望"));
 
-    await userEvent.selectOptions(
-      screen.getByLabelText("ご依頼の種類"),
-      NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE
-    );
+    await userEvent.click(planRadio("量産イラスト"));
 
-    expect((screen.getByLabelText("ご依頼の種類") as HTMLSelectElement).value).toBe(
-      NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE
-    );
+    expect(planRadio("量産イラスト").checked).toBe(true);
+    expect(screen.queryByLabelText("ご依頼の種類")).toBeNull();
     expect(screen.queryByLabelText("制作範囲")).toBeNull();
-    expect(screen.queryByLabelText(/ご依頼の種類（その他の内容）/)).toBeNull();
+    expect(screen.queryByLabelText(/描いてほしいもの（それ以外の内容）/)).toBeNull();
     const design = screen.getByLabelText("デザイン必須") as HTMLSelectElement;
     expect(design.required).toBe(true);
     expect(Array.from(design.options).map((option) => option.text)).toEqual(["デザインを選択してください", "おばけ", "魔女"]);
@@ -277,42 +282,52 @@ describe("条件付き入力", () => {
     });
   });
 
-  it("量産イラスト停止中は選択を変えず、Xへの案内を表示する", async () => {
+  it("量産イラスト停止中は選べない形で出し、押しても選ばれない", async () => {
     renderForm({ ...defaultPortfolioContent, massProductionIllustrationOpen: false });
 
-    await userEvent.selectOptions(
-      screen.getByLabelText("ご依頼の種類"),
-      NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE
-    );
+    const mass = planRadio(/量産イラスト/);
+    expect(mass.disabled).toBe(true);
+    expect(mass.closest("label")?.textContent).toContain("（受付停止中）");
+    await userEvent.click(mass);
 
-    expect((screen.getByLabelText("ご依頼の種類") as HTMLSelectElement).value).toBe(
-      "undecided"
-    );
-    expect(
-      screen.getByText(/現在、量産イラストは受け付けていません。/)
-    ).toBeTruthy();
-    expect(screen.getByRole("link", { name: "X" }).getAttribute("href")).toBe(
-      "https://x.com/natonato_o"
-    );
+    expect(mass.checked).toBe(false);
+    expect(screen.queryByLabelText("デザイン必須")).toBeNull();
+    // ほかの選択肢はふだんどおり選べる
+    await userEvent.click(planRadio("それ以外"));
+    expect(planRadio("それ以外").checked).toBe(true);
+  });
+
+  it("量産イラスト受付中は選べる", () => {
+    renderForm();
+    expect(planRadio("量産イラスト").disabled).toBe(false);
+    expect(screen.queryByText("（受付停止中）")).toBeNull();
+  });
+
+  it("「まだ決めていない」は置かず、最初は何も選ばれていない", () => {
+    renderForm();
+    const picker = document.getElementById("pf-plan-picker") as HTMLElement;
+    expect(within(picker).queryByRole("radio", { name: "まだ決めていない", hidden: true })).toBeNull();
+    expect(within(picker).getAllByRole("radio", { hidden: true }).some((radio) => (radio as HTMLInputElement).checked)).toBe(false);
   });
 
   it("その他を選んだときだけ補足欄が現れ、戻すと値を送らない", async () => {
     renderForm();
-    expect(screen.queryByLabelText(/ご依頼の種類（その他の内容）/)).toBeNull();
+    expect(screen.queryByLabelText(/描いてほしいもの（それ以外の内容）/)).toBeNull();
 
-    await userEvent.selectOptions(screen.getByLabelText("ご依頼の種類"), "other");
-    const otherInput = screen.getByLabelText(/ご依頼の種類（その他の内容）/);
+    await userEvent.click(planRadio("それ以外"));
+    const otherInput = screen.getByLabelText(/描いてほしいもの（それ以外の内容）/);
     await userEvent.type(otherInput, "アクリルスタンド");
 
-    await userEvent.selectOptions(screen.getByLabelText("ご依頼の種類"), "standing");
-    expect(screen.queryByLabelText(/ご依頼の種類（その他の内容）/)).toBeNull();
+    await userEvent.click(planRadio(/^全身/));
+    expect(screen.queryByLabelText(/描いてほしいもの（それ以外の内容）/)).toBeNull();
 
     await fillMinimum();
     submit();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(submittedRequestData()).toMatchObject({
-      requestType: "standing",
+      requestType: "illustration",
       requestTypeOther: null,
+      commissionScope: "full_body",
     });
   });
 
@@ -541,7 +556,7 @@ describe("server error の表示", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText(/ご予算（円）/)));
     expect(detailsBySummary("予算・納期").open).toBe(true);
-    for (const title of ["依頼の種類", "用途・条件", "資料", "キャラクター・イメージの詳細"]) {
+    for (const title of ["描くもの", "用途・条件", "資料", "キャラクター・イメージの詳細"]) {
       expect(detailsBySummary(title).open).toBe(false);
     }
     expect(screen.getByLabelText(/ご予算（円）/).getAttribute("aria-invalid")).toBe("true");
@@ -552,8 +567,7 @@ describe("server error の表示", () => {
   });
 
   it.each([
-    ["ご依頼の種類", "other", "pf-request-type-other"],
-    ["制作範囲", "other", "pf-scope-other"],
+    ["描くもの", "それ以外", "pf-request-type-other"],
     ["希望納期", "希望の日付がある", "pf-deadline-date"],
     ["ご予算", "金額を入力", "pf-budget-fixed"],
   ])("%s の条件付き必須を送信前に検証する", async (label, value, targetId) => {
@@ -561,7 +575,7 @@ describe("server error の表示", () => {
     await fillMinimum();
     if (label === "希望納期") await userEvent.click(deadlineChip(value));
     else if (label === "ご予算") await userEvent.click(budgetChip(value));
-    else await userEvent.selectOptions(screen.getByLabelText(label), value);
+    else await userEvent.click(planRadio(value));
     submit();
     expect(fetchMock).not.toHaveBeenCalled();
     await waitFor(() => expect(document.activeElement?.id).toBe(targetId));
@@ -645,6 +659,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scrollIntoView });
     renderForm();
     await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    await userEvent.click(planRadio(/^全身/));
     await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
     await waitFor(() => expect(document.activeElement?.textContent).toBe("ご希望の条件と連絡先"));
     expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
@@ -673,6 +688,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     await userEvent.click(screen.getByLabelText("見積もりを希望"));
     const quoteSteps = screen.getByRole("list", { name: "進行状況 1 / 3" });
     expect(quoteSteps.textContent).toBe("制作内容条件・連絡先確認・送信");
+    await userEvent.click(planRadio(/^全身/));
     await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
     expect(screen.getByRole("list", { name: "進行状況 2 / 3" }).querySelector('[aria-current="step"]')?.textContent).toBe("条件・連絡先");
   });
@@ -680,6 +696,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
   it("現在の資料エラーを次の画面へ持ち越さず、修正後は条件・連絡先のエラーへ移動する", async () => {
     renderForm();
     await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    await userEvent.click(planRadio(/^全身/));
     fireEvent.change(screen.getByLabelText("参考URL 1"), { target: { value: "ftp://invalid.example" } });
     await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
     await waitFor(() => expect(document.activeElement?.id).toBe("pf-ref-url-0"));
@@ -727,7 +744,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
 
   it("量産の必須項目が空なら送信せず、通常プランへ戻すと専用項目を外す", async () => {
     renderForm();
-    await userEvent.selectOptions(screen.getByLabelText("ご依頼の種類"), NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE);
+    await userEvent.click(planRadio("量産イラスト"));
     await fillMinimum();
     submit();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -751,7 +768,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     // 見積もりモードの「描く範囲」は折りたたみではなく、そのまま見えていて SD が選ばれている。
     expect(screen.getByRole("group", { name: /描く範囲/ }).closest("details")).toBeNull();
     expect((screen.getByRole("radio", { name: /^SD/ }) as HTMLInputElement).checked).toBe(true);
-    expect((screen.getByLabelText("ご依頼の種類") as HTMLSelectElement).value).toBe("sd");
+    expect(screen.queryByLabelText("ご依頼の種類")).toBeNull();
     expect((screen.getByLabelText("見積もりを希望") as HTMLInputElement).checked).toBe(true);
     await userEvent.click(screen.getByLabelText("まず相談したい"));
     expect(detailsBySummary("詳しい条件を追加する").open).toBe(false);
@@ -778,7 +795,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
 
     for (const title of [
       "詳しい条件を追加する",
-      "依頼の種類",
+      "描くもの",
       "用途・条件",
       "予算・納期",
       "キャラクター・イメージの詳細",
@@ -796,9 +813,10 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     for (const name of ["ご予算", "希望納期"]) {
       expect(screen.getByRole("group", { name, hidden: true }).closest("details")).toBeNull();
     }
-    // 種類と範囲のプルダウンは「細かく選ぶ」の中にしまう
-    expect(detailsBySummary("細かく選ぶ").open).toBe(false);
-    expect(screen.getByLabelText("ご依頼の種類").closest("details")).toBe(detailsBySummary("細かく選ぶ"));
+    // 種類と範囲のプルダウンは出さない（範囲のカードと 量産イラスト／それ以外 だけで選ぶ）
+    expect(screen.queryByLabelText("ご依頼の種類")).toBeNull();
+    expect(screen.queryByLabelText("制作範囲")).toBeNull();
+    expect(screen.queryByText("細かく選ぶ")).toBeNull();
     for (const title of ["キャラクター・イメージの詳細", "資料"]) {
       const section = detailsBySummary(title);
       expect(section.open).toBe(false);
@@ -828,7 +846,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
   it("primary fields は desktop でも1列で、必須を文字で示す", () => {
     renderForm();
 
-    for (const label of [/お名前/, /メールアドレス/, "ご依頼の種類", "商用利用"]) {
+    for (const label of [/お名前/, /メールアドレス/, "商用利用"]) {
       const control = screen.getByLabelText(label);
       expect(control.parentElement?.parentElement?.className).not.toContain("sm:grid-cols-2");
     }
@@ -846,8 +864,6 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     for (const labelText of [
       /お名前/,
       /メールアドレス/,
-      "ご依頼の種類",
-      "制作範囲",
       /ご相談・ご依頼の内容/,
       "参考URL 1",
     ]) {

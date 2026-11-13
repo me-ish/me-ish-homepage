@@ -1,7 +1,8 @@
 "use client";
 
 // features/natori/components/portfolio/intake/PlanPicker.tsx
-// 「描く範囲」カード（SD／胸上／膝〜腰上／全身）と、立ち絵・その他・未定のチップ。
+// 「描く範囲」カード（SD／胸上／膝〜腰上／全身）と、量産イラスト・それ以外のチップ。
+// 量産イラストは受付停止中なら押せない形で出す（選んでから断られるより、先に分かるほうが迷わない）。
 // 選択はフォーム state から作る派生表示で、選ぶと onPick で state を書き換える。
 import {
   PORTFOLIO_PLAN_PICK_CARDS,
@@ -41,14 +42,22 @@ export default function PlanPicker({
   works,
   value,
   onPick,
+  invalid,
+  describedBy,
+  massProductionOpen = true,
 }: {
   plans: readonly PortfolioPlan[];
   works: PortfolioWork[];
   value: PortfolioPlanPick | null;
   onPick: (pick: PortfolioPlanPick) => void;
+  /** 入力エラーの移動先になったとき */
+  invalid?: boolean;
+  describedBy?: string;
+  /** 量産イラストの受付中かどうか */
+  massProductionOpen?: boolean;
 }) {
   return (
-    <fieldset>
+    <fieldset id="pf-plan-picker" tabIndex={-1} aria-invalid={invalid || undefined} aria-describedby={describedBy} className="scroll-mt-24 outline-none">
       <legend className="mb-1.5 flex items-center text-sm font-bold">
         描く範囲
         <span className="ml-2 rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: c.surfaceSubtle, color: c.textSoft }}>
@@ -107,8 +116,10 @@ export default function PlanPicker({
       </div>
       <div className="mt-2 flex flex-wrap gap-2">
         {PORTFOLIO_PLAN_PICK_CHIPS.map((pick) => (
-          <ChoiceChip key={pick} type="radio" name="pf-plan" checked={value === pick} onChange={() => onPick(pick)}>
+          <ChoiceChip key={pick} type="radio" name="pf-plan" checked={value === pick} onChange={() => onPick(pick)}
+            disabled={pick === "mass_production" && !massProductionOpen}>
             {PORTFOLIO_PLAN_PICK_CHIP_LABELS[pick]}
+            {pick === "mass_production" && !massProductionOpen ? <span className="text-xs">（受付停止中）</span> : null}
           </ChoiceChip>
         ))}
       </div>
