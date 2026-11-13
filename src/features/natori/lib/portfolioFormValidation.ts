@@ -80,7 +80,7 @@ export function validatePortfolioStep(
   if (state.inquiryMode === "quote" && step === 0) {
     // Neutral later fields prevent an invalid budget type from aborting the
     // shared schema's current-screen Other and mass-production refinements.
-    // 使いみち（使用目的）は 1 画面目で聞く。題材（オリジナルキャラクター）は 2 画面目に残る。
+    // 使いみち（使用目的）は 1 画面目で聞く。題材（オリジナルキャラクター）の欄は外した（古い下書きに残っていても検査に混ぜない）。
     current = {
       ...state, usageTypes: state.usageTypes.filter((usage) => usage !== "original_character"),
       commercialUse: "unknown",

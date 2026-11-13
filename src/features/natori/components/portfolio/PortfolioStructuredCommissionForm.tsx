@@ -240,7 +240,8 @@ export default function PortfolioStructuredCommissionForm({
     // 復元したら最初の画面から見直してもらう（途中の画面に飛ぶと、何が戻ったか分かりにくい）。
     onRestore: (saved) => {
       restoredDraftModeRef.current = saved.state.inquiryMode;
-      setState(saved.state);
+      // 「題材」の欄は外したので、前の下書きに残っていても送らない。
+      setState({ ...saved.state, usageTypes: saved.state.usageTypes.filter((usage) => usage !== "original_character") });
       setStep(0);
     },
   });
@@ -1041,14 +1042,6 @@ export default function PortfolioStructuredCommissionForm({
             onToggle={(next) => setOpenSections((current) => ({ ...current, usage: next }))}
           >
             {!isQuote ? usageBlock : null}
-            <fieldset>
-              <legend className={labelClass}>題材<OptionalBadge /></legend>
-              <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm" style={{ color: c.textSoft }}>
-                <input type="checkbox" checked={state.usageTypes.includes("original_character")} onChange={() => toggleUsageType("original_character")} className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0" />
-                {NATORI_USAGE_TYPE_LABELS_V1.original_character}
-              </label>
-            </fieldset>
-
             <div className="grid gap-4">
               {!massProductionSelected ? (
               <div>

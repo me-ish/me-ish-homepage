@@ -294,33 +294,17 @@ describe("Phase 5 option and image access", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("keeps the original_character stable ID under subject through keyboard toggles, confirmation, actual mock multipart POST and the shared admin presentation", async () => {
+  it("no longer asks the subject (original character) on the form, while stored answers stay readable for staff", async () => {
     fetchMock.mockReset();
     fetchMock.mockReturnValue(new Promise<Response>(() => undefined));
     renderForm();
     await fillMinimum("オリジナルキャラクターの相談です。");
     await openPhase5Details("詳しい条件を追加する");
     await openPhase5Details("用途・条件");
-    const checkbox = screen.getByRole("checkbox", { name: "オリジナルキャラクター" }) as HTMLInputElement;
-    const subject = checkbox.closest("fieldset");
-    expect(subject?.querySelector("legend")?.textContent).toContain("題材");
-    expect(document.getElementById("pf-usage-types")?.contains(checkbox)).toBe(false);
-    expect(checkbox.checked).toBe(false);
-    await userEvent.click(checkbox);
-    expect(checkbox.checked).toBe(true);
-    checkbox.focus();
-    await userEvent.keyboard(" ");
-    expect(checkbox.checked).toBe(false);
-    await userEvent.keyboard(" ");
-    expect(checkbox.checked).toBe(true);
+    expect(screen.queryByRole("checkbox", { name: "オリジナルキャラクター" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
     const confirmation = await screen.findByRole("region", { name: "送信前の確認" });
-    expect(confirmation.textContent).toContain("オリジナルキャラクター");
-    const subjectRow = within(confirmation).getByText("題材", { selector: "dt" }).parentElement;
-    const purposeRow = within(confirmation).getByText("使用目的", { selector: "dt" }).parentElement;
-    expect(subjectRow?.querySelector("dd")?.textContent).toBe("オリジナルキャラクター");
-    expect(purposeRow?.querySelector("dd")?.textContent).toBe("未定");
-    expect(purposeRow?.textContent).not.toContain("オリジナルキャラクター");
+    expect(within(confirmation).queryByText("題材", { selector: "dt" })).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "相談内容を送信する" }));
     await waitFor(() => phase5ContactPost());
@@ -328,20 +312,16 @@ describe("Phase 5 option and image access", () => {
     expect(String(form.get("operationId"))).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i);
     const parsed = validateNatoriRequestDataV1(JSON.parse(String(form.get("requestData"))));
     expect(parsed.success).toBe(true);
-    if (!parsed.success) throw new Error("actual original-character submission is invalid");
+    if (!parsed.success) throw new Error("actual submission is invalid");
     expect(parsed.data.schemaVersion).toBe(1);
-    expect(parsed.data.usageTypes).toEqual(["original_character"]);
-    const admin = buildNatoriInquiryRequestView(parsed.data);
+    expect(parsed.data.usageTypes).toEqual([]);
+    // 以前に受け付けた依頼の「題材」は、運営側ではこれまでどおり読める。
+    const admin = buildNatoriInquiryRequestView({ ...parsed.data, usageTypes: ["original_character"] });
     expect(admin.kind).toBe("structured");
-    if (admin.kind !== "structured") throw new Error("admin reader cannot show actual original-character submission");
-    expect(admin.request.usageTypes).toEqual(["original_character"]);
+    if (admin.kind !== "structured") throw new Error("admin reader cannot show a stored original-character answer");
     const adminFields = admin.sections.flatMap((section) => section.fields);
-    const adminSubject = adminFields.find((field) => field.key === "subjectTypes");
-    const adminPurpose = adminFields.find((field) => field.key === "usageTypes");
-    expect(adminSubject).toEqual({ key: "subjectTypes", label: "題材", value: "オリジナルキャラクター" });
-    expect(adminPurpose).toEqual({ key: "usageTypes", label: "使用目的", value: "未定" });
-    expect(subjectRow?.querySelector("dd")?.textContent).toBe(adminSubject?.value);
-    expect(purposeRow?.querySelector("dd")?.textContent).toBe(adminPurpose?.value);
+    expect(adminFields.find((field) => field.key === "subjectTypes")).toEqual({ key: "subjectTypes", label: "題材", value: "オリジナルキャラクター" });
+    expect(adminFields.find((field) => field.key === "usageTypes")).toEqual({ key: "usageTypes", label: "使用目的", value: "未定" });
     expect(form.getAll("refImages")).toHaveLength(0);
   });
 });
