@@ -23,7 +23,7 @@ function parseYenAmount(value: string): number | null {
   return Number.isSafeInteger(amount) && amount >= 0 ? amount : null;
 }
 
-function parseYenRange(value: string): { min: number; max: number } | null {
+export function parsePortfolioYenRange(value: string): { min: number; max: number } | null {
   const match = value
     .trim()
     .match(/^\+?([0-9][0-9,]*)円[〜~-]\+?([0-9][0-9,]*)円$/u);
@@ -104,7 +104,7 @@ export function createPortfolioStructuredPricingConfig(
 
   const background = findOption(content, "detailed_background");
   if (background) {
-    const range = parseYenRange(background.price);
+    const range = parsePortfolioYenRange(background.price);
     if (range) {
       items.push({
         id: "detailed_background",
