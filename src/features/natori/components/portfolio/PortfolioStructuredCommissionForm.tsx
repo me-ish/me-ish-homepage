@@ -18,7 +18,8 @@ import { NATORI_INTAKE_WRITING_PROMPTS } from "@/features/natori/constants/intak
 import { insertWritingPrompt } from "@/features/natori/lib/intakeWritingPrompts";
 import { NATORI_INTAKE_BUDGET_CHIPS, NATORI_INTAKE_DEADLINE_CHIP_LABELS } from "@/features/natori/constants/intakeBudgetChips";
 import { applyPortfolioBudgetChip, portfolioBudgetChipId } from "@/features/natori/lib/portfolioBudgetChips";
-import { applyPortfolioPlanPick, portfolioBaseEstimate, portfolioPlanChoiceLabel, portfolioPlanPickValue, type PortfolioPlanPick } from "@/features/natori/lib/portfolioPlanPicker";
+import { applyPortfolioPlanPick, portfolioPlanChoiceLabel, portfolioPlanPickValue, type PortfolioPlanPick } from "@/features/natori/lib/portfolioPlanPicker";
+import { formatPortfolioEstimateRange, portfolioClientEstimate } from "@/features/natori/lib/portfolioClientEstimate";
 import PlanPicker from "./intake/PlanPicker";
 import ChoiceChip from "./intake/ChoiceChip";
 import { MASS_PRODUCTION_COMMERCIAL_AMOUNT, MASS_PRODUCTION_VARIANTS } from "@/features/natori/constants/massProductionIllustration";
@@ -821,15 +822,36 @@ export default function PortfolioStructuredCommissionForm({
     </>
   );
 
-  const baseEstimate = massProductionSelected ? null : portfolioBaseEstimate(state, content.plans);
+  // 先生の画面で見積もりの下書きを作るのと同じ計算。選ぶたびに金額と内訳が動く。
+  const estimate = portfolioClientEstimate(state, optionChoices, content);
   const estimateBlock = (
     <div aria-live="polite" className="empty:hidden">
-      {baseEstimate ? (
-        <p className="rounded-xl border-2 border-dashed px-4 py-3 text-sm leading-relaxed" style={{ borderColor: c.formBorder, background: c.surfaceSubtle }}>
-          この内容の目安：
-          <span className="mx-1 text-lg font-black" style={{ color: c.accentText }}>{baseEstimate.amount.toLocaleString("ja-JP")}円〜</span>
-          <span className="block text-xs sm:inline" style={{ color: c.textSoft }}>オプション・商用利用・お急ぎは、正式なお見積もりで確定します。</span>
-        </p>
+      {estimate ? (
+        <div data-testid="pf-estimate" className="rounded-xl border-2 border-dashed px-4 py-3 text-sm leading-relaxed" style={{ borderColor: c.formBorder, background: c.surfaceSubtle }}>
+          <p>
+            この内容の目安：
+            <span className="mx-1 text-lg font-black" style={{ color: c.accentText }}>{formatPortfolioEstimateRange(estimate.min, estimate.max, true)}</span>
+          </p>
+          {estimate.lines.length > 1 || estimate.unpriced.length > 0 ? (
+            <ul className="mt-1 space-y-0.5">
+              {estimate.lines.map((line) => (
+                <li key={line.id} className="flex justify-between gap-3">
+                  <span>{line.label}{line.quantity > 1 ? ` ×${line.quantity}` : ""}</span>
+                  <span className="shrink-0 font-bold">{line.base ? "" : "+"}{formatPortfolioEstimateRange(line.amount, line.amountMax, line.base)}</span>
+                </li>
+              ))}
+              {estimate.unpriced.map((label) => (
+                <li key={label} className="flex justify-between gap-3">
+                  <span>{label}</span>
+                  <span className="shrink-0 font-bold">別途</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <p className="mt-1 text-xs" style={{ color: c.textSoft }}>
+            選んだ内容から計算した目安です。正式な金額は、内容を確認したうえでお見積もりでご案内します。
+          </p>
+        </div>
       ) : null}
     </div>
   );
@@ -1631,10 +1653,10 @@ export default function PortfolioStructuredCommissionForm({
           {requestTypeSection}
           <section className="border-b pb-5" style={{ borderColor: c.borderSubtle }}>{usageBlock}</section>
           {messageSection}
-          <section className="space-y-4 border-b pb-5" style={{ borderColor: c.borderSubtle }}>{optionsBlock}{estimateBlock}</section>
+          <section className="space-y-4 border-b pb-5" style={{ borderColor: c.borderSubtle }}>{optionsBlock}{step === 0 ? estimateBlock : null}</section>
           {detailSections}
         </div>
-        <div hidden={step !== 1} className="space-y-4">{conditionSections}</div>
+        <div hidden={step !== 1} className="space-y-4">{conditionSections}{step === 1 ? estimateBlock : null}</div>
       </> : <>
         <div hidden={step === lastStep}>{messageSection}</div>
         <div hidden={step === lastStep}>{optionalSection}</div>

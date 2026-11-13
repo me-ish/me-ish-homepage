@@ -54,7 +54,7 @@ export function validatePortfolioForm(
     clientName, clientEmail, requestData: buildNatoriRequestDataV1(state, choices),
   });
   const errors: NatoriRequestFieldError[] = parsed.success ? [] : parsed.error.issues.map((issue) => ({
-    path: issue.path.join("."), message: portfolioValidationMessage(issue),
+    path: issue.path.join("."), message: portfolioValidationMessage(issue, { clientEmail }),
   }));
   errors.push(...collectPortfolioReferenceLinkErrors(state.referenceLinks).map((error) => ({
     path: `referenceLinks.${error.index}.url`, message: error.message,

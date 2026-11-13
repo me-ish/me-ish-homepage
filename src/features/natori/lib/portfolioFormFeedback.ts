@@ -72,11 +72,18 @@ export function portfolioErrorTarget(
 }
 
 /** スキーマの判定を変えず、標準の英語エラーだけ入力者向けに翻訳する。 */
-export function portfolioValidationMessage(issue: ZodIssue): string {
-  if (/[ぁ-んァ-ヶ一-龠]/u.test(issue.message)) return issue.message;
+export function portfolioValidationMessage(issue: ZodIssue, values?: { clientEmail?: string }): string {
   const path = issue.path.join(".");
-  if (path === "clientName") return "お名前を1〜100文字で入力してください。";
-  if (path === "clientEmail") return "メールアドレスの形式と文字数（254文字まで）をご確認ください。";
+  // 空欄なだけのときは、仕様の言葉（形式・文字数）を出さずに、書いてほしいことだけ伝える。
+  if (issue.message.startsWith("実在する日付を")) return "日付をお選びください。";
+  if (issue.message.startsWith("依頼内容または相談内容を")) return "ご相談の内容をひとことご記入ください。";
+  if (/[ぁ-んァ-ヶ一-龠]/u.test(issue.message)) return issue.message;
+  if (path === "clientName" && issue.code !== "too_big") return "お名前をご記入ください。";
+  if (path === "clientEmail" && issue.code !== "too_big") {
+    return values?.clientEmail !== undefined && values.clientEmail.trim() === ""
+      ? "メールアドレスをご記入ください。"
+      : "メールアドレスの形をご確認ください（例：name@example.com）。";
+  }
   if (/^requestData\.budget\.(min|max)$/.test(path)) {
     return "ご予算は半角数字で入力してください（例：10000）。";
   }

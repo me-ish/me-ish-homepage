@@ -26,6 +26,23 @@ describe("フォームエラーの表示先", () => {
     if (!issue) throw new Error("missing email issue");
     expect(portfolioValidationMessage(issue)).toContain("メールアドレス");
   });
+  it("空欄なだけのときは、形式や文字数の話をしない", () => {
+    const issues = (name: string, email: string) => {
+      const result = natoriRequestSubmissionV1Schema.safeParse({ clientName: name, clientEmail: email, requestData: buildNatoriRequestDataV1(createInitialPortfolioRequestFormState(), []) });
+      if (result.success) throw new Error("invalid fixture");
+      return result.error.issues;
+    };
+    const message = (name: string, email: string, field: string) => {
+      const issue = issues(name, email).find((item) => item.path.at(-1) === field);
+      if (!issue) throw new Error(`missing ${field} issue`);
+      return portfolioValidationMessage(issue, { clientEmail: email });
+    };
+    expect(message("", "", "clientName")).toBe("お名前をご記入ください。");
+    expect(message("", "", "clientEmail")).toBe("メールアドレスをご記入ください。");
+    expect(message("", "abc", "clientEmail")).toBe("メールアドレスの形をご確認ください（例：name@example.com）。");
+    expect(message("", "", "message")).toBe("ご相談の内容をひとことご記入ください。");
+    expect(message("あ".repeat(101), "", "clientName")).toBe("100文字以内で入力してください。");
+  });
 });
 
 describe("Retry-After", () => {
