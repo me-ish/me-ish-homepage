@@ -43,8 +43,9 @@ export function CaseWorkspaceSections({ record, section,step=null,application=fa
         ["入金", payment ? `入金済み · ${caseTime(payment.confirmedAt)}` : "まだ記録していません"]]} />
 </>
     : step === "quote" ? <Rows rows={[["見積", quote ? `第${quote.version}版` : caseQuoteDraftOnly(m.facts.quote) ? "下書き（まだ送っていません）" : observationLabel(m.facts.quote, "まだありません")], ["金額", quote ? caseMoney(quote.money) : "—"], ["お客さんの返事", quote ? quoteReply : "—"]]} />
-      : <Rows rows={[["金額", agreed ? caseMoney(agreed.money) : quote ? `${caseMoney(quote.money)}（OK前）` : "—"], ["宛先", `${record.clientLabel}さん（登録メール）`],
-        ["入金", payment ? `入金済み · ${caseTime(payment.confirmedAt)}` : "まだ"], ["支払いリンク", caseKnown(m.facts.link) ? "作成済み" : observationLabel(m.facts.link, "まだ")]]} />}
+      : <Rows rows={[["金額", agreed ? caseMoney(agreed.money) : quote ? `${caseMoney(quote.money)}（OK前）` : payment ? `${caseMoney(payment.money)}（入金額）` : "—"], ["宛先", `${record.clientLabel}さん（登録メール）`],
+        // 入金が済んでいれば、支払いリンクが読めない・無いことは困りごとではない（「この形式は表示できません」と出さない）。
+        ["入金", payment ? `入金済み · ${caseTime(payment.confirmedAt)}` : "まだ"], ["支払いリンク", caseKnown(m.facts.link) ? "作成済み" : payment ? "使っていません" : observationLabel(m.facts.link, "まだ")]]} />}
     {step !== "quote" && caseKnown(m.facts.payment) && caseKnown(m.facts.link)?.source === "legacy_projection" && caseKnown(m.facts.link)?.providerState === "unverified"
       ? <p className={look.body}>入金が済んだので、Stripe の管理画面でこの支払いリンクが「無効」になっているか見てください。有効のままなら、そこで無効にしてください。</p> : null}
     {application&&!readOnly&&!(external&&(m.facts.operations.state==="absent"||(m.facts.operations.state==="ready"&&m.facts.operations.value.length===0)))?<CaseReconciliationPanel selectedNotificationId={selectedNotificationId} key={`reconciliation-${record.id}`} projectId={record.id} onChanged={onChanged}/>:null}
