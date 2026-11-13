@@ -831,14 +831,14 @@ export default function PortfolioStructuredCommissionForm({
         <div data-testid="pf-estimate" className="rounded-xl border-2 border-dashed px-4 py-3 text-sm leading-relaxed" style={{ borderColor: c.formBorder, background: c.surfaceSubtle }}>
           <p>
             この内容の目安：
-            <span className="mx-1 text-lg font-black" style={{ color: c.accentText }}>{formatPortfolioEstimateRange(estimate.min, estimate.max)}</span>
+            <span className="mx-1 text-lg font-black" style={{ color: c.accentText }}>{formatPortfolioEstimateRange(estimate.min, estimate.max, true)}</span>
           </p>
           {estimate.lines.length > 1 || estimate.unpriced.length > 0 ? (
             <ul className="mt-1 space-y-0.5">
               {estimate.lines.map((line) => (
                 <li key={line.id} className="flex justify-between gap-3">
                   <span>{line.label}{line.quantity > 1 ? ` ×${line.quantity}` : ""}</span>
-                  <span className="shrink-0 font-bold">{line.base ? "" : "+"}{formatPortfolioEstimateRange(line.amount, line.amountMax)}</span>
+                  <span className="shrink-0 font-bold">{line.base ? "" : "+"}{formatPortfolioEstimateRange(line.amount, line.amountMax, line.base)}</span>
                 </li>
               ))}
               {estimate.unpriced.map((label) => (

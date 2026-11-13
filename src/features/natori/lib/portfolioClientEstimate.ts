@@ -71,6 +71,18 @@ export function portfolioClientEstimate(
   const unpriced = requestData.options
     .filter((option) => !priced.has(option.id))
     .map((option) => option.label);
+  // 商用利用・実績掲載は専用の欄で答えるので options には入らない。
+  // 掲載設定の料金が金額として読めないときも、黙って合計から外さず「別途」に出す。
+  const dedicated: [boolean, string, string][] = [
+    [requestData.commercialUse === "yes", "commercial_use", "商用利用"],
+    [requestData.publicationPolicy === "work_private", "sample_usage_denied", "作品の公開は不可"],
+    [requestData.publicationPolicy === "fully_private", "private_work", "完全非公開"],
+  ];
+  for (const [chosen, id, fallback] of dedicated) {
+    if (chosen && !priced.has(id)) {
+      unpriced.push(content.options.find((option) => option.id === id)?.name.trim() || fallback);
+    }
+  }
   return {
     lines,
     min: lines.reduce((sum, line) => sum + line.amount, 0),
@@ -79,7 +91,10 @@ export function portfolioClientEstimate(
   };
 }
 
-export function formatPortfolioEstimateRange(min: number, max: number): string {
+/**
+ * floor: プランの料金は「〜円から」の下限なので、合計と基本料金の行は幅が無いときも「9,800円〜」と出す。
+ */
+export function formatPortfolioEstimateRange(min: number, max: number, floor = false): string {
   const yen = (value: number) => value.toLocaleString("ja-JP");
-  return max > min ? `${yen(min)}〜${yen(max)}円` : `${yen(min)}円`;
+  return max > min ? `${yen(min)}〜${yen(max)}円` : `${yen(min)}円${floor ? "〜" : ""}`;
 }

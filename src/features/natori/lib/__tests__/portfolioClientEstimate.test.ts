@@ -72,4 +72,20 @@ describe("依頼フォームの目安", () => {
     expect(estimate.lines[0]).toMatchObject({ id: "mass_production_illustration", base: true });
     expect(estimate.min).toBeGreaterThan(0);
   });
+
+  it("専用の欄（商用利用・実績掲載）の料金が金額として読めないときも「別途」に出す", () => {
+    const odd = { ...content, options: content.options.map((option) =>
+      option.id === "commercial_use" || option.id === "private_work" ? { ...option, price: "要相談" } : option) };
+    const estimate = portfolioClientEstimate(
+      { ...applyPortfolioPlanPick(quote(), "full_body"), commercialUse: "yes", publicationPolicy: "fully_private" },
+      portfolioOptionChoices(odd), odd)!;
+    expect(estimate.min).toBe(10000);
+    expect(estimate.unpriced).toHaveLength(2);
+  });
+
+  it("プランの料金は下限なので、幅が無い合計には「〜」を付ける", () => {
+    expect(formatPortfolioEstimateRange(10000, 10000, true)).toBe("10,000円〜");
+    expect(formatPortfolioEstimateRange(2000, 2000)).toBe("2,000円");
+    expect(formatPortfolioEstimateRange(21000, 23000, true)).toBe("21,000〜23,000円");
+  });
 });
