@@ -46,12 +46,12 @@ export default function PortfolioFooter({
         </div>
       ) : null}
       {!showcase ? (
-        <nav className="mb-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm" aria-label="法務情報">
+        <nav className="mb-4 flex flex-wrap justify-center gap-x-5 gap-y-0 text-sm" aria-label="法務情報">
           {legalLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="pf-cute-focus underline underline-offset-4 hover:opacity-70"
+              className="pf-cute-focus inline-flex min-h-11 items-center underline underline-offset-4 hover:opacity-70"
             >
               {link.label}
             </Link>

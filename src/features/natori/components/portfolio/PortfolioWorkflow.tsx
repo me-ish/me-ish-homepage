@@ -84,7 +84,7 @@ function WorkflowStepCard({ title, body }: { title: string; body: string }) {
   const text = detail || lead;
   return (
     <details className="group min-w-0 flex-1">
-      <summary className="pf-cute-focus flex min-h-10 cursor-pointer list-none items-center rounded-2xl font-bold [&::-webkit-details-marker]:hidden">
+      <summary className="pf-cute-focus flex min-h-11 cursor-pointer list-none items-center rounded-2xl font-bold [&::-webkit-details-marker]:hidden">
         <span>
           {title}
           <ChevronDown

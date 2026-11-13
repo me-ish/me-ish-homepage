@@ -65,7 +65,7 @@ export function CaseWorkspaceSections({ record, section,step=null,application=fa
   if (section === "production") return <div className="space-y-4">
     {step === "delivery" || step === "receipt" ? <Rows rows={deliveryRows} /> : <>
       {roughs?.length ? <Rows rows={roughs.map((rough, index): [string, ReactNode] => [`ラフ${index + 1}`, rough.clientOkAt ? `お客さんOK · ${caseTime(rough.clientOkAt)}${rough.acknowledgedAt ? "（確認済み）" : ""}` : "お客さんの返事待ち"])} />
-        : <p className={`mb-4 ${look.body}`}>{observationLabel(m.facts.roughs, "ラフはまだ出していません")}</p>}
+        : <p className={`mb-4 ${look.body}`}>{observationLabel(m.facts.roughs, "トークで送ったラフはまだありません")}</p>}
       <div className="mb-2"><p className={`mb-2 ${look.sectionTitle}`}>工程{tasks?.length ? <span className={`ml-2 font-normal ${look.meta}`}>{tasks.filter(t => t.done).length}/{tasks.length} 完了</span> : null}</p>
         {/* In the live workspace the 工程を進める buttons below are the one place to see and press the tasks. */}
         {tasks?.length && application && !readOnly ? null : tasks?.length ? <ul aria-label="制作の工程" className="flex flex-wrap gap-2">{tasks.map(task => <li key={task.id} className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${task.done ? "border-[#BE185D] bg-[#BE185D] text-white" : "border-black/10 bg-white text-[#3C3C43]"}`}>{task.done ? "✓ " : ""}{stages[task.stage]}<span className="sr-only">{task.done ? "（完了）" : "（まだ）"}</span></li>)}</ul>
@@ -73,7 +73,7 @@ export function CaseWorkspaceSections({ record, section,step=null,application=fa
     </>}
     <Records title="ラフ・納品・受取の記録">
     <Card nested title="ラフ">{roughs?.length ? <ul className="space-y-2">{roughs.map((rough,index) => <li key={rough.id}>ラフ{index+1}：{rough.clientOkAt ? `お客さんOK · ${rough.acknowledgedAt ? "確認済み" : "まだ確認していません"}` : "お客さんの返事待ち"}</li>)}</ul>
-      : <p>{observationLabel(m.facts.roughs, "ラフはまだ出していません")}</p>}</Card>
+      : <p>{observationLabel(m.facts.roughs, "トークで送ったラフはまだありません")}</p>}</Card>
     <Card nested title="納品と受取">{delivery ? <><p className="font-semibold">納品済み</p><p className="mt-1">納品ページの期限：{delivery.expiresAt ? caseTime(delivery.expiresAt) : "—"}</p>
       {delivery.manifest === "verified" ? <p className={`mt-1 ${look.meta}`}>納品ファイルはそろっています</p> : <CaseNeedsCheck className="mt-2">納品ファイルの記録が足りません</CaseNeedsCheck>}</>
       : <p>{observationLabel(m.facts.delivery, "まだ納品していません")}</p>}
