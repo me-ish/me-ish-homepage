@@ -173,6 +173,13 @@ function FormSection({
   );
 }
 
+// 「題材（オリジナルキャラクター）」の欄は外した。古い下書きや送信の記録に残っていても、新しい送信には混ぜない。
+function withoutRemovedSubject(state: PortfolioRequestFormState): PortfolioRequestFormState {
+  return state.usageTypes.includes("original_character")
+    ? { ...state, usageTypes: state.usageTypes.filter((usage) => usage !== "original_character") }
+    : state;
+}
+
 export default function PortfolioStructuredCommissionForm({
   content,
   demoMode,
@@ -221,7 +228,9 @@ export default function PortfolioStructuredCommissionForm({
   }, !demoMode, fields => {
     restoredFromOperationRef.current = true;
     const restored = restoreStructuredIntakeFields(fields, content);
-    setClientName(restored.clientName); setClientEmail(restored.clientEmail); setState(restored.state);
+    setClientName(restored.clientName); setClientEmail(restored.clientEmail);
+    // 送信の記録そのもの（同じ内容での再送）は変えず、直せる状態に戻ったときの入力からだけ外した欄の値を落とす。
+    setState(withoutRemovedSubject(restored.state));
     setStep(restored.state.inquiryMode === "quote" ? 2 : 1);
   }, restoreOriginals);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -240,7 +249,7 @@ export default function PortfolioStructuredCommissionForm({
     // 復元したら最初の画面から見直してもらう（途中の画面に飛ぶと、何が戻ったか分かりにくい）。
     onRestore: (saved) => {
       restoredDraftModeRef.current = saved.state.inquiryMode;
-      setState(saved.state);
+      setState(withoutRemovedSubject(saved.state));
       setStep(0);
     },
   });
@@ -1041,14 +1050,6 @@ export default function PortfolioStructuredCommissionForm({
             onToggle={(next) => setOpenSections((current) => ({ ...current, usage: next }))}
           >
             {!isQuote ? usageBlock : null}
-            <fieldset>
-              <legend className={labelClass}>題材<OptionalBadge /></legend>
-              <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm" style={{ color: c.textSoft }}>
-                <input type="checkbox" checked={state.usageTypes.includes("original_character")} onChange={() => toggleUsageType("original_character")} className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0" />
-                {NATORI_USAGE_TYPE_LABELS_V1.original_character}
-              </label>
-            </fieldset>
-
             <div className="grid gap-4">
               {!massProductionSelected ? (
               <div>
