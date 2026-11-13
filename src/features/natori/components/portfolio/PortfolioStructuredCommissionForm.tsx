@@ -199,8 +199,7 @@ export default function PortfolioStructuredCommissionForm({
 }) {
   const [state, setState] = useState<PortfolioRequestFormState>(
     () => {
-      // 入口で決まっている希望（相談／見積もり）は最初の描画から使う。あとから切り替えると、開いた直後に相談の画面が一瞬見える。
-      const initial = { ...createInitialPortfolioRequestFormState(), ...(initialMode ? { inquiryMode: initialMode } : {}) };
+      const initial = createInitialPortfolioRequestFormState();
       const withPlan = initialPlan ? applyPortfolioPlanSelection(initial, initialPlan) : initial;
       return initialMessage ? { ...withPlan, message: initialMessage } : withPlan;
     }
