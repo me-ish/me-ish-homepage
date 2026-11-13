@@ -38,7 +38,7 @@ export function CasePaymentPanel({projectId,onChanged}:{projectId:string;onChang
  return <section aria-label="支払いリンクを送る" className="space-y-3">
   <h3 className="sr-only">支払いリンクを送る</h3>
   {error?<p role="alert" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-inset ring-amber-600/20">{error}</p>:null}
-  {view?<><p role="status" className="text-sm">{view.reason}</p><p className="text-xs text-zinc-500">見積 第{view.quoteVersion??"?"}版 · {view.amount?.toLocaleString("ja-JP")}円 · 送ったメール {view.sentCount}通</p>
+  {view?<><p role="status" className="text-sm">{view.reason}</p>{view.quoteVersion!=null||view.amount!=null||view.sentCount>0?<p className="text-xs text-zinc-500">{[view.quoteVersion!=null?`見積 第${view.quoteVersion}版`:null,view.amount!=null?`${view.amount.toLocaleString("ja-JP")}円`:null,`送ったメール ${view.sentCount}通`].filter(Boolean).join(" · ")}</p>:null}
    {view.jobs.length?<ul className="space-y-1 text-sm">{view.jobs.map(j=><li key={j.id}>{j.attempt}回目：{j.status==="sent"?"送信しました":j.status==="failed"?"送れませんでした":j.status==="unknown"?"送れたか分かりません":"送信待ち"}{j.sentAt?` · ${caseTime(j.sentAt)}`:""}</li>)}</ul>:null}
   </>:null}
   {receipt&&!preview?<div className="space-y-2 rounded-xl bg-amber-50 p-3 ring-1 ring-inset ring-amber-600/20"><p className="text-sm">送信の途中です。まず「結果を見る」を押してください。</p>
