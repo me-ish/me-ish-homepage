@@ -78,6 +78,12 @@ export default function PortfolioStyles() {
       @media (min-width: 1024px) { .pf-hero-frame { width: min(34rem, calc(70vh * 0.8 + 1rem)); width: round(down, min(34rem, calc(70vh * 0.8 + 1rem)), 1px); } }
       .pf-form-control { border-color: ${c.formBorder}; }
       .pf-form-control::placeholder { font-size: 0.875rem; }
+      /* iPhone の日付欄は、ほかの入力欄より幅がはみ出し、灰色・中央寄せになる。ほかの欄とそろえる。 */
+      .pf-form-control[type="date"] {
+        -webkit-appearance: none; appearance: none; display: block; box-sizing: border-box;
+        min-width: 0; max-width: 100%; min-height: 2.75rem; background-color: #fff; color: inherit; text-align: left;
+      }
+      .pf-form-control[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
       .pf-choice-control {
         appearance: none;
         border: 2px solid ${c.formBorder};

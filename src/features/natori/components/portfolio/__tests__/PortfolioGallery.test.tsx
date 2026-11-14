@@ -70,9 +70,9 @@ describe("PortfolioGallery collections", () => {
     }
   });
 
-  it("卵商品をつなぐのカテゴリとして案内する", () => {
+  it("卵商品のカテゴリを「お試しイラスト」として案内する", () => {
     render(<PortfolioGallery collections={[{ id: "egg", name: "卵商品", description: "", color: "#FFF0C9" }]} works={[work("egg", { collectionId: "egg" })]} />);
-    expect(screen.getByRole("button", { name: "つなぐ 卵商品" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "お試しイラスト" })).toBeTruthy();
   });
 
   it("編集画面の保存順を維持したまま初期6件・全件表示・カテゴリ絞り込みを切り替える", () => {

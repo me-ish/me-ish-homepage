@@ -27,7 +27,7 @@ import PortfolioWorkRelatedLinks, { relatedLinksHeading } from "./PortfolioWorkR
 const GALLERY_PREVIEW_LIMIT = 6;
 
 function collectionLabel(name: string): string {
-  return name === "卵商品" ? "つなぐ 卵商品" : name;
+  return name === "卵商品" ? "お試しイラスト" : name;
 }
 
 function formatProductionMonth(value?: string | null): string | null {

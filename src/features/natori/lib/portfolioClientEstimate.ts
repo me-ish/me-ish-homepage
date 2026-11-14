@@ -83,11 +83,14 @@ export function portfolioClientEstimate(
       unpriced.push(content.options.find((option) => option.id === id)?.name.trim() || fallback);
     }
   }
+  // 納期で「お急ぎ」を選ぶと金額つきの行が入る。掲載設定のオプションにも同じ名前の「お急ぎ納品」があって
+  // 両方選ばれたときは、同じものを「+2,000円」と「別途」の 2 行で出さない。ほかの同名オプションは消さない。
+  const rushLabel = lines.find((line) => line.id === "rush_delivery")?.label;
   return {
     lines,
     min: lines.reduce((sum, line) => sum + line.amount, 0),
     max: lines.reduce((sum, line) => sum + line.amountMax, 0),
-    unpriced: [...new Set(unpriced)],
+    unpriced: [...new Set(unpriced)].filter((label) => label !== rushLabel),
   };
 }
 
