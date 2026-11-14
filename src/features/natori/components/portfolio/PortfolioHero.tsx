@@ -131,7 +131,7 @@ export default function PortfolioHero({
                 className="pf-btn pf-cute-focus inline-flex min-h-12 w-full items-center justify-center px-5 py-3 font-bold sm:w-auto sm:px-6"
                 style={{ background: c.surface, borderColor: c.ink, color: c.text }}
               >
-                作品を見る
+                実績を見る
                 <span aria-hidden="true" className="pf-btn-arrow">↓</span>
               </a>
             </div>

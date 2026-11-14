@@ -87,7 +87,8 @@ export function portfolioClientEstimate(
     lines,
     min: lines.reduce((sum, line) => sum + line.amount, 0),
     max: lines.reduce((sum, line) => sum + line.amountMax, 0),
-    unpriced: [...new Set(unpriced)],
+    // 同じ名前がすでに金額つきの行にあるとき（例：納期で「お急ぎ」を選び、オプションでも「お急ぎ納品」を選んだ）は二重に出さない。
+    unpriced: [...new Set(unpriced)].filter((label) => !lines.some((line) => line.label === label)),
   };
 }
 

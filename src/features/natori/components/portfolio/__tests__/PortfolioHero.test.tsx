@@ -91,7 +91,7 @@ describe("PF-03 portfolio hero", () => {
     expect(primaryLink.className).toContain("pf-btn");
     expect(primaryLink.className).not.toContain("rounded-full");
     expect(primaryLink.className).toContain("text-base font-black");
-    const worksLink = screen.getByRole("link", { name: "作品を見る" });
+    const worksLink = screen.getByRole("link", { name: "実績を見る" });
     expect(worksLink.getAttribute("href")).toBe("#gallery");
     expect((worksLink as HTMLElement).style.borderColor).toBe("rgb(59, 47, 51)");
     expect(worksLink.className).toContain("pf-btn");
@@ -196,7 +196,7 @@ describe("PF-03 portfolio hero", () => {
     expect(screen.queryByText("3,000円～")).toBeNull();
     expect(screen.queryByText("2〜3日以内")).toBeNull();
     expect(screen.queryByText("約1か月")).toBeNull();
-    expect(screen.getByRole("link", { name: "作品を見る" }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: "実績を見る" }).getAttribute("href")).toBe(
       "#gallery"
     );
   });

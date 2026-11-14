@@ -994,7 +994,7 @@ export default function PortfolioStructuredCommissionForm({
             ) : null}
 
             {!isQuote ? optionsBlock : null}
-            {!isQuote ? estimateBlock : null}
+            {!isQuote && step !== lastStep ? estimateBlock : null}
           </FormSection>
   );
 
@@ -1635,7 +1635,8 @@ export default function PortfolioStructuredCommissionForm({
           </li>
         ))}
       </ol>
-      {step !== lastStep && (
+      {/* 「まず相談／見積もり」は最初の画面だけで聞く。先へ進んだあとにもう一度出すと同じ質問に見える。 */}
+      {step === 0 && (
         <fieldset className="border-b pb-3" style={{ borderColor: c.borderSubtle }}>
           <legend className="text-xs font-bold" style={{ color: c.textSoft }}>ご希望</legend>
           <div className="flex flex-wrap gap-x-4 gap-y-1">
@@ -1731,6 +1732,8 @@ export default function PortfolioStructuredCommissionForm({
           </div>
         </section>
       )}
+      {/* 前の画面で見てきた目安を、送る前の確認でももう一度見せる。 */}
+      {step === lastStep && confirmationSubmission.success ? estimateBlock : null}
       {step === lastStep && frozenSubmission && !frozenSubmission.success ? <p role="alert" className="text-sm" style={{ color: c.error }}>{frozenSubmission.errors[0]?.message}</p> : null}
 
       {submitError && <p id="pf-submit-errors" tabIndex={-1} role="alert" className="rounded-xl border-2 px-3 py-2 text-sm font-bold" style={{ borderColor: c.error, color: c.error, background: c.errorSoft }}>{submitError}</p>}
