@@ -18,6 +18,8 @@ function isAuthorized(req: NextRequest): boolean {
 
 async function handle(req: NextRequest) {
   if (!isAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // 自動実行のスイッチ。値が "1" になるまでは何もしない（案件画面のボタンでの匿名化は使える）。
+  if (process.env.NATORI_ANONYMIZE_SCHEDULE_ENABLED !== "1") return NextResponse.json({ ok: true, skipped: "schedule_disabled" });
   const report = await runScheduledNatoriAnonymization().catch(() => null);
   if (!report) return NextResponse.json({ error: "anonymization_unavailable" }, { status: 500 });
   const ok = report.failed === 0 && report.filesPending === 0;

@@ -61,6 +61,7 @@ insert into public.natori_estimate_drafts(project_id,user_id,agreed_terms,items,
 insert into public.natori_case_items(project_id,position,title,project_type,amount,publication_policy,publication_allowed_from,note) values('$OLD',1,'アイコン','icon',4000,'delayed','2026-12-01','花子さんの猫');
 insert into public.natori_payment_transactions(project_id,amount,status,received_at,stripe_payment_intent_id) values('$OLD',4000,'received',now()-interval '128 days','pi_test_1');
 SQL
+q "set session_replication_role=replica; update public.natori_projects set quote_accept_token_hash=repeat('f',64) where id='$OLD'" >/dev/null
 echo "ok   fictional rows seeded"
 call(){ q "select public.natori_case_anonymize_v1('$OWNER','$1','$2'::jsonb)->>'result'"; }
 SCHED='{"kind":"scheduled","operator":{"kind":"schedule"}}'
@@ -110,6 +111,8 @@ ok "ordinary edits still touch the update time" "$(q "update public.natori_proje
 ok "money and dates kept" "$(q "select amount||'|'||status||'|'||(completed_at is not null) from public.natori_projects where id='$OLD'")" "4000|completed|true"
 ok "quote keeps addressee, amount, body, terms" "$(q "select client_name||'|'||amount||'|'||body_snapshot||'|'||(quote_terms->>'scope')||'|'||(accepted_at is not null) from public.natori_quotes where project_id='$OLD'")" "架空花子|4000|架空花子 様 お見積もりは 4,000 円です。|胸上|true"
 ok "quote loses address and request text" "$(q "select to_email||'|'||(request_snapshot->>'message') from public.natori_quotes where project_id='$OLD'")" "|（匿名化済み）"
+ok "quote URL key no longer matches the sent link" "$(q "select count(*) from public.natori_quotes where project_id='$OLD' and token_hash not like 'anonymized:%'")" "0"
+ok "legacy quote URL key removed" "$(q "select count(*) from public.natori_projects where id='$OLD' and quote_accept_token_hash is not null")" "0"
 ok "estimate and payment mails keep body" "$(q "select string_agg(kind||':'||body_snapshot,',' order by id) from public.natori_order_mail_logs where project_id='$OLD' and kind in ('estimate','payment')")" "estimate:見積の本文,payment:支払いの本文"
 ok "other mails lose body" "$(q "select subject||'|'||body_snapshot from public.natori_order_mail_logs where id=9003")" "（匿名化済み）|"
 ok "no mail log keeps an address or link" "$(q "select count(*) from public.natori_order_mail_logs where project_id='$OLD' and (to_email<>'' or link_url is not null)")" "0"

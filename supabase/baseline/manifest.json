@@ -337,7 +337,7 @@
     "sha256:supabase/migrations/20261106100000_natori_case_items_handover.sql": "02403ffb59bccf09e9949f659f010d961d5b88028c81c18b19b01e8050b8a081",
     "sha256:supabase/migrations/20261114120000_natori_case_items_contract.sql": "8cb1d5940af1bf37136c74050dfe5db3e7af85829726e9082d0ac4e91e038421",
     "sha256:supabase/migrations/20261114130000_natori_case_insights.sql": "ad02a081b9766775ab16deadc568e5e829bbb836e6a1c567612fd6d1987ab368",
-    "sha256:supabase/migrations/20261115000000_natori_case_anonymize.sql": "586929efffe89a075113696c323bf14fec95db243a11dd5430bee12448e1918b"
+    "sha256:supabase/migrations/20261115000000_natori_case_anonymize.sql": "886c0451c5938178e86a9d065b700104fd2b294ab26450dec40b6a29fa53afad"
   },
   "operatorConfirmationRequired": [
     "target project ref is non-production and not lvnfspyainrxtztjytbo",
