@@ -1,4 +1,4 @@
--- 【案・未適用】完了した案件の依頼者情報を匿名化する。
+-- 完了した案件の依頼者情報を匿名化する。
 --
 -- 決まっていること（keisuke さん 2026-11-14）:
 --   ・完了（または終了）から 90 日で匿名化する
@@ -10,7 +10,7 @@
 --   1. 記録の表 natori_case_anonymizations（いつ・誰が・どの受付番号にしたか、消すファイルの一覧）
 --   2. 書き換え禁止の 3 つの仕組みに「匿名化の関数の中だけ」の例外を足す
 --        通知の控え（snapshot / payload）・納品記録の写し（snapshot）・見積（宛先アドレスと依頼文の写しだけ）
---   3. 関数 natori_case_anonymize_v1（1 案件を 1 回の処理で匿名化。途中で失敗したら全部元に戻る）
+--   3. 関数 natori_case_anonymize_v1（1 案件を 1 回の処理で匿名化。途中で失敗したら全部元に戻る）。案件の最終更新日時は変えない
 --   4. 案件の守りの台帳を更新し、全 root の確認を通す
 -- ファイル本体（相談の添付・参考画像・納品データ）は SQL では消さない。関数が返す一覧をアプリが
 -- Storage の API で消し、終わったら storage_purged_at を入れる。
@@ -75,6 +75,23 @@ $i$,string_to_array(t.cols,','));
   execute replace(p.definition,p.prosrc,body);
  end loop;
 end $patch$;
+
+-- 匿名化で案件の「最終更新」が今日に変わると、古い案件が一覧の上に来てしまう。匿名化の関数の中だけ、元の日時を残す。
+create or replace function public.touch_natori_projects_updated_at()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if exists(select 1 from natori_case_guard.frames f where f.pid=pg_backend_pid() and f.tx=txid_current()
+    and f.root='natori_case_anonymize_v1' and f.project_id=new.id) then
+    new.updated_at = old.updated_at;
+    return new;
+  end if;
+  new.updated_at = now();
+  return new;
+end;
+$$;
 
 create function public.natori_case_anonymize_v1(p_owner uuid,p_project uuid,p_input jsonb)
 returns jsonb language plpgsql volatile security definer set search_path='' as $$

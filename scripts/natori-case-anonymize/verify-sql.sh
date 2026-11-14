@@ -1,16 +1,14 @@
 #!/usr/bin/env bash
-# 匿名化の SQL 案（まだ本番にも supabase/migrations にも入れていない）を、架空のデータで確かめる。
-# Usage: PSQL_BASE="psql -h <socket dir> -U postgres" scripts/natori-case-anonymize/verify-sql.sh [draft.sql]
-# 案の既定の場所は docs/natori/drafts/natori_case_anonymize_draft.sql。
-# 使い捨ての DB を作り、有効なマイグレーションをすべて流してから案を流す。実在のデータは使わない。
+# 匿名化（20261115000000_natori_case_anonymize.sql）を、架空のデータで確かめる。
+# Usage: PSQL_BASE="psql -h <socket dir> -U postgres" scripts/natori-case-anonymize/verify-sql.sh
+# 使い捨ての DB を作り、有効なマイグレーションをすべて流す。実在のデータは使わない。
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
-DRAFT=${1:-$ROOT/docs/natori/drafts/natori_case_anonymize_draft.sql}
-DB="natori_case_anon_$$"
+DB="${KEEP_DB:-natori_case_anon_$$}"
 PSQL_BASE=${PSQL_BASE:-psql}
 P="$PSQL_BASE -X -q -At -v ON_ERROR_STOP=1"
 $P -d postgres -c "create database $DB" >/dev/null
-trap '$P -d postgres -c "drop database if exists $DB" >/dev/null' EXIT
+[ -n "${KEEP_DB:-}" ] || trap '$P -d postgres -c "drop database if exists $DB" >/dev/null' EXIT
 q(){ $P -d "$DB" -c "$1"; }
 fails=0
 ok(){ if [ "$2" = "$3" ]; then echo "ok   $1"; else echo "FAIL $1: expected [$3] got [$2]"; fails=$((fails+1)); fi; }
@@ -20,8 +18,7 @@ $P -d "$DB" -f "$ROOT/scripts/legacy-entry-read-security/fresh-bootstrap.sql" >/
 for f in $(python3 -c "import json,sys;print(' '.join(json.load(open(sys.argv[1]))['activeMigrations']))" "$ROOT/supabase/baseline/manifest.json"); do
   $P -d "$DB" -f "$ROOT/$f" >/dev/null 2>&1
 done
-$P -d "$DB" -f "$DRAFT" >/dev/null
-echo "ok   migrations and draft applied"
+echo "ok   migrations applied"
 ok "guard ledger has no drift" "$(q "select count(*) from natori_case_guard.dependencies d full join natori_case_guard.images() i using(kind,identity) where d.image is distinct from i.image")" "0"
 
 OWNER=22222222-2222-4222-8222-222222222222
@@ -84,15 +81,32 @@ ok "unfinished notification blocks" "$(call $OLD "$SCHED")" "busy"
 q "set session_replication_role=replica; update public.natori_notification_jobs set status='sent' where id='c0000000-0000-4000-8000-000000000002'" >/dev/null
 ok "nothing changed by refused calls" "$(q "select client_email from public.natori_projects where id='$OLD'")" "hanako@example.test"
 
+# READ_DUMP=<dir> を付けると、匿名化の前後で、管理画面が使う読み取り関数の結果を保存する（画面側の確認用）。
+dump_reads(){
+  [ -n "${READ_DUMP:-}" ] || return 0
+  mkdir -p "$READ_DUMP/$1"
+  local O=$OWNER C=$OLD
+  for pair in "admin:public.natori_case_admin_read_v1('$O','$C')" "snapshot:public.natori_case_snapshot_v1('$C','$O')" \
+    "workspace:public.natori_case_workspace_v1('$O')" "history:public.natori_case_history_page_v1('$O','$C',0,null)" \
+    "overview:public.natori_consultation_overview_v2('$O',array['$C']::uuid[])" "payment:public.natori_case_payment_snapshot_v1('$O','$C',null)" \
+    "work:public.natori_case_work_read_v1('$O','$C',null)" "entry:public.natori_case_entry_page_v1('$O','cases',0,null)" \
+    "context:public.natori_case_context_read_v1('$O','$C')" "tasks:public.natori_project_task_snapshot_v1('$O',array['$C']::uuid[])"; do
+    q "set role service_role; select ${pair#*:}" > "$READ_DUMP/$1/${pair%%:*}.json"
+  done
+}
+dump_reads before
 q "insert into public.natori_case_insights(project_id,source,close_reason,repeat_client) values('$OLD','pixiv',null,true)"
 ok "old completed case is anonymized" "$(call $OLD "$SCHED")" "applied"
 ok "review records survive anonymization" "$(q "select source||'/'||repeat_client from public.natori_case_insights where project_id='$OLD'")" "pixiv/true"
 LABEL=$(q "select label from public.natori_case_anonymizations where project_id='$OLD'")
+dump_reads after
 ok "label is a receipt number" "$(q "select '$LABEL' ~ '^依頼者 #[0-9A-F]{8}\$'")" "t"
 ok "project name, mail, note" "$(q "select client_name||'|'||coalesce(client_email,'null')||'|'||coalesce(note,'null') from public.natori_projects where id='$OLD'")" "$LABEL|null|null"
 ok "project title carries the label" "$(q "select title from public.natori_projects where id='$OLD'")" "アイコン / $LABEL"
 ok "free text removed from the request" "$(q "select request_data->>'message'||'|'||(request_data->>'characterFeatures')||'|'||(request_data->>'referenceNotes')||'|'||(request_data#>>'{deadline,note}') from public.natori_projects where id='$OLD'")" "（匿名化済み）|||"
 ok "choices kept in the request" "$(q "select request_data->>'requestType'||'|'||(request_data->>'publicationPolicy')||'|'||(request_data->>'publicationAllowedFrom')||'|'||(request_data#>>'{deadline,kind}') from public.natori_projects where id='$OLD'")" "icon|delayed|2026-12-01|standard"
+ok "last update time is kept" "$(q "select updated_at < now()-interval '99 days' from public.natori_projects where id='$OLD'")" "t"
+ok "ordinary edits still touch the update time" "$(q "update public.natori_projects set next_action='x' where id='$OPEN' returning updated_at > now()-interval '1 minute'")" "t"
 ok "money and dates kept" "$(q "select amount||'|'||status||'|'||(completed_at is not null) from public.natori_projects where id='$OLD'")" "4000|completed|true"
 ok "quote keeps addressee, amount, body, terms" "$(q "select client_name||'|'||amount||'|'||body_snapshot||'|'||(quote_terms->>'scope')||'|'||(accepted_at is not null) from public.natori_quotes where project_id='$OLD'")" "架空花子|4000|架空花子 様 お見積もりは 4,000 円です。|胸上|true"
 ok "quote loses address and request text" "$(q "select to_email||'|'||(request_snapshot->>'message') from public.natori_quotes where project_id='$OLD'")" "|（匿名化済み）"
