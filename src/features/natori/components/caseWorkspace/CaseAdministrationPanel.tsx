@@ -8,6 +8,7 @@ import { loadCaseItems } from "../../data/supabaseCaseItems";
 import { caseItemsTotal } from "../../lib/caseItems";
 import { CASE_CLOSE_REASONS, CASE_CLOSE_REASON_LABELS, closeReasonNote, type CaseCloseReason } from "../../lib/caseInsights";
 import { CaseInsightsCard } from "./CaseInsightsCard";
+import { CaseAnonymizeCard } from "./CaseAnonymizeCard";
 import {
   caseAdminLabels,
   caseBasicDetails,
@@ -216,13 +217,14 @@ export function CaseAdministrationPanel({
           refreshKey={refreshKey}
         />
         <section hidden={overviewPart !== "lifecycle"} className={card}>
-          <h3 className={look.sectionTitle}>見送る・しまう</h3>
+          <h3 className={look.sectionTitle}>見送る・しまう・匿名化</h3>
           <Lifecycle
             view={view}
             disabled={disabled}
             prepare={prepare}
             onDirty={setLifecycleDirty}
           />
+          <CaseAnonymizeCard projectId={projectId} refreshKey={refreshKey} onChanged={changed} />
         </section>
       </div>
       <div hidden={section !== "transaction"} className="space-y-4">

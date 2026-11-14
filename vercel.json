@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/natori-payment-expiry",
       "schedule": "20 0 * * *"
+    },
+    {
+      "path": "/api/cron/natori-anonymize",
+      "schedule": "40 0 * * *"
     }
   ]
 }

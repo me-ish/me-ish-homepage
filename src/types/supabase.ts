@@ -1000,6 +1000,12 @@ export type Database = {
           },
         ]
       }
+      natori_case_anonymizations: {
+        Row: { project_id: string; owner_id: string; label: string; kind: string; operator: Json; storage_objects: Json; storage_purged_at: string | null; anonymized_at: string }
+        Insert: { project_id: string; owner_id: string; label: string; kind: string; operator: Json; storage_objects?: Json; storage_purged_at?: string | null; anonymized_at?: string }
+        Update: { storage_purged_at?: string | null }
+        Relationships: [{ foreignKeyName: "natori_case_anonymizations_project_id_fkey"; columns: ["project_id"]; isOneToOne: true; referencedRelation: "natori_projects"; referencedColumns: ["id"] }]
+      }
       natori_case_insights: {
         Row: { project_id: string; source: string | null; close_reason: string | null; repeat_client: boolean | null; updated_at: string }
         Insert: { project_id: string; source?: string | null; close_reason?: string | null; repeat_client?: boolean | null; updated_at?: string }
@@ -1874,6 +1880,7 @@ export type Database = {
       natori_case_admin_notice_read_v1: {Args:{p_owner:string;p_project:string;p_notice:string};Returns:Json}
       natori_case_reconciliation_notice_read_v1: {Args:{p_owner:string;p_project:string;p_notice:string};Returns:Json}
       natori_case_admin_read_v1: { Args: {p_owner:string;p_project:string}; Returns: Json }
+      natori_case_anonymize_v1: { Args: { p_owner: string; p_project: string; p_input: Json }; Returns: Json }
       natori_case_admin_replay_v1: { Args: { p_owner: string; p_operation: string; p_project: string | null; p_command: string; p_revision: string | null; p_input: Json }; Returns: Json };
       natori_case_admin_lookup_v1: { Args: {p_owner:string;p_operation:string}; Returns: Json }
       natori_case_admin_command_v1: { Args: {p_owner:string;p_operation:string;p_project:string|null;p_command:string;p_revision:string|null;p_input:Json;p_operator:Json}; Returns: Json }

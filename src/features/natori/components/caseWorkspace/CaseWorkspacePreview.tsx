@@ -36,7 +36,7 @@ import {CalendarDays, ChevronRight, Clock, Globe, LayoutList, MessageCircle, Mor
 export type CasePreviewLoader = (mode: CaseWorkspaceLocation["mode"], signal: AbortSignal) => Promise<readonly CaseWorkspaceRecord[]>;
 const entries: Record<CaseEntry,string> = { cases: "案件", schedule: "予定", notifications: "トーク" };
 /** The その他 menu: each item opens on its own instead of every panel at once. */
-const OVERVIEW_PARTS: readonly (readonly [CaseOverviewPart,string,"always"|"tools"|"edit"])[] = [["request","依頼の内容","tools"],["decided","決まったこと","always"],["details","案件の情報を直す","edit"],["outside","サイトの外であったことを書く","edit"],["lifecycle","この案件を見送る・しまう","edit"]];
+const OVERVIEW_PARTS: readonly (readonly [CaseOverviewPart,string,"always"|"tools"|"edit"])[] = [["request","依頼の内容","tools"],["decided","決まったこと","always"],["details","案件の情報を直す","edit"],["outside","サイトの外であったことを書く","edit"],["lifecycle","この案件を見送る・しまう・匿名化","edit"]];
 const ENTRY_ICONS: Record<CaseEntry,LucideIcon> = { cases: LayoutList, schedule: CalendarDays, notifications: MessageCircle };
 const SECTION_ICONS = { consultation: MessageCircle, history: Clock, overview: MoreHorizontal } as const;
 // Phone tab bars: icon over a small label. On wide screens the case tabs turn into a segmented control.

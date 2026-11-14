@@ -1,4 +1,4 @@
--- 【案・未適用】完了した案件の依頼者情報を匿名化する。
+-- 完了した案件の依頼者情報を匿名化する。
 --
 -- 決まっていること（keisuke さん 2026-11-14）:
 --   ・完了（または終了）から 90 日で匿名化する
@@ -9,8 +9,8 @@
 -- この SQL がすること:
 --   1. 記録の表 natori_case_anonymizations（いつ・誰が・どの受付番号にしたか、消すファイルの一覧）
 --   2. 書き換え禁止の 3 つの仕組みに「匿名化の関数の中だけ」の例外を足す
---        通知の控え（snapshot / payload）・納品記録の写し（snapshot）・見積（宛先アドレスと依頼文の写しだけ）
---   3. 関数 natori_case_anonymize_v1（1 案件を 1 回の処理で匿名化。途中で失敗したら全部元に戻る）
+--        通知の控え（snapshot / payload）・納品記録の写し（snapshot）・見積（宛先アドレス・依頼文の写し・URL の鍵だけ）
+--   3. 関数 natori_case_anonymize_v1（1 案件を 1 回の処理で匿名化。途中で失敗したら全部元に戻る）。案件の最終更新日時は変えない
 --   4. 案件の守りの台帳を更新し、全 root の確認を通す
 -- ファイル本体（相談の添付・参考画像・納品データ）は SQL では消さない。関数が返す一覧をアプリが
 -- Storage の API で消し、終わったら storage_purged_at を入れる。
@@ -62,7 +62,7 @@ begin
  for t in select * from (values
    ('public.natori_notification_immutable_v1()','snapshot,payload'),
    ('public.natori_delivery_release_guard_v1()','snapshot'),
-   ('public.guard_natori_quote_snapshot_immutability()','to_email,request_snapshot')) v(fn,cols) loop
+   ('public.guard_natori_quote_snapshot_immutability()','to_email,request_snapshot,token_hash')) v(fn,cols) loop
   select *,pg_get_functiondef(oid) definition into p from pg_proc where oid=t.fn::regprocedure;
   if p.prosrc like '%natori_case_anonymize_v1%' then raise exception 'case_anonymize_already_patched: %',t.fn; end if;
   inject:=format($i$
@@ -75,6 +75,23 @@ $i$,string_to_array(t.cols,','));
   execute replace(p.definition,p.prosrc,body);
  end loop;
 end $patch$;
+
+-- 匿名化で案件の「最終更新」が今日に変わると、古い案件が一覧の上に来てしまう。匿名化の関数の中だけ、元の日時を残す。
+create or replace function public.touch_natori_projects_updated_at()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if exists(select 1 from natori_case_guard.frames f where f.pid=pg_backend_pid() and f.tx=txid_current()
+    and f.root='natori_case_anonymize_v1' and f.project_id=new.id) then
+    new.updated_at = old.updated_at;
+    return new;
+  end if;
+  new.updated_at = now();
+  return new;
+end;
+$$;
 
 create function public.natori_case_anonymize_v1(p_owner uuid,p_project uuid,p_input jsonb)
 returns jsonb language plpgsql volatile security definer set search_path='' as $$
@@ -117,9 +134,14 @@ begin
  begin
   -- 案件本体
   update public.natori_projects set client_name=v_label,client_email=null,title=v_title,note=null,
-   request_data=natori_case_guard.scrub_request_v1(request_data) where id=p.id;
+   request_data=natori_case_guard.scrub_request_v1(request_data),
+   -- 古い方式の見積 URL の鍵も消す（URL を知っている人が宛名や見積を開けないように）。
+   -- 古い方式の納品 URL の鍵は納品の証拠として書き換えられない。期限（30 日）切れで開けないので残す。
+   quote_accept_token_hash=null where id=p.id;
   -- 見積：宛名・件名・本文・金額・条件は残す。宛先アドレスと依頼文の写しだけ消す。
-  update public.natori_quotes set to_email='',request_snapshot=natori_case_guard.scrub_request_v1(request_snapshot) where project_id=p.id;
+  -- URL の鍵は、誰も持っていない値に置き換える（見積 URL から宛名と金額を開けないように）。
+  update public.natori_quotes set to_email='',request_snapshot=natori_case_guard.scrub_request_v1(request_snapshot),
+   token_hash='anonymized:'||encode(sha256(convert_to(id::text||':'||gen_random_uuid()::text,'UTF8')),'hex') where project_id=p.id;
   -- 送信記録：見積と支払い案内は本文を残し、宛先だけ消す。ほか（ラフ・納品）は本文も消す。
   update public.natori_order_mail_logs set to_email='',link_url=null,
    subject=case when kind in ('estimate','payment') then subject else '（匿名化済み）' end,
