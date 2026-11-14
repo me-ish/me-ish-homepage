@@ -1000,6 +1000,12 @@ export type Database = {
           },
         ]
       }
+      natori_case_insights: {
+        Row: { project_id: string; source: string | null; close_reason: string | null; repeat_client: boolean | null; updated_at: string }
+        Insert: { project_id: string; source?: string | null; close_reason?: string | null; repeat_client?: boolean | null; updated_at?: string }
+        Update: { project_id?: string; source?: string | null; close_reason?: string | null; repeat_client?: boolean | null; updated_at?: string }
+        Relationships: [{ foreignKeyName: "natori_case_insights_project_id_fkey"; columns: ["project_id"]; isOneToOne: true; referencedRelation: "natori_projects"; referencedColumns: ["id"] }]
+      }
       natori_consultation_access: {
         Row: { id: string; project_id: string; token_hash: string; expires_at: string; created_at: string; renewed_at: string | null }
         Insert: { id?: string; project_id: string; token_hash: string; expires_at: string; created_at?: string; renewed_at?: string | null }

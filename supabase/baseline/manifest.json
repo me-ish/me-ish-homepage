@@ -65,9 +65,11 @@
     "supabase/migrations/20261025000000_natori_production_mail_evidence.sql",
     "supabase/migrations/20261101120000_natori_case_completion.sql",
     "supabase/migrations/20261105120000_natori_case_items.sql",
-    "supabase/migrations/20261106100000_natori_case_items_handover.sql"
+    "supabase/migrations/20261106100000_natori_case_items_handover.sql",
+    "supabase/migrations/20261114120000_natori_case_items_contract.sql",
+    "supabase/migrations/20261114130000_natori_case_insights.sql"
   ],
-  "activeMigrationCount": 57,
+  "activeMigrationCount": 59,
   "legacyMigrationCount": 55,
   "remoteOnlyEvidenceCount": 3,
   "sourceProjectRef": "lvnfspyainrxtztjytbo",
@@ -142,7 +144,9 @@
     "20261025000000_natori_production_mail_evidence.sql",
     "20261101120000_natori_case_completion.sql",
     "20261105120000_natori_case_items.sql",
-    "20261106100000_natori_case_items_handover.sql"
+    "20261106100000_natori_case_items_handover.sql",
+    "20261114120000_natori_case_items_contract.sql",
+    "20261114130000_natori_case_insights.sql"
   ],
   "archiveVerification": {
     "status": "verified",
@@ -328,7 +332,9 @@
     "sha256:supabase/migrations/20261025000000_natori_production_mail_evidence.sql": "68cdd825fecc26905a0a270a816ba8d0b9f9d9106956dd99bb41125c452593d8",
     "sha256:supabase/migrations/20261101120000_natori_case_completion.sql": "820949bd322f09d6c88a1717a8e74aca9e67c799a34e82238a4bdf61f6e026f0",
     "sha256:supabase/migrations/20261105120000_natori_case_items.sql": "0f270a45ab5101b920b8c0c587bbda8c97a7f92806575a7a8cf9c771ccc68509",
-    "sha256:supabase/migrations/20261106100000_natori_case_items_handover.sql": "02403ffb59bccf09e9949f659f010d961d5b88028c81c18b19b01e8050b8a081"
+    "sha256:supabase/migrations/20261106100000_natori_case_items_handover.sql": "02403ffb59bccf09e9949f659f010d961d5b88028c81c18b19b01e8050b8a081",
+    "sha256:supabase/migrations/20261114120000_natori_case_items_contract.sql": "8cb1d5940af1bf37136c74050dfe5db3e7af85829726e9082d0ac4e91e038421",
+    "sha256:supabase/migrations/20261114130000_natori_case_insights.sql": "ad02a081b9766775ab16deadc568e5e829bbb836e6a1c567612fd6d1987ab368"
   },
   "operatorConfirmationRequired": [
     "target project ref is non-production and not lvnfspyainrxtztjytbo",

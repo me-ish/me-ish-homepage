@@ -315,6 +315,11 @@ natori_case_items,publication_allowed_from,string | null,YES,natori_case_items�
 natori_case_items,note,string | null,YES,natori_case_itemsのデータ管理,備考
 natori_case_items,created_at,string,NO,natori_case_itemsのデータ管理,作成日時
 natori_case_items,updated_at,string,NO,natori_case_itemsのデータ管理,更新日時
+natori_case_insights,project_id,string,NO,natori_case_insightsのデータ管理,project_id（natori_case_insights）
+natori_case_insights,source,string | null,YES,natori_case_insightsのデータ管理,source（natori_case_insights）
+natori_case_insights,close_reason,string | null,YES,natori_case_insightsのデータ管理,close_reason（natori_case_insights）
+natori_case_insights,repeat_client,boolean | null,YES,natori_case_insightsのデータ管理,repeat_client（natori_case_insights）
+natori_case_insights,updated_at,string,NO,natori_case_insightsのデータ管理,更新日時
 natori_consultation_access,id,string,NO,ナトリ: 相談ページ（トーク）のアクセス鍵,主キーID
 natori_consultation_access,project_id,string,NO,ナトリ: 相談ページ（トーク）のアクセス鍵,project_id（natori_consultation_access）
 natori_consultation_access,token_hash,string,NO,ナトリ: 相談ページ（トーク）のアクセス鍵,トークンハッシュ
