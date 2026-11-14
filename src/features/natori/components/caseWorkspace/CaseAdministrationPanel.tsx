@@ -6,6 +6,8 @@ import { useCaseAdminOperation } from "./useCaseAdminOperation";
 import { loadCaseAdministration } from "../../data/supabaseCaseAdministration";
 import { loadCaseItems } from "../../data/supabaseCaseItems";
 import { caseItemsTotal } from "../../lib/caseItems";
+import { CASE_CLOSE_REASONS, CASE_CLOSE_REASON_LABELS, closeReasonNote, type CaseCloseReason } from "../../lib/caseInsights";
+import { CaseInsightsCard } from "./CaseInsightsCard";
 import {
   caseAdminLabels,
   caseBasicDetails,
@@ -206,6 +208,13 @@ export function CaseAdministrationPanel({
             }
           />
         </section>
+        <CaseInsightsCard
+          key={`insights-${projectId}`}
+          hidden={overviewPart !== "details"}
+          projectId={projectId}
+          closed={p.status === "closed"}
+          refreshKey={refreshKey}
+        />
         <section hidden={overviewPart !== "lifecycle"} className={card}>
           <h3 className={look.sectionTitle}>見送る・しまう</h3>
           <Lifecycle
@@ -596,10 +605,11 @@ function Lifecycle({
   const p = view.project;
   const [draft, setDraft] = useCaseDraft(
     `natori-case-draft/${p.id}/close`,
-    { reason: "" },
+    { reason: "", kind: "" },
     onDirty,
   );
   const reason = draft.reason;
+  const kind = (CASE_CLOSE_REASONS as readonly string[]).includes(draft.kind) ? (draft.kind as CaseCloseReason) : null;
   return (
     <>
       {p.deletedAt ? (
@@ -636,22 +646,37 @@ function Lifecycle({
         <>
           <label className="block text-sm">
             見送りの理由
+            <select
+              className={ui.input}
+              value={kind ?? ""}
+              onChange={(e) => setDraft({ ...draft, kind: e.target.value })}
+            >
+              <option value="">選んでください</option>
+              {CASE_CLOSE_REASONS.map((value) => (
+                <option key={value} value={value}>{CASE_CLOSE_REASON_LABELS[value]}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm">
+            ひとことメモ（なくても大丈夫です）
             <input
               className={ui.input}
               value={reason}
-              onChange={(e) => setDraft({ reason: e.target.value })}
-              maxLength={2000}
+              onChange={(e) => setDraft({ ...draft, reason: e.target.value })}
+              maxLength={1900}
             />
           </label>
           <button
             className={ui.btnSecondary}
-            disabled={disabled || !reason.trim()}
-            onClick={() =>
-              prepare({ command: "close", reason: reason.trim() }, [
-                `理由：${reason}`,
+            disabled={disabled || !kind}
+            onClick={() => {
+              if (!kind) return;
+              const note = closeReasonNote(kind, reason);
+              prepare({ command: "close", reason: note, reasonKind: kind }, [
+                `理由：${note}`,
                 "この相談を見送ります。送ってある支払いリンクは、これだけでは止まりません。",
-              ])
-            }
+              ]);
+            }}
           >
             見送る（前に内容を表示）
           </button>

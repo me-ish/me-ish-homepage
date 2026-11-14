@@ -84,7 +84,9 @@ ok "unfinished notification blocks" "$(call $OLD "$SCHED")" "busy"
 q "set session_replication_role=replica; update public.natori_notification_jobs set status='sent' where id='c0000000-0000-4000-8000-000000000002'" >/dev/null
 ok "nothing changed by refused calls" "$(q "select client_email from public.natori_projects where id='$OLD'")" "hanako@example.test"
 
+q "insert into public.natori_case_insights(project_id,source,close_reason,repeat_client) values('$OLD','pixiv',null,true)"
 ok "old completed case is anonymized" "$(call $OLD "$SCHED")" "applied"
+ok "review records survive anonymization" "$(q "select source||'/'||repeat_client from public.natori_case_insights where project_id='$OLD'")" "pixiv/true"
 LABEL=$(q "select label from public.natori_case_anonymizations where project_id='$OLD'")
 ok "label is a receipt number" "$(q "select '$LABEL' ~ '^依頼者 #[0-9A-F]{8}\$'")" "t"
 ok "project name, mail, note" "$(q "select client_name||'|'||coalesce(client_email,'null')||'|'||coalesce(note,'null') from public.natori_projects where id='$OLD'")" "$LABEL|null|null"

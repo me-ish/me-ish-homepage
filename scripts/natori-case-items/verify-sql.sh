@@ -60,5 +60,15 @@ ok "rls enabled" "$(q "select relrowsecurity from pg_class where relname='natori
 ok "anon has no table privilege" "$(q "select has_table_privilege('anon','public.natori_case_items','select')")" "f"
 ok "authenticated has no table privilege" "$(q "select has_table_privilege('authenticated','public.natori_case_items','select')")" "f"
 ok "service_role can write" "$(q "select has_table_privilege('service_role','public.natori_case_items','insert')")" "t"
+# 振り返り用の記録（20261114130000_natori_case_insights.sql）。選択肢の値だけを受け付ける。
+q "insert into public.natori_case_insights(project_id,source,close_reason,repeat_client) values('$CASE','pixiv','budget',true)"
+ok "insight row stored" "$(q "select source||'/'||close_reason||'/'||repeat_client from public.natori_case_insights where project_id='$CASE'")" "pixiv/budget/true"
+rejects "unknown source" "update public.natori_case_insights set source='friend' where project_id='$CASE'"
+rejects "unknown close reason" "update public.natori_case_insights set close_reason='mood' where project_id='$CASE'"
+rejects "second insight row for one case" "insert into public.natori_case_insights(project_id) values('$CASE')"
+ok "insights rls enabled" "$(q "select relrowsecurity from pg_class where relname='natori_case_insights'")" "t"
+ok "anon cannot read insights" "$(q "select has_table_privilege('anon','public.natori_case_insights','select')")" "f"
+ok "authenticated cannot read insights" "$(q "select has_table_privilege('authenticated','public.natori_case_insights','select')")" "f"
+ok "service_role can write insights" "$(q "select has_table_privilege('service_role','public.natori_case_insights','insert,update')")" "t"
 if [ "$fails" -ne 0 ]; then echo "$fails check(s) failed"; exit 1; fi
 echo "all checks passed"
