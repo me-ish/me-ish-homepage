@@ -21,6 +21,10 @@ for f in $(python3 -c "import json,sys;print(' '.join(json.load(open(sys.argv[1]
   $P -d "$DB" -f "$ROOT/$f" >/dev/null
 done
 echo "ok   all active migrations applied"
+# 表や関数を足したあとも、案件の守りの台帳（natori_case_guard.dependencies）と食い違っていないこと。
+# 食い違うと、見積の承諾・納品の受け取り・相談ページの送信などが natori_system_contract_changed で止まる。
+ok "guard ledger has no drift" "$(q "select count(*) from natori_case_guard.dependencies d full join natori_case_guard.images() i using(kind,identity) where d.image is distinct from i.image")" "0"
+ok "every guarded root passes its contract check" "$(q "select count(*)>0 from (select natori_case_guard.check_contract(root) from (select distinct root from natori_case_guard.permissions) r) x")" "t"
 
 OWNER=22222222-2222-4222-8222-222222222222; CASE=a0000000-0000-4000-8000-000000000001
 q "insert into auth.users(id) values('$OWNER')"
