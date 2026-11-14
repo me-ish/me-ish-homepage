@@ -65,6 +65,21 @@ describe("依頼フォームの目安", () => {
     expect(estimate.unpriced).toEqual(["複雑な小物追加"]);
   });
 
+  it("納期でお急ぎを選んだとき、同じ名前のオプションを「別途」で二重に出さない（ほかの同名は残す）", () => {
+    const custom = { ...content, options: content.options.map((option) =>
+      option.id === "complex_prop" ? { ...option, name: "お急ぎ納品", price: "要相談" }
+        : option.id === "expression_variation" ? { ...option, name: "人物追加", price: "要相談" } : option) };
+    const state: PortfolioRequestFormState = {
+      ...applyPortfolioPlanPick(quote(), "bust_up"),
+      optionSelections: { ...pick("complex_prop"), ...pick("expression_variation"), ...pick("additional_character") },
+      deadlineKind: "rush_consultation",
+    };
+    const estimate = portfolioClientEstimate(state, portfolioOptionChoices(custom), custom)!;
+    expect(estimate.lines.filter((line) => line.label === "お急ぎ納品")).toHaveLength(1);
+    // 金額つきの「人物追加」と同じ名前でも、お急ぎ以外の「別途」は消さない。
+    expect(estimate.unpriced).toEqual(["人物追加"]);
+  });
+
   it("量産イラストはデザインを選んだら専用の料金で出す", () => {
     const mass = applyPortfolioPlanPick(quote(), "mass_production");
     expect(portfolioClientEstimate(mass, massProductionOptionChoices(), content)).toBeNull();
