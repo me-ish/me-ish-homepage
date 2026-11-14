@@ -6,6 +6,7 @@ import {
 import { readNatoriProjectType } from "./projectReadModel";
 import type { NatoriProject, NatoriDeliveryPlan } from "../types/projects";
 import { normalizeNatoriReferenceUrl } from "./referenceLinks";
+import { CASE_CLOSE_REASONS } from "./caseInsights";
 
 const money = z.number().int().min(0).max(2147483647),
   date = z.iso.date().nullable();
@@ -46,6 +47,8 @@ export const caseAdminAction = z.discriminatedUnion("command", [
   z.strictObject({
     command: z.literal("close"),
     reason: z.string().trim().min(1).max(2000),
+    // 選択式の理由。振り返り用の記録（natori_case_insights）に残す。
+    reasonKind: z.enum(CASE_CLOSE_REASONS).optional(),
   }),
   z.strictObject({
     command: z.literal("retry-notice"),

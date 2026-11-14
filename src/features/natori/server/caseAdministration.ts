@@ -14,6 +14,7 @@ import {
 } from "./acceptanceNotifications";
 import type { Json } from "@/types/supabase";
 import { normalizeNatoriReferenceUrl } from "../lib/referenceLinks";
+import { updateNatoriCaseInsights } from "./caseInsightsService";
 
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
@@ -173,5 +174,13 @@ export async function commandCaseAdministration(raw: unknown) {
   // A replay only returns the saved receipt. It never redispatches an external request.
   if (result.result === "queued" && !result.replayed && result.notificationId)
     await dispatchAcceptanceNotification(result.notificationId, true);
+  // 見送りの理由（選択式）は振り返り用の記録に残す。見送り自体は済んでいるので、ここで失敗しても結果は変えない。
+  if (action.command === "close" && action.reasonKind && result.result === "applied" && input.projectId) {
+    try {
+      await updateNatoriCaseInsights(input.projectId, { closeReason: action.reasonKind }, ownerId);
+    } catch {
+      console.error("[natori-case-insights] close reason not recorded");
+    }
+  }
   return data;
 }

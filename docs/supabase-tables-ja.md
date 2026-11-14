@@ -1,7 +1,7 @@
 # Supabaseテーブル説明（public, 自動生成）
 
 - 生成元: `src/types/supabase.ts`
-- 生成日時: `2026-11-05T13:30:53.733Z`
+- 生成日時: `2026-11-14T13:07:38.229Z`
 - 型定義に載っているテーブルだけを並べています。DBにある全テーブルと最新の定義は `supabase/migrations/` を参照してください。
 - 作り直し: `npm run docs:supabase`
 
@@ -37,6 +37,7 @@
 | `natori_portfolio_assets` | ナトリ: ポートフォリオのアップロード素材 | 7 |
 | `natori_pricing_configs` | ナトリ: 料金表の設定 | 9 |
 | `natori_case_items` | natori_case_itemsのデータ管理 | 14 |
+| `natori_case_insights` | natori_case_insightsのデータ管理 | 5 |
 | `natori_consultation_access` | ナトリ: 相談ページ（トーク）のアクセス鍵 | 6 |
 | `natori_consultation_files` | ナトリ: トークの添付ファイル | 8 |
 | `natori_consultation_messages` | ナトリ: トークのメッセージ | 10 |
@@ -566,6 +567,18 @@
 | `publication_allowed_from` | `string | null` | YES | publication_allowed_from（natori_case_items） |
 | `note` | `string | null` | YES | 備考 |
 | `created_at` | `string` | NO | 作成日時 |
+| `updated_at` | `string` | NO | 更新日時 |
+
+## natori_case_insights
+
+- 役割: natori_case_insightsのデータ管理
+
+| カラム | TypeScript型 | NULL可 | 作用 |
+|---|---|---|---|
+| `project_id` | `string` | NO | project_id（natori_case_insights） |
+| `source` | `string | null` | YES | source（natori_case_insights） |
+| `close_reason` | `string | null` | YES | close_reason（natori_case_insights） |
+| `repeat_client` | `boolean | null` | YES | repeat_client（natori_case_insights） |
 | `updated_at` | `string` | NO | 更新日時 |
 
 ## natori_consultation_access

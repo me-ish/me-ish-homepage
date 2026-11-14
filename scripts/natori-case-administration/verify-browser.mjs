@@ -307,11 +307,13 @@ export async function checkAdministrationBrowser({
       "Admin parallel registration and changed-content replay preserve one external case with unknown type/amount/deadline",
     );
     await open(externalId);
+    await page.getByLabel("見送りの理由", { exact: true }).selectOption("other");
     await page
-      .getByLabel("見送りの理由", { exact: true })
+      .getByLabel("ひとことメモ（なくても大丈夫です）", { exact: true })
       .fill("担当が明示した見送り理由");
     await page.reload();
-    await expect(page.getByLabel("見送りの理由", { exact: true })).toHaveValue(
+    await expect(page.getByLabel("見送りの理由", { exact: true })).toHaveValue("other");
+    await expect(page.getByLabel("ひとことメモ（なくても大丈夫です）", { exact: true })).toHaveValue(
       "担当が明示した見送り理由",
     );
     await page.getByRole("button", { name: "見送りの確認へ" }).click();
