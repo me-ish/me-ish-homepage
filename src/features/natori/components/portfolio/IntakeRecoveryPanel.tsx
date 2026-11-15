@@ -57,7 +57,7 @@ export default function IntakeRecoveryPanel({ intake }: { intake: ReturnType<typ
   if (!intake.operation) return <>{intake.message && <p role="status" className="mt-3 whitespace-pre-wrap text-sm">{intake.message}</p>}{originals}</>;
   return <><section className="mt-4 space-y-3 rounded-xl border-2 p-4 text-sm" style={{ borderColor: c.formBorder }} aria-label="前回の受付結果の確認">
     <p role="status" className="font-bold">{intake.message}</p>
-    <p>受付済みの場合は同じ受付結果を表示します。未保存を確認できるまで、入力内容を変えて応募し直す必要はありません。</p>
+    <p>受付済みの場合は同じ受付結果を表示します。送れていないと分かるまでは、内容を変えて送り直す必要はありません。</p>
     {intake.operation.manifest.length > 0 && <div>
       <label className="block font-bold">再試行用の画像を選択
         <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple disabled={intake.busy} className="mt-2 block w-full"
@@ -70,7 +70,7 @@ export default function IntakeRecoveryPanel({ intake }: { intake: ReturnType<typ
     <div className="flex flex-wrap gap-3">
       <button type="button" disabled={intake.busy} onClick={() => void intake.check()} className="pf-cute-focus min-h-11 rounded-full border px-4">受付結果を確認する</button>
       <button type="button" disabled={intake.busy} onClick={() => void intake.retry()} className="pf-cute-focus min-h-11 rounded-full border px-4">同じ内容で再試行する</button>
-      <button type="button" disabled={intake.busy} onClick={() => void intake.settle()} className="pf-cute-focus min-h-11 underline">未保存を確認して編集に戻る</button>
+      <button type="button" disabled={intake.busy} onClick={() => void intake.settle()} className="pf-cute-focus min-h-11 underline">送れていないか確かめて、入力に戻る</button>
     </div>
   </section>{originals}</>;
 }

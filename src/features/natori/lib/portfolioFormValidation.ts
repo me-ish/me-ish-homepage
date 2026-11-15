@@ -13,6 +13,7 @@ import { natoriRequestSubmissionV1Schema, type NatoriRequestFieldError } from ".
 import { portfolioValidationMessage } from "./portfolioFormFeedback";
 import { normalizeNatoriReferenceUrl } from "./referenceLinks";
 import { buildNatoriInquiryRequestView, type NatoriInquiryRequestSection } from "./inquiryRequestView";
+import { relabelPortfolioConfirmation, type PortfolioPricedOption } from "./portfolioFormLabels";
 import type { NatoriRequestDataV1, NatoriRequestSubmissionV1 } from "../types/request";
 
 export type PortfolioFormValidation =
@@ -129,11 +130,18 @@ export function readFrozenPortfolioSubmission(
 }
 
 /** The admin reader supplies the labels and meanings; empty optional answers are omitted. */
-export function portfolioConfirmationSections(request: NatoriRequestDataV1): NatoriInquiryRequestSection[] {
+/**
+ * 依頼者の確認画面。options（掲載設定の料金）を渡すと、項目名と値を入力画面の言葉にそろえる。
+ * 渡さないときは管理画面と同じ言葉のまま。
+ */
+export function portfolioConfirmationSections(
+  request: NatoriRequestDataV1,
+  options?: readonly PortfolioPricedOption[],
+): NatoriInquiryRequestSection[] {
   const view = buildNatoriInquiryRequestView(request);
   if (view.kind !== "structured") return [];
   const detailKeys = ["characterFeatures", "expressionMood", "composition", "colorDirection", "referenceNotes", "message"] as const;
-  return ["request", "details", "usage", "conditions"].flatMap((key) => {
+  const sections = ["request", "details", "usage", "conditions"].flatMap((key) => {
     const section = view.sections.find((item) => item.key === key);
     if (!section) return [];
     const fields = section.fields.filter((field) => {
@@ -148,4 +156,5 @@ export function portfolioConfirmationSections(request: NatoriRequestDataV1): Nat
     });
     return fields.length > 0 ? [{ ...section, fields }] : [];
   });
+  return options ? relabelPortfolioConfirmation(sections, request, options) : sections;
 }

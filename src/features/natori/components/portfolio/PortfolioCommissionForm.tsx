@@ -3,7 +3,7 @@
 // features/natori/components/portfolio/PortfolioCommissionForm.tsx
 // ご依頼フォーム。送信すると /api/natori/portfolio/contact 経由でナトリ宛に
 // メールが飛び、案件（依頼受付）として自動起票される。
-// 料金カードの「このプランで相談」からの遷移でプランが自動選択される。
+// 料金カードの「このプランで見積もり」からの遷移でプランが自動選択される。
 import { NATORI_INTAKE_COPY, NATORI_INTAKE_NEXT_STEPS } from "@/features/natori/constants/portfolioContactCopy";
 import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -326,7 +326,7 @@ function PortfolioCommissionFormSession({
               <button type="button" disabled={startingNewRequest || !commissionOpen} onClick={() => void startNewRequest()} className="pf-cute-focus min-h-11 rounded-full border-2 px-4 font-bold">新しい依頼を始める</button>
               {newRequestError && <p role="alert">{newRequestError}</p>}
               <p>迷惑メールフォルダもご確認ください。2〜3日を過ぎても連絡がない場合は、公開連絡先へお問い合わせください。</p>
-              <p>保存済みの依頼として確認できます。新しく応募し直す必要はありません。</p>
+              <p>保存済みの依頼として確認できます。もう一度送る必要はありません。</p>
               {content.socialLinks.find(link => link.label === "X") && <a className="pf-cute-focus min-h-11 inline-flex items-center underline" href={content.socialLinks.find(link => link.label === "X")?.href} target="_blank" rel="noopener noreferrer">公開連絡先（X）</a>}
             </div>}
           </div>

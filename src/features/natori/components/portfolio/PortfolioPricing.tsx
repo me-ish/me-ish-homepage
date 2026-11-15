@@ -115,7 +115,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                   style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
                   aria-label={`${plan.name}を選ぶ`}
                 >
-                  このプランで相談
+                  このプランで見積もり
                 </a>
               </div>
               </div>
@@ -178,7 +178,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                   className="pf-btn pf-btn-sm pf-cute-focus inline-flex min-h-11 items-center px-4 text-sm font-bold"
                   style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
                 >
-                  このプランで相談
+                  このプランで見積もり
                 </a>
               </div>
             </li>
@@ -255,7 +255,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
             className="pf-btn pf-btn-sm pf-cute-focus mt-3 flex min-h-11 shrink-0 items-center justify-center px-5 py-2.5 text-center text-sm font-bold sm:mt-0"
             style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
           >
-            このプランで相談
+            このプランで見積もり
           </a>
         </div>
       ) : (

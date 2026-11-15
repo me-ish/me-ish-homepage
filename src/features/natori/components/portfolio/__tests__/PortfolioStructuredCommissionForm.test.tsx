@@ -644,7 +644,7 @@ describe("server error の表示", () => {
   it("通信失敗では受付を未保存扱いせず成功表示も出さない", async () => {
     fetchMock.mockRejectedValue(new Error("network down"));
     renderForm(); await fillMinimum(); submit();
-    await screen.findByRole("button", { name: "未保存を確認して編集に戻る" });
+    await screen.findByRole("button", { name: "送れていないか確かめて、入力に戻る" });
     await waitForIntakePostSettled();
     expect(screen.queryByText("送信ありがとうございます!")).toBeNull();
     expect(trackNatoriPageEvent.mock.calls.some(([event]) => event === "portfolio_form_submit")).toBe(false);
@@ -672,7 +672,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
     const confirmation = screen.getByRole("region", { name: "送信前の確認" });
     expect(within(confirmation).getByText("商用利用する", { exact: true })).toBeTruthy();
-    expect(within(confirmation).getByText("完全非公開", { exact: true })).toBeTruthy();
+    expect(within(confirmation).getByText("完全非公開（+2,000円）", { exact: true })).toBeTruthy();
   });
 
   it("相談と見積もりで残りの段階を示し、選択欄をコンパクトに表示する", async () => {

@@ -371,7 +371,7 @@ export function portfolioPlanSelectDetail(plan: PortfolioPlan): PortfolioPlanSel
   return { id: plan.id, label: planChoiceLabel(plan) };
 }
 
-/** 「このプランで相談」→ フォームのプラン自動選択に使うイベント名 */
+/** 「このプランで見積もり」→ フォームのプラン自動選択に使うイベント名 */
 export const PLAN_SELECT_EVENT = "natori-portfolio-select-plan";
 
 /* ------------------------------------------------------------------

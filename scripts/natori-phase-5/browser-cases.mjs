@@ -142,7 +142,7 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
 
   test("Phase 5 pricing origin re-presents the selected drawing range", async ({ page }) => {
     await page.goto(`${DEMO_PATH}?structured=1`);
-    const plan = page.locator("#pricing a").filter({ hasText: "このプランで相談" }).first();
+    const plan = page.locator("#pricing a").filter({ hasText: "このプランで見積もり" }).first();
     const href = await plan.getAttribute("href");
     if (!href) throw new Error("pricing plan has no link");
     const url = new URL(href, page.url());
@@ -150,7 +150,7 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
     url.searchParams.set("structured", "1");
     await page.goto(url.toString());
     if (!selected || !["bust_up", "waist_up", "full_body", "sd"].includes(selected)) throw new Error("unexpected pricing plan fixture");
-    await expect(page.getByText(/料金から選んだ内容：/)).toBeVisible();
+    await expect(page.getByText(/料金表で選んだ「/)).toBeVisible();
     // 料金表で選んだ範囲のカードが選ばれている（種類のプルダウンは無い）。
     await expect(page.locator(`#pf-plan-picker input[name="pf-plan"][value="${selected}"]`)).toBeChecked();
     await expect(page.getByLabel("ご依頼の種類", { exact: true })).toHaveCount(0);

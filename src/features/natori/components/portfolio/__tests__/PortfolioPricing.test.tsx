@@ -74,7 +74,7 @@ describe("PortfolioPricing", () => {
     render(<PortfolioPricing content={defaultPortfolioContent} />);
 
     const firstPlan = defaultPortfolioContent.plans[0];
-    const link = screen.getAllByRole("link", { name: "このプランで相談" })[0];
+    const link = screen.getAllByRole("link", { name: "このプランで見積もり" })[0];
     expect(link.getAttribute("href")).toBe(`/natori/portfolio/contact?mode=quote&plan=${firstPlan.id}`);
     fireEvent.click(link);
 
@@ -167,7 +167,7 @@ describe("PortfolioPricing", () => {
   it("dispatches the mass-production request value from its CTA", () => {
     render(<PortfolioPricing content={defaultPortfolioContent} />);
 
-    const massCta = screen.getAllByRole("link", { name: "このプランで相談" }).at(-1);
+    const massCta = screen.getAllByRole("link", { name: "このプランで見積もり" }).at(-1);
     expect(massCta).toBeTruthy();
     expect(massCta?.getAttribute("href")).toBe(`/natori/portfolio/contact?mode=quote&plan=${NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE}`);
     fireEvent.click(massCta as HTMLAnchorElement);
@@ -203,7 +203,7 @@ describe("PortfolioPricing", () => {
     );
 
     expect(screen.getByText("現在受付停止中")).toBeTruthy();
-    expect(screen.getAllByRole("link", { name: "このプランで相談" })).toHaveLength(
+    expect(screen.getAllByRole("link", { name: "このプランで見積もり" })).toHaveLength(
       defaultPortfolioContent.plans.length
     );
   });
