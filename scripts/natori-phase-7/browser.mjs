@@ -227,7 +227,7 @@ async function main() {
         await page.locator('#pf-message').fill('Synthetic original request\nLine 2: preserve character\nLine 3: preserve expression\nLine 4: preserve usage\nLine 5: preserve publication\nImportant final condition: no AI training');
         await page.getByRole('button', { name: '条件・連絡先へ', exact: true }).click();
         await page.locator('#pf-name').fill('Synthetic Phase 7 client'); await page.locator('#pf-email').fill('client@phase7.invalid');
-        await (await revealField(page, '#pf-commercial')).selectOption('yes'); await page.locator('#pf-publication').selectOption('delayed'); await page.locator('#pf-publication-allowed-from').fill('2026-11-15');
+        await (await revealField(page, '#pf-commercial')).locator('input[value="yes"]').check(); await page.locator('#pf-publication input[value="delayed"]').check(); await page.locator('#pf-publication-allowed-from').fill('2026-11-15');
         await page.locator('#pf-budget-kind').getByRole('radio', { name: '金額を入力', exact: true }).check(); await page.locator('#pf-budget-fixed').fill('12000');
         await page.locator('#pf-deadline-kind').getByRole('radio', { name: '希望の日付がある', exact: true }).check(); await page.locator('#pf-deadline-date').fill('2026-11-15');
         await page.getByRole('button', { name: '内容を確認する', exact: true }).click(); const confirmation = page.getByRole('region', { name: '送信前の確認' });
@@ -236,7 +236,7 @@ async function main() {
         const edits = confirmation.getByRole('button', { name: /を修正する$/ }); check(await edits.count() >= 5, 'NAMED_EDIT_TARGETS');
         for (const edit of await edits.all()) { const box = await edit.boundingBox(); check(box && box.width >= 44 && box.height >= 44, 'EDIT_TARGET_SIZE'); }
         await confirmation.getByRole('button', { name: '用途・条件を修正する', exact: true }).click();
-        await expect(page.locator('#pf-commercial')).toHaveValue('yes'); await expect(page.locator('#pf-publication-allowed-from')).toHaveValue('2026-11-15');
+        await expect(page.locator('#pf-commercial input[value="yes"]')).toBeChecked(); await expect(page.locator('#pf-publication-allowed-from')).toHaveValue('2026-11-15');
         await screenshot(page, ids[2], width, 'edit-preserved'); await page.getByRole('button', { name: '内容を確認する', exact: true }).click();
         await expect(confirmation).toContainText('Important final condition: no AI training');
       });

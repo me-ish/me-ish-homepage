@@ -68,7 +68,7 @@ async function main(){
   const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAYAAACddGYaAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWN44zHzPwwzIHMA2KQQyVXgEtIAAAAASUVORK5CYII=','base64');await page.getByLabel('キャラクター資料の画像を選択',{exact:true}).setInputFiles({name:'costume.png',mimeType:'image/png',buffer:png});await page.getByLabel(/ご相談・ご依頼の内容/).fill('Synthetic complete quote request');
  }
  async function assertActualEnvelope(page){
-  if(await page.getByRole('checkbox',{name:'オリジナルキャラクター',exact:true}).count()!==0)throw new Error('subject checkbox should be removed from the form');await page.getByLabel(/作品の公開可否/).selectOption('delayed');await page.getByLabel('公開可能日必須',{exact:true}).fill('2026-11-15');
+  if(await page.getByRole('checkbox',{name:'オリジナルキャラクター',exact:true}).count()!==0)throw new Error('subject checkbox should be removed from the form');await page.locator('#pf-publication input[value="delayed"]').check();await page.getByLabel('公開可能日必須',{exact:true}).fill('2026-11-15');
   const budgetSummary=page.locator('summary').filter({hasText:/^予算・納期/});if(await budgetSummary.count()>0){const budget=budgetSummary.first().locator('..');if(!await budget.evaluate(el=>el.open))await budgetSummary.first().click();}
   await page.getByRole('group',{name:'ご予算',exact:true}).getByRole('radio',{name:'10,000〜20,000円',exact:true}).check();await page.getByRole('group',{name:'希望納期',exact:true}).getByRole('radio',{name:'希望の日付がある',exact:true}).check();await page.getByLabel(/希望日/).fill('2026-12-01');await page.getByLabel('納期の補足（任意）',{exact:true}).fill('イベント前まで');
 

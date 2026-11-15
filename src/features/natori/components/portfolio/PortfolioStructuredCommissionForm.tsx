@@ -1057,55 +1057,36 @@ export default function PortfolioStructuredCommissionForm({
             {!isQuote ? usageBlock : null}
             <div className="grid gap-4">
               {!massProductionSelected ? (
-              <div>
-                <label htmlFor="pf-commercial" className={labelClass}>
-                  商用利用
-                </label>
-                <select
-                  id="pf-commercial"
-                  {...errorAttributes("pf-commercial", "pf-commercial-help")}
-                  value={state.commercialUse}
-                  onChange={(event) =>
-                    update({ commercialUse: event.target.value as typeof state.commercialUse })
-                  }
-                  className={inputClass}
-                >
+              <fieldset id="pf-commercial" tabIndex={-1} {...errorAttributes("pf-commercial", "pf-commercial-help")}>
+                <legend className={labelClass}>商用利用</legend>
+                <div className="flex flex-wrap gap-2">
                   {(Object.keys(NATORI_COMMERCIAL_USE_LABELS_V1) as Array<
                     keyof typeof NATORI_COMMERCIAL_USE_LABELS_V1
                   >).map((value) => (
-                    <option key={value} value={value}>
+                    <ChoiceChip key={value} type="radio" name="pf-commercial" value={value}
+                      checked={state.commercialUse === value} onChange={() => update({ commercialUse: value })}>
                       {NATORI_COMMERCIAL_USE_LABELS_V1[value]}
-                    </option>
+                      {value === "yes" && commercialPrice ? `（${commercialPrice}）` : ""}
+                    </ChoiceChip>
                   ))}
-                </select>
+                </div>
                 <p id="pf-commercial-help" className="mt-2 text-sm leading-relaxed" style={{ color: c.textSoft }}>
-                  収益化した配信・動画、グッズ、広告で使う場合{commercialPrice ? `は ${commercialPrice}です。` : "です。"}
+                  収益化した配信・動画、グッズ、広告で使う場合です。
                 </p>
-              </div>
+              </fieldset>
               ) : null}
-              <div>
-                <label htmlFor="pf-publication" className={labelClass}>
-                  ナトリによる実績掲載（作品の公開可否）
-                </label>
-                <select
-                  id="pf-publication"
-                  {...errorAttributes("pf-publication", "pf-publication-help")}
-                  value={state.publicationPolicy}
-                  onChange={(event) =>
-                    update({
-                      publicationPolicy: event.target.value as typeof state.publicationPolicy,
-                    })
-                  }
-                  className={inputClass}
-                >
+              <fieldset id="pf-publication" tabIndex={-1} {...errorAttributes("pf-publication", "pf-publication-help")}>
+                <legend className={labelClass}>ナトリによる実績掲載（作品の公開可否）</legend>
+                <div className="flex flex-wrap gap-2">
                   {(Object.keys(NATORI_PUBLICATION_POLICY_LABELS_V1) as Array<
                     keyof typeof NATORI_PUBLICATION_POLICY_LABELS_V1
                   >).map((value) => (
-                    <option key={value} value={value}>
+                    <ChoiceChip key={value} type="radio" name="pf-publication" value={value}
+                      checked={state.publicationPolicy === value} onChange={() => update({ publicationPolicy: value })}>
                       {portfolioPublicationLabel(value, content.options)}
-                    </option>
+                    </ChoiceChip>
                   ))}
-                </select>
+                </div>
                 <p id="pf-publication-help" className="mt-2 text-sm leading-relaxed" style={{ color: c.textSoft }}>
                   {state.publicationPolicy === "work_private"
                     ? "完成イラストをポートフォリオ・SNS・サンプル画像等へ掲載しません。"
@@ -1124,7 +1105,7 @@ export default function PortfolioStructuredCommissionForm({
                     <p className="mt-1">完全非公開：制作内容・完成イラストを含め一切公開せず、ご依頼内容も非公開で対応します。</p>
                   </details>
                 ) : null}
-              </div>
+              </fieldset>
             </div>
 
             {state.publicationPolicy === "delayed" ? (

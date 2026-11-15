@@ -13,6 +13,7 @@ export default function ChoiceChip({
   onChange,
   children,
   id,
+  value,
   disabled,
 }: {
   type: "radio" | "checkbox";
@@ -21,6 +22,8 @@ export default function ChoiceChip({
   onChange: () => void;
   children: ReactNode;
   id?: string;
+  /** radio の値。テストや自動操作で選択肢を見分けるのに使う。 */
+  value?: string;
   /** 選べないとき（例：受付停止中）。灰色にして押せないようにする。 */
   disabled?: boolean;
 }) {
@@ -38,6 +41,7 @@ export default function ChoiceChip({
         id={id}
         type={type}
         name={name}
+        value={value}
         checked={checked}
         onChange={onChange}
         disabled={disabled}

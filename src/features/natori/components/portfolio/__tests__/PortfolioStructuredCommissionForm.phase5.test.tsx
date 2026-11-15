@@ -67,6 +67,12 @@ async function openPhase5Details(title: string): Promise<void> {
   if (!element.open) await userEvent.click(element.querySelector("summary")!);
 }
 
+function phase5Chip(groupId: string, value: string): void {
+  const input = document.querySelector<HTMLInputElement>(`#${groupId} input[value="${value}"]`);
+  if (!input) throw new Error(`chip not found: ${groupId}=${value}`);
+  fireEvent.click(input);
+}
+
 function phase5Change(label: string | RegExp, value: string): void {
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 }
@@ -146,8 +152,8 @@ describe("Phase 5 confirmation and actual submitted values", () => {
     await userEvent.click(screen.getByLabelText("その他"));
     phase5Change(/使用目的（その他の内容）/, " 特番 ");
     if (mode === "quote") await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
-    phase5Change("商用利用", "yes");
-    phase5Change(/作品の公開可否/, "delayed");
+    phase5Chip("pf-commercial", "yes");
+    phase5Chip("pf-publication", "delayed");
     phase5Change("公開可能日必須", "2026-11-15");
     if (mode !== "quote") await openPhase5Details("予算・納期");
     await userEvent.click(within(screen.getByRole("group", { name: "ご予算" })).getByRole("radio", { name: "10,000〜20,000円" }));
@@ -219,12 +225,12 @@ describe("Phase 5 confirmation and actual submitted values", () => {
     await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
     phase5Change(/お名前/, "テスト");
     phase5Change(/メールアドレス/, "client@example.com");
-    phase5Change("商用利用", "yes");
+    phase5Chip("pf-commercial", "yes");
     await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
     await userEvent.click(within(await screen.findByRole("region", { name: "送信前の確認" })).getByRole("button", { name: "用途・条件を修正する" }));
     await waitFor(() => expect(document.activeElement?.textContent).toBe("ご希望の条件と連絡先"));
-    expect((screen.getByLabelText("商用利用") as HTMLSelectElement).value).toBe("yes");
-    phase5Change("商用利用", "none");
+    expect(document.querySelector<HTMLInputElement>('#pf-commercial input[value="yes"]')?.checked).toBe(true);
+    phase5Chip("pf-commercial", "none");
     await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
     const confirmation = await screen.findByRole("region", { name: "送信前の確認" });
     expect(confirmation.textContent).toContain("商用利用しない");

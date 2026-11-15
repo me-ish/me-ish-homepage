@@ -30,8 +30,8 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
       if (width === 390) await prepareActualEnvelope(page);
       await page.getByRole("button", { name: "条件・連絡先へ" }).click();
       await fillContact(page, `phase5-${width}`);
-      await page.getByLabel("商用利用").selectOption("yes");
-      await page.getByLabel(/作品の公開可否/).selectOption("fully_private");
+      await page.locator('#pf-commercial input[value="yes"]').check();
+      await page.locator('#pf-publication input[value="fully_private"]').check();
       await page.getByRole("button", { name: "内容を確認する" }).click();
       const confirmation = page.getByRole("region", { name: "送信前の確認" });
       await expect(confirmation).toContainText("表情差分 ×2");
@@ -45,7 +45,7 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
       await edit.focus();
       await page.keyboard.press("Enter");
       await expect(page.getByRole("heading", { name: "ご希望の条件と連絡先" })).toBeFocused();
-      await expect(page.getByLabel("商用利用")).toHaveValue("yes");
+      await expect(page.locator('#pf-commercial input[value="yes"]')).toBeChecked();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.screenshot({ path: test.info().outputPath(`phase5-${width}.png`), fullPage: true });
       if (width === 390) await assertActualEnvelope(page);
@@ -94,8 +94,8 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
     await page.getByRole("button", { name: "条件・連絡先へ" }).click();
     checkpoint('EDIT_CONDITIONS');
     await fillContact(page, "phase5-edit");
-    await page.getByLabel("商用利用", { exact: true }).selectOption("yes");
-    await page.getByLabel(/作品の公開可否/).selectOption("delayed");
+    await page.locator('#pf-commercial input[value="yes"]').check();
+    await page.locator('#pf-publication input[value="delayed"]').check();
     await page.getByLabel(/公開可能日/).fill("2026-11-15");
     await page.getByRole("button", { name: "内容を確認する" }).click();
     const confirmation = page.getByRole("region", { name: "送信前の確認" });
