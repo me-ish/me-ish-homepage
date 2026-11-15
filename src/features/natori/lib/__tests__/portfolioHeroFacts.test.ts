@@ -13,7 +13,7 @@ const plan = (price: string, name = "プラン"): PortfolioPlan => ({ id: null, 
 describe("portfolioHeroFacts", () => {
   it("restates the price list, reply copy and delivery lead", () => {
     expect(portfolioHeroFacts(defaultPortfolioContent)).toEqual([
-      { label: "SDキャラ", value: "3,000円～" },
+      { label: "全身", value: "10,000円～" },
       { label: "お返事", value: "2〜3日以内" },
       { label: "納期", value: "約1か月" },
     ]);
@@ -27,10 +27,16 @@ describe("portfolioHeroFacts", () => {
 });
 
 describe("portfolioStartingPlan", () => {
+  it("shows the 全身 plan when there is one", () => {
+    expect(
+      portfolioStartingPlan([plan("4,000円〜", "胸上"), plan("10,000円", "全身"), plan("応相談", "全身（背景つき）")]),
+    ).toEqual({ label: "全身", value: "10,000円～" });
+  });
+
   it("pairs the cheapest single amount with its plan name and ignores unreadable prices", () => {
     expect(
       portfolioStartingPlan([
-        plan("10,000円", "全身"),
+        plan("10,000円", "ひざ上"),
         plan("4,000円〜", "胸上"),
         plan("応相談", "SD"),
         plan("3,000〜5,000円", "おまかせ"),

@@ -154,7 +154,7 @@ export default function QuoteAcceptCard({
         <div className={row}>
           <dt className={ui.label}>お支払い方法</dt>
           <dd className={value}>
-            {terms ? "クレジットカード決済" : "Stripeによるカード決済"}
+            {terms ? "クレジットカード等（Apple Pay・Google Pay などを含みます）" : "Stripeによるカード決済"}
           </dd>
         </div>
         <div className={row}>
