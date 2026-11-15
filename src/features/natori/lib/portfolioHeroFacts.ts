@@ -18,23 +18,29 @@ function parsePlanPrice(price: string): number | null {
   return Number.isSafeInteger(amount) && amount > 0 ? amount : null;
 }
 
+/** 1画面目の料金は、依頼の多い「全身」を基準に見せる。 */
+const HERO_PLAN_KEYWORD = "全身";
+
 /**
- * 通常イラストでいちばん安いプランを「SDキャラ」「3,000円～」の形で返す。
- * 量産イラストのほうが安いため、「料金〇円〜」ではなくプラン名と組にする。
+ * 1画面目に出すプランを「全身」「10,000円～」の形で返す。
+ * 「全身」のプランがあればそれを、無ければいちばん安いプランを出す。
  */
 export function portfolioStartingPlan(
   plans: PortfolioContent["plans"],
 ): PortfolioHeroFact | null {
   let cheapest: { name: string; amount: number } | null = null;
+  let preferred: { name: string; amount: number } | null = null;
   for (const plan of plans) {
     const amount = parsePlanPrice(plan.price);
-    if (amount !== null && (cheapest === null || amount < cheapest.amount)) {
-      cheapest = { name: plan.name.trim(), amount };
-    }
+    if (amount === null) continue;
+    const name = plan.name.trim();
+    if (preferred === null && name.includes(HERO_PLAN_KEYWORD)) preferred = { name, amount };
+    if (cheapest === null || amount < cheapest.amount) cheapest = { name, amount };
   }
-  if (cheapest === null) return null;
+  const shown = preferred ?? cheapest;
+  if (shown === null) return null;
   // 料金表（PortfolioPricing）と同じ「～」を付ける。
-  return { label: cheapest.name || "料金", value: `${cheapest.amount.toLocaleString("ja-JP")}円～` };
+  return { label: shown.name || "料金", value: `${shown.amount.toLocaleString("ja-JP")}円～` };
 }
 
 /** 受付文面（「2〜3日以内にお返事します」）に書かれた返信の目安。 */

@@ -14,9 +14,6 @@ const legalLinks = [
   { href: "/natori/legal/terms", label: "ご依頼規約" },
 ] as const;
 
-/** 目次を最初から開いておく条の数の上限。 */
-const TOC_OPEN_LIMIT = 12;
-
 type SectionHeading = { id: string | undefined; badge: string | null; label: string };
 
 /** 「1. 取得する情報」「第1条　適用」を、番号と見出しに分ける。番号が無ければそのまま出す。 */
@@ -140,8 +137,8 @@ export default function NatoriLegalPage({
 
         {contents.length > 0 ? (
           <nav className="pf-sketch-soft mb-7 px-4 py-2 md:px-5" aria-label="目次">
-            {/* 条の数が多いページ（ご依頼規約）は、本文が遠くならないよう畳んでおく。 */}
-            <details open={contents.length <= TOC_OPEN_LIMIT}>
+            {/* 本文が遠くならないよう、目次は畳んでおく。 */}
+            <details>
             <summary className="cursor-pointer py-3 text-sm font-black">目次</summary>
             <ol className="mb-2 mt-1 flex flex-wrap gap-2">
               {contents.map((entry) => (

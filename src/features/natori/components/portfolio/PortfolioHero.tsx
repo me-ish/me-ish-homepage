@@ -1,6 +1,6 @@
 // features/natori/components/portfolio/PortfolioHero.tsx
 // 1画面目。作品を縦長の額で大きく見せ、呼び名・紹介文・料金などの目安・相談ボタンを添える。
-// スマホは「作品 → 呼び名 → 目安と相談ボタン → 紹介文」の順にして、相談ボタンを1画面目に入れる。
+// スマホは「作品 → 目安と相談ボタン → 紹介文」の順にして、相談ボタンを1画面目に入れる（呼び名はヘッダーにある）。
 import { natoriSoftActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import { portfolioHeroFacts } from "@/features/natori/lib/portfolioHeroFacts";
@@ -60,7 +60,8 @@ export default function PortfolioHero({
             hasArt ? "md:max-w-xl" : "md:col-span-2 md:text-center"
           }`}
         >
-          <div className="order-2 min-w-0 px-5 md:order-none md:px-0">
+          {/* スマホでは呼び名がヘッダーに出ているので、見出しは読み上げ用にだけ残す。 */}
+          <div className="sr-only order-2 min-w-0 md:not-sr-only md:order-none">
             {/* 英字の肩書きは小さく、字間を広げない（看板の小さな札）。 */}
             <p
               className="mb-3 hidden text-xs font-medium md:block"
@@ -70,7 +71,7 @@ export default function PortfolioHero({
             </p>
             <h1
               aria-label={`${content.heroTitleAccent}${content.heroTitleTail}`}
-              className="text-[32px] font-black leading-[1.18] tracking-tight md:mb-5 md:text-5xl lg:text-6xl"
+              className="sr-only text-[32px] font-black leading-[1.18] tracking-tight md:not-sr-only md:mb-5 md:text-5xl lg:text-6xl"
             >
               <span aria-hidden="true" style={{ color: c.text }}>
                 {content.heroTitleAccent}
