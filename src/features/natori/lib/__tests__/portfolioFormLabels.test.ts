@@ -39,4 +39,19 @@ describe("依頼フォームの言葉", () => {
     expect(admin.find((field) => field.key === "publicationPolicy")?.label).toBe("公開可否");
     expect(admin.find((field) => field.key === "budget")?.value).toBe("0円〜5,000円");
   });
+
+  it("一定期間後の公開は、日付を入れても確認画面で無料と分かる", () => {
+    const request = buildNatoriRequestDataV1({
+      ...createInitialPortfolioRequestFormState(),
+      inquiryMode: "quote",
+      commissionScope: "full_body",
+      requestType: "illustration",
+      publicationPolicy: "delayed",
+      publicationAllowedFrom: "2026-11-15",
+    }, []);
+    const view = buildNatoriInquiryRequestView(request);
+    if (view.kind !== "structured") throw new Error("structured view expected");
+    const client = relabelPortfolioConfirmation(view.sections, request, options).flatMap((section) => section.fields);
+    expect(client.find((field) => field.key === "publicationPolicy")?.value).toBe("一定期間後なら公開してよい（2026年11月15日から）・無料");
+  });
 });

@@ -70,7 +70,7 @@ export function relabelPortfolioConfirmation(
         case "publicationPolicy": {
           const label = portfolioPublicationLabel(request.publicationPolicy, options);
           const value = request.publicationPolicy === "delayed" && request.publicationAllowedFrom
-            ? `${NATORI_PUBLICATION_POLICY_LABELS_V1.delayed}（${formatNatoriRequestDate(request.publicationAllowedFrom)}から）`
+            ? `${NATORI_PUBLICATION_POLICY_LABELS_V1.delayed}（${formatNatoriRequestDate(request.publicationAllowedFrom)}から）・無料`
             : label;
           return { ...field, label: "実績掲載", value };
         }
