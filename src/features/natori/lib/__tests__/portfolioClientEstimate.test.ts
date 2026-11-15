@@ -40,6 +40,9 @@ describe("依頼フォームの目安", () => {
     expect(estimate.min).toBe(18500);
     expect(estimate.max).toBe(18500);
     expect(estimate.lines.find((line) => line.id === "expression_variation")).toMatchObject({ quantity: 2, amount: 1000 });
+    // お急ぎ料金は案件ごとに変わるので「2,000円〜」と出す（基本料金と同じ扱い）。ほかの固定オプションは「〜」なし。
+    expect(estimate.lines.find((line) => line.id === "rush_delivery")).toMatchObject({ amount: 2000, floor: true });
+    expect(estimate.lines.find((line) => line.id === "expression_variation")).toMatchObject({ floor: false });
   });
 
   it("人物追加は基本料金の70%、しっかり背景は幅で出す", () => {

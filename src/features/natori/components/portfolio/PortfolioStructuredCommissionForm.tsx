@@ -851,7 +851,7 @@ export default function PortfolioStructuredCommissionForm({
               {estimate.lines.map((line) => (
                 <li key={line.id} className="flex justify-between gap-3">
                   <span>{line.label}{line.quantity > 1 ? ` ×${line.quantity}` : ""}</span>
-                  <span className="shrink-0 font-bold">{line.base ? "" : "+"}{formatPortfolioEstimateRange(line.amount, line.amountMax, line.base)}</span>
+                  <span className="shrink-0 font-bold">{line.base ? "" : "+"}{formatPortfolioEstimateRange(line.amount, line.amountMax, line.floor)}</span>
                 </li>
               ))}
               {estimate.unpriced.map((label) => (

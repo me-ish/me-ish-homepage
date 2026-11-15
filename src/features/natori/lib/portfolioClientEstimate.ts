@@ -23,6 +23,8 @@ export type PortfolioClientEstimateLine = {
   /** 幅があるときの上限 */
   amountMax: number;
   base: boolean;
+  /** 金額が下限で、上は案件ごとに変わる（基本料金・お急ぎ料金）。「〜」をつけて出す。 */
+  floor: boolean;
 };
 
 export type PortfolioClientEstimate = {
@@ -65,6 +67,7 @@ export function portfolioClientEstimate(
       amount: item.amount,
       amountMax: Math.max(item.amount, amountMax),
       base: item.kind === "base",
+      floor: item.kind === "base" || item.presetItemId === "rush_delivery",
     };
   });
   const priced = new Set(lines.map((line) => line.id));

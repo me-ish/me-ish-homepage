@@ -437,7 +437,7 @@ describe("条件付き入力", () => {
     await userEvent.click(deadlineChip("希望の日付がある"));
     fireEvent.change(screen.getByLabelText(/希望日/), { target: { value: "2026-09-01" } });
 
-    await userEvent.click(deadlineChip("お急ぎ（+2,000円／要相談）"));
+    await userEvent.click(deadlineChip("お急ぎ（+2,000円〜／要相談）"));
     await userEvent.type(screen.getByLabelText("納期の補足（任意）"), "急ぎです");
 
     await fillMinimum();
