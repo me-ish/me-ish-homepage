@@ -227,23 +227,23 @@ async function main() {
         await page.locator('#pf-message').fill('Synthetic original request\nLine 2: preserve character\nLine 3: preserve expression\nLine 4: preserve usage\nLine 5: preserve publication\nImportant final condition: no AI training');
         await page.getByRole('button', { name: '条件・連絡先へ', exact: true }).click();
         await page.locator('#pf-name').fill('Synthetic Phase 7 client'); await page.locator('#pf-email').fill('client@phase7.invalid');
-        await (await revealField(page, '#pf-commercial')).locator('input[value="yes"]').check(); await page.locator('#pf-publication input[value="delayed"]').check(); await page.locator('#pf-publication-allowed-from').fill('2026-11-15');
+        await (await revealField(page, '#pf-commercial')).locator('input[value="yes"]').check(); await page.locator('#pf-publication input[value="delayed"]').check(); await page.locator('#pf-publication-allowed-from').fill('2030-11-15');
         await page.locator('#pf-budget-kind').getByRole('radio', { name: '金額を入力', exact: true }).check(); await page.locator('#pf-budget-fixed').fill('12000');
-        await page.locator('#pf-deadline-kind').getByRole('radio', { name: '希望の日付がある', exact: true }).check(); await page.locator('#pf-deadline-date').fill('2026-11-15');
+        await page.locator('#pf-deadline-kind').getByRole('radio', { name: '希望の日付がある', exact: true }).check(); await page.locator('#pf-deadline-date').fill('2030-11-15');
         await page.getByRole('button', { name: '内容を確認する', exact: true }).click(); const confirmation = page.getByRole('region', { name: '送信前の確認' });
-        for (const text of ['Important final condition: no AI training', '全身', '商用利用する', '2026年11月15日', '12,000', 'Synthetic Phase 7 client', 'client@phase7.invalid']) await expect(confirmation).toContainText(text);
+        for (const text of ['Important final condition: no AI training', '全身', '商用利用する', '2030年11月15日', '12,000', 'Synthetic Phase 7 client', 'client@phase7.invalid']) await expect(confirmation).toContainText(text);
         await screenshot(page, ids[2], width, 'confirmation'); await noOverflow(page);
         const edits = confirmation.getByRole('button', { name: /を修正する$/ }); check(await edits.count() >= 5, 'NAMED_EDIT_TARGETS');
         for (const edit of await edits.all()) { const box = await edit.boundingBox(); check(box && box.width >= 44 && box.height >= 44, 'EDIT_TARGET_SIZE'); }
         await confirmation.getByRole('button', { name: '用途・条件を修正する', exact: true }).click();
-        await expect(page.locator('#pf-commercial input[value="yes"]')).toBeChecked(); await expect(page.locator('#pf-publication-allowed-from')).toHaveValue('2026-11-15');
+        await expect(page.locator('#pf-commercial input[value="yes"]')).toBeChecked(); await expect(page.locator('#pf-publication-allowed-from')).toHaveValue('2030-11-15');
         await screenshot(page, ids[2], width, 'edit-preserved'); await page.getByRole('button', { name: '内容を確認する', exact: true }).click();
         await expect(confirmation).toContainText('Important final condition: no AI training');
       });
       await test(ids[4], width, async () => {
         await page.goto(app + '/ja/fixture-phase7/quote/' + fixture.quoteToken); const quote = page.locator('[data-phase7-surface=quote]');
         for (const label of ['制作するもの', '制作範囲', '用途', '商用利用', '実績公開', '金額の内訳', 'お支払い方法', '承諾時のお支払条件', '現在の支払期限', '納品日', 'キャンセル・返金について']) await expect(quote.locator('dt').filter({ hasText: new RegExp('^' + label + '$') })).toBeVisible();
-        for (const text of ['全身イラスト1点・表情差分1点、PNGで納品', '動画サムネイル・SNS告知', 'AI学習は禁止', '12,000', '2026年11月15日']) await expect(quote).toContainText(text);
+        for (const text of ['全身イラスト1点・表情差分1点、PNGで納品', '動画サムネイル・SNS告知', 'AI学習は禁止', '12,000', '2030年11月15日']) await expect(quote).toContainText(text);
         const deadline = quote.locator('dt').filter({ hasText: /^現在の支払期限$/ }).locator('..').locator('dd');
         await expect(deadline).toContainText(new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(fixture.deadline)));
         await expect(deadline).toContainText('再通知では期限は延長されません');
@@ -265,8 +265,8 @@ async function main() {
         const data = await response.json(); check(data.editable === false && data.draft?.revision === 1, 'HISTORICAL_DRAFT_LOCK');
         await expect(data.draft.agreedTerms).toEqual({
           scope: 'full_body', scopeNote: '', deliverables: '全身イラスト1点・表情差分1点、PNGで納品',
-          usage: '動画サムネイル・SNS告知', commercialUse: 'yes', publication: '2026年11月15日以降に公開可。AI学習は禁止',
-          dueDate: '2026-11-15', memo: 'Synthetic internal memo',
+          usage: '動画サムネイル・SNS告知', commercialUse: 'yes', publication: '2030年11月15日以降に公開可。AI学習は禁止',
+          dueDate: '2030-11-15', memo: 'Synthetic internal memo',
         });
         await expect(data.draft.items).toEqual([{
           id: 'phase7-base', presetItemId: null, kind: 'manual', labelSnapshot: '全身イラスト・表情差分', quantity: 1,
@@ -313,7 +313,7 @@ async function main() {
         await expect(editable.getByRole('link', { name: '← ダッシュボードへ戻る', exact: true })).toHaveAttribute('href', '/natori/dashboard');
         await expect(editable.locator('#estimate-scope')).toHaveValue('full_body');
         for (const [selector, value] of [['#estimate-deliverables', data.draft.agreedTerms.deliverables], ['#estimate-usage', data.draft.agreedTerms.usage],
-          ['#estimate-commercial', 'yes'], ['#estimate-publication', data.draft.agreedTerms.publication], ['#estimate-due', '2026-11-15'], ['#estimate-memo', data.draft.agreedTerms.memo]]) {
+          ['#estimate-commercial', 'yes'], ['#estimate-publication', data.draft.agreedTerms.publication], ['#estimate-due', '2030-11-15'], ['#estimate-memo', data.draft.agreedTerms.memo]]) {
           await expect(editable.locator(selector)).toHaveValue(value);
         }
         const navigation = editable.getByRole('navigation', { name: '見積りの手順', exact: true });
@@ -336,7 +336,7 @@ async function main() {
         await priceNext.click();
         await expect(editable.getByRole('heading', { name: '相手に見える内容を確認', exact: true })).toBeVisible();
         await expect(editable.getByRole('heading', { name: '正式見積りを発行しました', exact: true })).toHaveCount(0);
-        for (const text of [data.draft.agreedTerms.deliverables, data.draft.agreedTerms.usage, data.draft.agreedTerms.publication, '12,000', '2026年11月15日']) await expect(editable).toContainText(text);
+        for (const text of [data.draft.agreedTerms.deliverables, data.draft.agreedTerms.usage, data.draft.agreedTerms.publication, '12,000', '2030年11月15日']) await expect(editable).toContainText(text);
         await expect(editable.locator('#estimate-to')).toHaveValue('client@phase7.invalid');
         await expect(editable.locator('#estimate-subject')).not.toHaveValue(''); await expect(editable.locator('#estimate-body')).not.toHaveValue('');
         const acknowledge = editable.getByRole('checkbox', { name: '依頼者に見える内容と宛先を確認しました。', exact: true });
@@ -352,7 +352,7 @@ async function main() {
       await test(ids[5], width, async () => {
         await page.goto(app + '/ja/fixture-phase7/management'); const card = page.getByRole('article', { name: 'Phase 7 active production', exact: true }); await expect(card).toBeVisible();
         for (const text of ['Synthetic Phase 7 client', 'ラフ', 'Synthetic rough: preserve original conditions']) await expect(card).toContainText(text);
-        const expectedDueDate = new Intl.DateTimeFormat('ja-JP', { month: 'numeric', day: 'numeric', weekday: 'short' }).format(new Date(2026, 10, 15));
+        const expectedDueDate = new Intl.DateTimeFormat('ja-JP', { month: 'numeric', day: 'numeric', weekday: 'short' }).format(new Date(2030, 10, 15));
         await expect(card.getByText('納期', { exact: true }).locator('..')).toContainText(expectedDueDate);
         const advance = card.getByRole('button', { name: '線画へ進む', exact: true }); await expect(advance).toBeEnabled();
         const paymentCard = page.getByRole('article', { name: 'Phase 7 historical estimate', exact: true }); await expect(paymentCard).toBeVisible();

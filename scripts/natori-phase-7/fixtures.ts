@@ -47,16 +47,16 @@ if (!parsePortfolioContent(seedContent)) throw new Error("INVALID_PORTFOLIO_FIXT
 export const requestData: NatoriRequestDataV1 = {
   schemaVersion: 1, formVersion: "etorie-request-v1", inquiryMode: "quote", requestType: "illustration", requestTypeOther: null,
   commissionScope: "full_body", commissionScopeOther: null, options: [], usageTypes: ["video_thumbnail"], usageTypeOther: null,
-  commercialUse: "yes", publicationPolicy: "delayed", publicationAllowedFrom: "2026-11-15",
+  commercialUse: "yes", publicationPolicy: "delayed", publicationAllowedFrom: "2030-11-15",
   budget: { kind: "fixed", min: 12000, max: 12000, currency: "JPY" },
-  deadline: { kind: "preferred_date", date: "2026-11-15", note: "Synthetic deadline" },
+  deadline: { kind: "preferred_date", date: "2030-11-15", note: "Synthetic deadline" },
   characterFeatures: "Synthetic character", expressionMood: "Synthetic smile", composition: "Synthetic standing pose",
   colorDirection: "Synthetic pink and blue", referenceNotes: "Synthetic reference", message: "Synthetic request\nImportant original condition: no AI training",
   legacySource: null,
 };
 export const quoteTerms: NatoriQuoteTerms = {
-  deliverables: "全身イラスト1点・表情差分1点、PNGで納品", dueDate: "2026-11-15", scope: "全身",
-  usage: "動画サムネイル・SNS告知", commercialUse: "あり", publication: "2026年11月15日以降に公開可。AI学習は禁止",
+  deliverables: "全身イラスト1点・表情差分1点、PNGで納品", dueDate: "2030-11-15", scope: "全身",
+  usage: "動画サムネイル・SNS告知", commercialUse: "あり", publication: "2030年11月15日以降に公開可。AI学習は禁止",
 };
 export const agreedTerms: NatoriAgreedTerms = {
   scope: "full_body", scopeNote: "", deliverables: quoteTerms.deliverables, usage: quoteTerms.usage ?? "",
