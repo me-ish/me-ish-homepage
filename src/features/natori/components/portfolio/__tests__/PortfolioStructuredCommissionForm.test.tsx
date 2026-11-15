@@ -105,6 +105,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+
+/** 商用利用・実績掲載などのチップ（radio）を値で取る */
+function formChip(groupId: string, value: string): HTMLInputElement {
+  const input = document.querySelector<HTMLInputElement>(`#${groupId} input[value="${value}"]`);
+  if (!input) throw new Error(`chip not found: ${groupId}=${value}`);
+  return input;
+}
+
 describe("最低入力と送信", () => {
   it("相談本文がなくても詳細欄が埋まっていれば共有スキーマどおり送信できる", async () => {
     renderForm();
@@ -356,10 +364,9 @@ describe("条件付き入力", () => {
 
   it("一定期間後に公開可を選ぶと公開可能日を送る", async () => {
     renderForm();
-    const publicationPolicy = screen.getByLabelText(/作品の公開可否/);
     expect(screen.queryByLabelText("公開可能日＊")).toBeNull();
 
-    await userEvent.selectOptions(publicationPolicy, "delayed");
+    await userEvent.click(formChip("pf-publication", "delayed"));
     fireEvent.change(screen.getByLabelText("公開可能日必須"), {
       target: { value: "2026-10-15" },
     });
@@ -375,12 +382,11 @@ describe("条件付き入力", () => {
 
   it("公開条件を変更すると公開可能日を送らない", async () => {
     renderForm();
-    const publicationPolicy = screen.getByLabelText(/作品の公開可否/);
-    await userEvent.selectOptions(publicationPolicy, "delayed");
+    await userEvent.click(formChip("pf-publication", "delayed"));
     fireEvent.change(screen.getByLabelText("公開可能日必須"), {
       target: { value: "2026-10-15" },
     });
-    await userEvent.selectOptions(publicationPolicy, "allowed");
+    await userEvent.click(formChip("pf-publication", "allowed"));
     expect(screen.queryByLabelText("公開可能日＊")).toBeNull();
 
     await fillMinimum();
@@ -464,8 +470,12 @@ describe("オプション", () => {
     expect(screen.queryByRole("checkbox", { name: /商用利用/ })).toBeNull();
     expect(screen.queryByRole("checkbox", { name: /サンプル使用不可/ })).toBeNull();
     expect(screen.queryByRole("checkbox", { name: /完全非公開/ })).toBeNull();
-    expect(screen.getByLabelText("商用利用")).toBeTruthy();
-    expect(screen.getByLabelText(/作品の公開可否/)).toBeTruthy();
+    // どちらもプルダウンではなく、ほかの項目と同じチップで選ぶ
+    expect(screen.getByRole("group", { name: "商用利用" })).toBeTruthy();
+    expect(screen.getByRole("group", { name: /作品の公開可否/ })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "商用利用する（+3,000円）" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "完全非公開（+2,000円）" })).toBeTruthy();
+    expect(screen.queryByRole("combobox", { name: /商用利用|作品の公開可否/ })).toBeNull();
   });
 
   it("stable ID・label snapshot・数量・補足を送る", async () => {
@@ -666,8 +676,8 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
 
     fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: "テスト太郎" } });
     fireEvent.change(screen.getByLabelText(/メールアドレス/), { target: { value: "client@example.com" } });
-    await userEvent.selectOptions(screen.getByLabelText("商用利用"), "yes");
-    await userEvent.selectOptions(screen.getByLabelText(/作品の公開可否/), "fully_private");
+    await userEvent.click(formChip("pf-commercial", "yes"));
+    await userEvent.click(formChip("pf-publication", "fully_private"));
     expect(screen.getByText(/ご依頼内容も非公開で対応します/)).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
     const confirmation = screen.getByRole("region", { name: "送信前の確認" });
@@ -783,7 +793,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
   it("閉じた条件欄の入力エラーでも該当欄を表示する", async () => {
     renderForm();
     await userEvent.click(screen.getByLabelText("見積もりを希望"));
-    await userEvent.selectOptions(screen.getByLabelText(/作品の公開可否/), "delayed");
+    await userEvent.click(formChip("pf-publication", "delayed"));
     await userEvent.click(screen.getByLabelText("まず相談したい"));
     fireEvent.invalid(screen.getByLabelText("公開可能日必須"));
     expect(detailsBySummary("詳しい条件を追加する").open).toBe(true);
@@ -807,10 +817,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     await userEvent.click(screen.getByLabelText("見積もりを希望"));
 
     expect(screen.getByRole("group", { name: /描く範囲/ }).closest("details")).toBeNull();
-    for (const label of ["商用利用"]) {
-      expect(screen.getByLabelText(label).closest("details")).toBeNull();
-    }
-    for (const name of ["ご予算", "希望納期"]) {
+    for (const name of ["商用利用", "ご予算", "希望納期"]) {
       expect(screen.getByRole("group", { name, hidden: true }).closest("details")).toBeNull();
     }
     // 種類と範囲のプルダウンは出さない（範囲のカードと 量産イラスト／それ以外 だけで選ぶ）
@@ -846,10 +853,11 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
   it("primary fields は desktop でも1列で、必須を文字で示す", () => {
     renderForm();
 
-    for (const label of [/お名前/, /メールアドレス/, "商用利用"]) {
+    for (const label of [/お名前/, /メールアドレス/]) {
       const control = screen.getByLabelText(label);
       expect(control.parentElement?.parentElement?.className).not.toContain("sm:grid-cols-2");
     }
+    expect(screen.getByRole("group", { name: "商用利用" }).parentElement?.className).not.toContain("sm:grid-cols-2");
 
     expect(screen.getAllByText("必須")).toHaveLength(3);
     expect(screen.getByLabelText(/お名前/).closest("div")?.textContent).toContain("必須");

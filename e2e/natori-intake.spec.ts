@@ -79,8 +79,8 @@ test.describe("Natori public intake rollout", () => {
     await expect(page.getByRole("group", { name: "ご予算" })).toBeVisible();
     await expect(page.getByLabel(/お名前/)).toBeVisible();
     await fillContact(page, "quote");
-    await page.getByLabel("商用利用").selectOption("yes");
-    await page.getByLabel(/作品の公開可否/).selectOption("fully_private");
+    await page.locator('#pf-commercial input[value="yes"]').check();
+    await page.locator('#pf-publication input[value="fully_private"]').check();
     await page.getByRole("button", { name: "内容を確認する" }).click();
     await expect(page.getByRole("region", { name: "送信前の確認" }).getByText("用途・条件", { exact: true })).toBeVisible();
     await expect(page.getByRole("region", { name: "送信前の確認" }).getByText("商用利用する", { exact: true })).toBeVisible();
@@ -120,8 +120,8 @@ test.describe("Natori public intake rollout", () => {
       await quantity.fill("2");
       await page.getByRole("button", { name: "条件・連絡先へ" }).click();
       await fillContact(page, `phase5-${width}`);
-      await page.getByLabel("商用利用").selectOption("yes");
-      await page.getByLabel(/作品の公開可否/).selectOption("fully_private");
+      await page.locator('#pf-commercial input[value="yes"]').check();
+      await page.locator('#pf-publication input[value="fully_private"]').check();
       await page.getByRole("button", { name: "内容を確認する" }).click();
       const confirmation = page.getByRole("region", { name: "送信前の確認" });
       await expect(confirmation).toContainText("表情差分 ×2");
@@ -135,7 +135,7 @@ test.describe("Natori public intake rollout", () => {
       await edit.focus();
       await page.keyboard.press("Enter");
       await expect(page.getByRole("heading", { name: "ご希望の条件と連絡先" })).toBeFocused();
-      await expect(page.getByLabel("商用利用")).toHaveValue("yes");
+      await expect(page.locator('#pf-commercial input[value="yes"]')).toBeChecked();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.screenshot({ path: test.info().outputPath(`phase5-${width}.png`), fullPage: true });
     });
@@ -181,8 +181,8 @@ test.describe("Natori public intake rollout", () => {
     await page.getByLabel("キャラクター資料の画像を選択").setInputFiles({ name: "costume.png", mimeType: "image/png", buffer: png });
     await page.getByRole("button", { name: "条件・連絡先へ" }).click();
     await fillContact(page, "phase5-edit");
-    await page.getByLabel("商用利用", { exact: true }).selectOption("yes");
-    await page.getByLabel(/作品の公開可否/).selectOption("delayed");
+    await page.locator('#pf-commercial input[value="yes"]').check();
+    await page.locator('#pf-publication input[value="delayed"]').check();
     await page.getByLabel(/公開可能日/).fill("2026-11-15");
     await page.getByRole("button", { name: "内容を確認する" }).click();
     const confirmation = page.getByRole("region", { name: "送信前の確認" });
