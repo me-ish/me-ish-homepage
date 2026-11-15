@@ -63,6 +63,12 @@ describe("scheduled completion of expired, unaccepted deliveries", () => {
     expect(await runScheduledNatoriDeemedCompletion()).toEqual({ checked: 2, applied: 0, skipped: 1, failed: 1 });
   });
 
+  it("reports a database that does not accept the schedule yet as a failure", async () => {
+    m.rpc.mockImplementation(async (name: string) =>
+      name === "natori_case_work_revision_v1" ? { data: "r".repeat(64), error: null } : { data: { result: "invalid" }, error: null });
+    expect(await runScheduledNatoriDeemedCompletion()).toEqual({ checked: 2, applied: 0, skipped: 0, failed: 2 });
+  });
+
   it("stops quietly when nothing has expired", async () => {
     m.releases.mockResolvedValue({ data: [], error: null });
     expect(await runScheduledNatoriDeemedCompletion()).toEqual({ checked: 0, applied: 0, skipped: 0, failed: 0 });

@@ -76,7 +76,12 @@ export async function runScheduledNatoriDeemedCompletion(limit = 25): Promise<Sc
       console.error("[natori-deemed-completion] rpc failed");
       report.failed++;
     } else if (parsed.data.result === "applied") report.applied++;
-    else report.skipped++;
+    else if (parsed.data.result === "invalid") {
+      // ここから送る内容は決まっているので、「invalid」は DB 側がまだ毎日の処理を受け付けていない
+      // （本番の SQL が未適用）ことを意味する。黙って飛ばさず、失敗として気づけるようにする。
+      console.error("[natori-deemed-completion] schedule operator rejected");
+      report.failed++;
+    } else report.skipped++;
   }
   return report;
 }
