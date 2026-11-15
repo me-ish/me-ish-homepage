@@ -82,5 +82,28 @@ ok "anon/authenticated cannot execute" "$(q "select has_function_privilege('anon
 ok "no frame left behind" "$(q "select count(*) from natori_case_guard.frames")" 0
 ok "guard contract still holds for every root" "$(q "do \$\$declare r record;begin for r in select distinct root from natori_case_guard.permissions loop perform natori_case_guard.check_contract(r.root);end loop;end\$\$;select 'ok'")" ok
 
+# 毎日の処理（operator = schedule）：保存期限が過ぎた案件だけを deemed で完了にできる。
+SCHED=a0000000-0000-4000-8000-000000000006; SCHED_LIVE=a0000000-0000-4000-8000-000000000007; SCHED_EXT=a0000000-0000-4000-8000-000000000008
+R3=c0000000-0000-4000-8000-000000000003; R4=c0000000-0000-4000-8000-000000000004; R5=c0000000-0000-4000-8000-000000000005; R6=c0000000-0000-4000-8000-000000000006
+for id in $SCHED $SCHED_LIVE $SCHED_EXT; do
+  q "insert into public.natori_projects(id,user_id,title,client_name,status,type,amount,next_action,delivery_plan,created_at,updated_at) values('$id','$OWNER','架空の案件','架空依頼者','delivery_prep','illustration',12000,'-','normal',now()-interval '60 days',now())"
+done
+q "update public.natori_projects set payment_confirmed_at=now()-interval '50 days' where id in ('$SCHED','$SCHED_LIVE')"
+q "insert into public.natori_delivery_releases(project_id,manifest,snapshot,published_at,expires_at) values('$SCHED','[{\"id\":\"x\"}]','{}',now()-interval '40 days',now()-interval '10 days'),('$SCHED_LIVE','[{\"id\":\"x\"}]','{}',now()-interval '5 days',now()+interval '25 days')"
+q "update public.natori_projects set status='delivered' where id in ('$SCHED','$SCHED_LIVE')"
+sched(){ # project kind requestId
+  q "begin;set local role service_role;select public.natori_case_complete_v1('$OWNER','$1',jsonb_build_object('requestId','$3','revision','$(rev "$1")','kind','$2','note','保存期限が過ぎたため自動で完了にしました','operator',jsonb_build_object('kind','schedule')))->>'result';commit;"
+}
+ok "schedule may not complete an external case" "$(sched $SCHED_EXT external $R3)" invalid
+ok "schedule deemed is rejected before expiry" "$(sched $SCHED_LIVE deemed $R4)" not-expired
+ok "schedule deemed completes after expiry" "$(sched $SCHED deemed $R5)" applied
+ok "scheduled completion = page expiry, no customer acceptance" "$(q "select p.status||'|'||(p.completed_at=r.expires_at)::text||'|'||coalesce(p.delivery_accepted_at::text,'null') from public.natori_projects p join public.natori_delivery_releases r on r.project_id=p.id where p.id='$SCHED'")" "completed|true|null"
+ok "evidence records the schedule" "$(q "select operator->>'kind'||'|'||kind from public.natori_case_completions where project_id='$SCHED'")" "schedule|deemed"
+ok "second run is a conflict, nothing changes" "$(sched $SCHED deemed $R6)" conflict
+ok "unknown operator kind is still invalid" "$(q "begin;set local role service_role;select public.natori_case_complete_v1('$OWNER','$SCHED_LIVE',jsonb_build_object('requestId','$R6','revision','$(rev $SCHED_LIVE)','kind','deemed','note','n','operator',jsonb_build_object('kind','robot')))->>'result';commit;")" invalid
+ok "evidence table rejects schedule on a non-deemed row" "$(q "do \$\$begin begin insert into public.natori_case_completions(project_id,owner_id,request_id,kind,completed_at,note,operator,request_hash) values('$SCHED_EXT','$OWNER',gen_random_uuid(),'external',now(),'n','{\"kind\":\"schedule\"}','$(printf 'a%.0s' {1..64})');raise notice 'inserted';exception when others then raise notice 'rejected';end;end\$\$" 2>&1 | grep -o 'rejected\|inserted' | head -1)" rejected
+ok "no frame left behind (schedule)" "$(q "select count(*) from natori_case_guard.frames")" 0
+ok "guard contract still holds for every root (schedule)" "$(q "do \$\$declare r record;begin for r in select distinct root from natori_case_guard.permissions loop perform natori_case_guard.check_contract(r.root);end loop;end\$\$;select 'ok'")" ok
+
 if [ "$fails" -ne 0 ]; then echo "$fails check(s) failed"; exit 1; fi
 echo "all checks passed"
