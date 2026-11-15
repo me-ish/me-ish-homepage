@@ -40,7 +40,7 @@ describe("PortfolioPricing mobile details", () => {
     for (const plan of defaultPortfolioContent.plans) {
       expect(within(mobileList).queryByText(plan.desc)).toBeNull();
       const cta = within(mobileList).getByRole("link", { name: `${plan.name}を選ぶ` });
-      expect(cta.textContent).toBe("このプランで相談");
+      expect(cta.textContent).toBe("このプランで見積もり");
       expect(cta.className).toContain("pf-btn");
       expect(cta.className).toContain("min-h-11");
     }

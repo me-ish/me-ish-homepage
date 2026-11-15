@@ -45,9 +45,9 @@ export function useIntakeOperation(onCompleted: (result: IntakeCompleted) => voi
       return;
     }
     setMessage(result.kind === "needs_review" || result.kind === "conflict"
-      ? "送信内容の確認が必要です。新しく応募せず、公開連絡先へお問い合わせください。"
+      ? "送信内容の確認が必要です。もう一度送らずに、公開連絡先へお問い合わせください。"
       : result.retryAfter ? `同じ送信の結果を確認中です。約${Math.ceil(result.retryAfter / 60)}分後に確認してください。`
-        : "同じ送信の結果を確認中です。新しく応募せず、下のボタンで受付結果をご確認ください。");
+        : "同じ送信の結果を確認中です。もう一度送らずに、下のボタンで受付結果をご確認ください。");
   };
 
   useEffect(() => {
@@ -66,12 +66,12 @@ export function useIntakeOperation(onCompleted: (result: IntakeCompleted) => voi
         setOriginalAnswers(preserveIntakeOriginalAnswers(saved));
         // A rollout can display a different form version; recovery must still remain available.
         try { restoreRef.current?.(saved.fields); } catch { /* Frozen receipt recovery remains authoritative. */ }
-        setMessage("前回の送信結果を確認中です。新しく応募する必要はありません。");
+        setMessage("前回の送信結果を確認中です。もう一度送る必要はありません。");
         void recoverFrozenIntakeOperation(saved).then(result => { if (active) acceptResult(result, saved); });
       } else if (restoreOriginals && drafts.length) {
         try { restoreRef.current?.(drafts[drafts.length - 1].fields); } catch { /* The readable original remains available while editing. */ }
       }
-    } catch { setRecoveryBlocked(true); setMessage("前回の送信情報を読み取れませんでした。新しく応募せず、公開連絡先へ保存状況をご確認ください。"); }
+    } catch { setRecoveryBlocked(true); setMessage("前回の送信情報を読み取れませんでした。もう一度送らずに、公開連絡先へ届いているかご確認ください。"); }
     setHydrated(true);
     return () => { active = false; lifecycle.active = false; };
     // Recovery runs once per mounted form; callback identity is kept in completedRef.

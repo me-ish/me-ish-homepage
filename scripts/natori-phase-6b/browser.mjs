@@ -164,7 +164,7 @@ try {
         await contrastStates(page, 'delivery', page.getByTestId('delivery').getByRole('button', { name: '内容を確認し、受け取りを完了する', exact: true }), theme);
         await contrastStates(page, 'delivery-disabled', page.getByTestId('delivery-disabled').getByRole('button', { name: '内容を確認し、受け取りを完了する', exact: true }), theme, true);
         await contrastStates(page, 'download', page.getByTestId('delivery').locator('a[href="/phase6b-a.svg"] > span').last(), theme);
-        const mass = page.getByTestId('pricing').getByRole('link', { name: 'このプランで相談', exact: true }).last();
+        const mass = page.getByTestId('pricing').getByRole('link', { name: 'このプランで見積もり', exact: true }).last();
         await contrastStates(page, 'mass-production', mass, theme);
         const form = page.getByTestId('form');
         await contrastStates(page, 'form-next', form.getByRole('button', { name: '内容を確認する', exact: true }), theme);

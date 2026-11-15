@@ -89,7 +89,7 @@ export async function POST(req: Request) {
     if (!operationId.success) {
       recordPublicIntakeMetric("legacy_operation_id_missing");
       return NextResponse.json({ ok: false, error: "client_update_required", operationState: "unknown",
-        guidance: "入力内容をコピーして保管し、保存済みの受付がないか公開連絡先へ確認してから、このページを更新してください。自動で再応募しないでください。" }, { status: 409 });
+        guidance: "入力内容をコピーして保管し、保存済みの受付がないか公開連絡先へ確認してから、このページを更新してください。続けて送り直さないでください。" }, { status: 409 });
     }
     const declaredHash = intakeHashSchema.safeParse(fields.requestHash);
     if (!declaredHash.success) return fail("invalid_request", 400);

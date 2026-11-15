@@ -66,6 +66,7 @@ import IntakeRecoveryPanel from "./IntakeRecoveryPanel";
 import { useIntakeDraft } from "./intake/useIntakeDraft";
 import { suggestEmailDomain } from "@/features/natori/lib/emailTypoSuggestion";
 import { restoreStructuredIntakeFields } from "../../lib/restoreIntakeForm";
+import { portfolioPublicationLabel } from "@/features/natori/lib/portfolioFormLabels";
 import { portfolioConfirmationSections, portfolioQuoteNeedsContent, readFrozenPortfolioSubmission, validatePortfolioForm, validatePortfolioStep } from "@/features/natori/lib/portfolioFormValidation";
 import PortfolioLegalNotice from "./PortfolioLegalNotice";
 import PortfolioFormStyles, { portfolioFormColors as c } from "./PortfolioFormStyles";
@@ -213,6 +214,8 @@ export default function PortfolioStructuredCommissionForm({
   );
   const [step, setStep] = useState(0);
   const [planOrigin, setPlanOrigin] = useState<string | null>(initialPlan ?? null);
+  // 料金表から来た案内は、ご自分で選び直したら消す（選び直した後も「料金表で選んだ」と出ると食い違う）。
+  const [planRepicked, setPlanRepicked] = useState(false);
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [sending, setSending] = useState(false);
@@ -357,7 +360,7 @@ export default function PortfolioStructuredCommissionForm({
     ? readFrozenPortfolioSubmission(intake.operation.fields) : null, [intake.operation]);
   const confirmationSubmission = frozenSubmission ?? validatedSubmission;
   const confirmationSections = confirmationSubmission.success
-    ? portfolioConfirmationSections(confirmationSubmission.data.requestData) : [];
+    ? portfolioConfirmationSections(confirmationSubmission.data.requestData, content.options) : [];
   const xLink = content.socialLinks.find(isPortfolioXLink);
   const hasOtherDetails = [state.characterFeatures, state.expressionMood, state.composition,
     state.colorDirection, state.referenceNotes].some((value) => value.trim().length > 0);
@@ -366,7 +369,6 @@ export default function PortfolioStructuredCommissionForm({
   const publicationOptions = content.options.filter((option) =>
     option.id === PORTFOLIO_OPTION_IDS.sampleUsageDenied || option.id === PORTFOLIO_OPTION_IDS.privateWork
   );
-  const publicationPrice = (id: string) => publicationOptions.find((option) => option.id === id)?.price;
 
   const goToStep = (next: number) => {
     // A corrected error must not steal focus from the newly opened screen.
@@ -445,6 +447,7 @@ export default function PortfolioStructuredCommissionForm({
   };
 
   const changeRequestType = (value: PortfolioRequestTypeChoiceValue) => {
+    setPlanRepicked(true);
     if (
       value === NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE &&
       !content.massProductionIllustrationOpen
@@ -462,6 +465,7 @@ export default function PortfolioStructuredCommissionForm({
   };
 
   const pickPlan = (pick: PortfolioPlanPick) => {
+    setPlanRepicked(true);
     // 量産イラストは受付停止の案内やデザイン欄の開き方が決まっているので、同じ処理を通す。
     if (pick === "mass_production") {
       changeRequestType(NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE);
@@ -482,12 +486,13 @@ export default function PortfolioStructuredCommissionForm({
     setOptionalOpen(expanded);
   };
 
-  // 料金カードの「このプランで相談」からプランを受け取る
+  // 料金カードの「このプランで見積もり」からプランを受け取る
   useEffect(() => {
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<PortfolioPlanSelectDetail>).detail;
       if (!detail) return;
       setPlanOrigin(detail.id);
+      setPlanRepicked(false);
       setState((current) => applyPortfolioPlanSelection(current, detail.id));
       setOptionalOpen(true);
       setOpenSections((current) => ({ ...current, requestType: true }));
@@ -1043,7 +1048,7 @@ export default function PortfolioStructuredCommissionForm({
           <FormSection
             title="用途・条件"
             summary={state.usageTypes.length > 0 || state.commercialUse !== "unknown" || state.publicationPolicy !== "unknown"
-              ? `用途${state.usageTypes.length}件／商用利用：${NATORI_COMMERCIAL_USE_LABELS_V1[state.commercialUse]}／実績掲載：${NATORI_PUBLICATION_POLICY_LABELS_V1[state.publicationPolicy]}`
+              ? `用途${state.usageTypes.length}件／商用利用：${NATORI_COMMERCIAL_USE_LABELS_V1[state.commercialUse]}／実績掲載：${portfolioPublicationLabel(state.publicationPolicy, content.options)}`
               : undefined}
             collapsible={!isQuote}
             open={openSections.usage}
@@ -1097,15 +1102,15 @@ export default function PortfolioStructuredCommissionForm({
                     keyof typeof NATORI_PUBLICATION_POLICY_LABELS_V1
                   >).map((value) => (
                     <option key={value} value={value}>
-                      {NATORI_PUBLICATION_POLICY_LABELS_V1[value]}
+                      {portfolioPublicationLabel(value, content.options)}
                     </option>
                   ))}
                 </select>
                 <p id="pf-publication-help" className="mt-2 text-sm leading-relaxed" style={{ color: c.textSoft }}>
                   {state.publicationPolicy === "work_private"
-                    ? `サンプル使用不可${publicationPrice(PORTFOLIO_OPTION_IDS.sampleUsageDenied) ? `（${publicationPrice(PORTFOLIO_OPTION_IDS.sampleUsageDenied)}）` : ""}：完成イラストをポートフォリオ・SNS・サンプル画像等へ掲載しません。`
+                    ? "完成イラストをポートフォリオ・SNS・サンプル画像等へ掲載しません。"
                     : state.publicationPolicy === "fully_private"
-                      ? `完全非公開${publicationPrice(PORTFOLIO_OPTION_IDS.privateWork) ? `（${publicationPrice(PORTFOLIO_OPTION_IDS.privateWork)}）` : ""}：制作内容・完成イラストを含め一切公開せず、ご依頼内容も非公開で対応します。`
+                      ? "制作内容・完成イラストを含め一切公開せず、ご依頼内容も非公開で対応します。"
                       : state.publicationPolicy === "delayed"
                         ? "指定した日までは公開しません。"
                         : state.publicationPolicy === "allowed"
@@ -1618,8 +1623,8 @@ export default function PortfolioStructuredCommissionForm({
         </div>
         {step > 0 && <button type="button" onClick={() => goToStep(step - 1)} className="pf-cute-focus min-h-[44px] text-sm font-bold underline">戻る</button>}
       </div>
-      {(fromPlan || planOrigin) ? <p className="rounded-lg px-3 py-2 text-sm" style={{ background: c.surfaceSubtle, color: c.textSoft }}>
-        料金から選んだ内容：{planChoiceLabel ?? "未定"}。入力画面で変更できます。
+      {(fromPlan || planOrigin) && !planRepicked && planChoiceLabel ? <p className="rounded-lg px-3 py-2 text-sm" style={{ background: c.surfaceSubtle, color: c.textSoft }}>
+        料金表で選んだ「{planChoiceLabel}」が入っています。下で変えられます。
       </p> : null}
       {draft.restored ? <div role="status" className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg px-3 py-2 text-sm" style={{ background: c.surfaceSubtle, color: c.text }}>
         <span>前回の下書きを復元しました。{draft.restored.hadImages ? "参考画像は選び直してください。" : ""}</span>

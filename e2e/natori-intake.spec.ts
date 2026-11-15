@@ -84,7 +84,7 @@ test.describe("Natori public intake rollout", () => {
     await page.getByRole("button", { name: "内容を確認する" }).click();
     await expect(page.getByRole("region", { name: "送信前の確認" }).getByText("用途・条件", { exact: true })).toBeVisible();
     await expect(page.getByRole("region", { name: "送信前の確認" }).getByText("商用利用する", { exact: true })).toBeVisible();
-    await expect(page.getByRole("region", { name: "送信前の確認" }).getByText("完全非公開", { exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "送信前の確認" }).getByText(/^完全非公開/)).toBeVisible();
     await page.getByRole("button", { name: "見積もりを依頼する" }).click();
     await expect(page.getByRole("heading", { name: "送信ありがとうございます!" })).toBeVisible();
   });
@@ -213,7 +213,7 @@ test.describe("Natori public intake rollout", () => {
 
   test("Phase 5 pricing origin re-presents the selected drawing range", async ({ page }) => {
     await page.goto(`${DEMO_PATH}?structured=1`);
-    const plan = page.locator("#pricing a").filter({ hasText: "このプランで相談" }).first();
+    const plan = page.locator("#pricing a").filter({ hasText: "このプランで見積もり" }).first();
     const href = await plan.getAttribute("href");
     if (!href) throw new Error("pricing plan has no link");
     const url = new URL(href, page.url());
@@ -221,7 +221,7 @@ test.describe("Natori public intake rollout", () => {
     url.searchParams.set("structured", "1");
     await page.goto(url.toString());
     if (!selected || !["bust_up", "waist_up", "full_body", "sd"].includes(selected)) throw new Error("unexpected pricing plan fixture");
-    await expect(page.getByText(/料金から選んだ内容：/)).toBeVisible();
+    await expect(page.getByText(/料金表で選んだ「/)).toBeVisible();
     // 料金表で選んだ範囲のカードが選ばれている（種類のプルダウンは無い）。
     await expect(page.locator(`#pf-plan-picker input[name="pf-plan"][value="${selected}"]`)).toBeChecked();
     await expect(page.getByLabel("ご依頼の種類", { exact: true })).toHaveCount(0);
@@ -234,7 +234,7 @@ test.describe("Natori public intake rollout", () => {
     await expect(page).toHaveURL(/\/portfolio\/contact/);
     await expect(page.getByRole("heading", { name: "ご相談・ご依頼", exact: true })).toBeVisible();
     await page.goBack();
-    const firstPlan = page.getByRole("link", { name: "このプランで相談" }).first();
+    const firstPlan = page.getByRole("link", { name: "このプランで見積もり" }).first();
     const planId = new URL(await firstPlan.getAttribute("href") ?? "", page.url()).searchParams.get("plan");
     await firstPlan.click();
     await expect(page).toHaveURL(new RegExp(`plan=${planId}`));

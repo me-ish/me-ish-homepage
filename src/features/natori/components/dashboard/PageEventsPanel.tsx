@@ -36,7 +36,7 @@ const EVENT_META: Array<{ event: string; title: string; hint?: string }> = [
     hint: "consultation / quote",
   },
   { event: "portfolio_form_submit", title: "ご依頼フォーム送信", hint: "/natori/portfolio" },
-  { event: "portfolio_plan_click", title: "「このプランで相談」クリック", hint: "料金カード" },
+  { event: "portfolio_plan_click", title: "「このプランで見積もり」クリック", hint: "料金カード" },
   { event: "portfolio_sns_click", title: "SNSリンクのクリック", hint: "ポートフォリオ内の X / つなぐ" },
 ];
 
