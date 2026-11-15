@@ -26,6 +26,9 @@ const MOBILE_NAV_LINKS = [
   { href: "/natori/portfolio/contact", label: "相談" },
 ];
 
+// showcase 表示ではページに存在しないセクション（料金・流れ・依頼）を除外
+const SHOWCASE_NAV_HREFS = new Set(["#gallery", "#about"]);
+
 export default function PortfolioHeader({
   content,
   variant = "full",
@@ -41,10 +44,10 @@ export default function PortfolioHeader({
   const fullLinks = <T extends { href: string }>(links: readonly T[]) => links
     .filter((link) => link.href !== "#faq" || hasFaq)
     .map((link) => link.href === "/natori/portfolio/contact" ? { ...link, href: contactPath } : link);
-  // showcase（外部サイトに貼る作品集）は作品とプロフィールだけの短いページなので、
-  // ページ内へ飛ぶタブ自体を出さない。
-  const navLinks = showcase ? [] : fullLinks(NAV_LINKS);
-  const mobileLinks = showcase ? [] : fullLinks(MOBILE_NAV_LINKS);
+  const navLinks = showcase
+    ? NAV_LINKS.filter((link) => SHOWCASE_NAV_HREFS.has(link.href))
+    : fullLinks(NAV_LINKS);
+  const mobileLinks = showcase ? navLinks : fullLinks(MOBILE_NAV_LINKS);
   const titleAccent = content.heroTitleAccent.trim();
   const titleTail = content.heroTitleTail.trim();
   const subName = portfolioBrandSubName(content);
@@ -75,7 +78,7 @@ export default function PortfolioHeader({
             </span>
           ) : null}
         </span>
-        {navLinks.length > 0 ? <nav
+        <nav
           aria-label="メインナビゲーション"
           className="hidden shrink-0 items-center gap-4 whitespace-nowrap text-sm font-medium md:flex lg:gap-6 lg:text-sm"
           style={{ color: c.textSoft }}
@@ -94,7 +97,7 @@ export default function PortfolioHeader({
               {link.label}
             </a>
           ))}
-        </nav> : null}
+        </nav>
         {showcase ? null : (
           // 受付状況の札。緑の枠で目立たせるより、白い札に小さな灯りを置いてサイトの淡い配色になじませる。
           <span
@@ -122,7 +125,7 @@ export default function PortfolioHeader({
         )}
       </div>
       {/* モバイル用ナビ。md 以上は上のナビがあるので出さない */}
-      {mobileLinks.length > 0 ? <PortfolioMobileNav links={mobileLinks} /> : null}
+      <PortfolioMobileNav links={mobileLinks} />
     </header>
   );
 }

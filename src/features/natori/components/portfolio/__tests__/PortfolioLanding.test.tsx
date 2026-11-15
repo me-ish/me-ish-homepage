@@ -118,9 +118,13 @@ describe("PF-01 portfolio information architecture", () => {
     render(<PortfolioLanding content={defaultPortfolioContent} variant="showcase" />);
 
     expect(sectionOrder()).toEqual(["hero", "gallery", "about", "footer"]);
-    // 外部サイトに貼る作品集なので、ページ内へ飛ぶタブもリンクも置かない。
-    expect(screen.queryAllByRole("navigation")).toHaveLength(0);
-    expect(screen.queryAllByRole("link")).toHaveLength(0);
+    expect(uniqueNavLinks()).toEqual([
+      { href: "#gallery", label: "作品" },
+      { href: "#about", label: "プロフィール" },
+    ]);
+    for (const { href } of uniqueNavLinks()) {
+      expect(document.querySelector(href)).not.toBeNull();
+    }
     expect(document.querySelector("#pricing")).toBeNull();
     expect(document.querySelector("#flow")).toBeNull();
     expect(document.querySelector("#form")).toBeNull();
