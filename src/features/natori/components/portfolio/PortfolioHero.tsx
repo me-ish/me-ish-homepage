@@ -61,7 +61,7 @@ export default function PortfolioHero({
           }`}
         >
           {/* スマホでは呼び名がヘッダーに出ているので、見出しは読み上げ用にだけ残す。 */}
-          <div className="order-2 hidden min-w-0 px-5 md:order-none md:block md:px-0">
+          <div className="sr-only order-2 min-w-0 md:not-sr-only md:order-none">
             {/* 英字の肩書きは小さく、字間を広げない（看板の小さな札）。 */}
             <p
               className="mb-3 hidden text-xs font-medium md:block"
