@@ -23,7 +23,7 @@ export async function seedPhase7(origin, keys) {
     { ...base, id: quoteProjectId, title: 'Phase 7 full saved quote', status: 'inquiry', next_action: 'Synthetic awaiting payment', payment_link_id: linkId,
       payment_link_url: 'https://buy.stripe.com/test_phase7synthetic', payment_link_status: 'ready' },
     { ...base, id: managementId, title: 'Phase 7 active production', status: 'rough', amount: 12000, paid_amount: 12000,
-      paid_at: now, payment_confirmed_at: now, due_date: '2026-11-15', next_action: 'Synthetic rough: preserve original conditions' },
+      paid_at: now, payment_confirmed_at: now, due_date: '2030-11-15', next_action: 'Synthetic rough: preserve original conditions' },
   ];
   check(!(await db.from('natori_projects').insert(projects)).error, 'PROJECT_FIXTURE');
   check(!(await db.from('natori_estimate_drafts').insert({ project_id: estimateId, user_id: owner, revision: 1, agreed_terms: agreedTerms,

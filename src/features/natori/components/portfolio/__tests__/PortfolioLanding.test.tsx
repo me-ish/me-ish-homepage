@@ -153,24 +153,4 @@ describe("PF-01 portfolio information architecture", () => {
     expect(sectionOrder()).toEqual(["hero", "gallery", "about", "footer"]);
     expect(document.querySelector("#process")).toBeNull();
   });
-
-  it("offers the lightbox consultation link only on the open full page", () => {
-    render(<PortfolioLanding content={defaultPortfolioContent} />);
-    expect(galleryProps.at(-1)?.consultation).toEqual({ contactPath: "/natori/portfolio/contact", query: "" });
-    cleanup();
-
-    render(<PortfolioLanding content={defaultPortfolioContent} demoContact structuredIntake />);
-    expect(galleryProps.at(-1)?.consultation).toEqual({
-      contactPath: "/etorie/demo/app/portfolio/contact",
-      query: "&structured=1",
-    });
-    cleanup();
-
-    render(<PortfolioLanding content={defaultPortfolioContent} variant="showcase" />);
-    expect(galleryProps.at(-1)?.consultation).toBeUndefined();
-    cleanup();
-
-    render(<PortfolioLanding content={{ ...defaultPortfolioContent, commissionOpen: false }} />);
-    expect(galleryProps.at(-1)?.consultation).toBeUndefined();
-  });
 });

@@ -504,72 +504,22 @@ describe("PortfolioGallery pick-up and lightbox browsing", () => {
   });
 });
 
-describe("PortfolioGallery consultation from the lightbox", () => {
-  const withImage = (id: string, options: Partial<PortfolioWork> = {}) =>
-    work(id, { image: `https://example.com/${id}.webp`, ...options });
-  const consultation = { contactPath: "/natori/portfolio/contact", query: "" };
-
-  it("開いている作品のIDを付けて相談フォームへ誘導し、前後に移るとその作品のIDに変わる", () => {
-    render(
-      <PortfolioGallery
-        collections={collections}
-        works={[withImage("1"), withImage("a&b/2")]}
-        consultation={consultation}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "作品1 を拡大表示" }));
-    const dialog = screen.getByRole("dialog", { name: "作品1" });
-    const link = within(dialog).getByRole("link", { name: "この雰囲気で相談する" });
-    expect(link.getAttribute("href")).toBe("/natori/portfolio/contact?mode=consultation&work=1");
-
-    fireEvent.click(within(dialog).getByRole("button", { name: "次の作品を表示" }));
-    expect(
-      within(screen.getByRole("dialog", { name: "作品a&b/2" }))
-        .getByRole("link", { name: "この雰囲気で相談する" })
-        .getAttribute("href"),
-    ).toBe("/natori/portfolio/contact?mode=consultation&work=a%26b%2F2");
-  });
-
-  it("デモの構造化フォームの指定をそのまま引き継ぎ、クリックを計測する", () => {
-    render(
-      <PortfolioGallery
-        collections={collections}
-        works={[withImage("1")]}
-        consultation={{ contactPath: "/etorie/demo/app/portfolio/contact", query: "&structured=1" }}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "作品1 を拡大表示" }));
-    const link = screen.getByRole("link", { name: "この雰囲気で相談する" });
-    expect(link.getAttribute("href")).toBe(
-      "/etorie/demo/app/portfolio/contact?mode=consultation&work=1&structured=1",
-    );
-    // jsdom は画面遷移を実装していないので、遷移そのものは止めてクリックの計測だけを見る。
-    link.addEventListener("click", (event) => event.preventDefault());
-    fireEvent.click(link);
-    expect(trackNatoriPageEvent).toHaveBeenCalledWith("portfolio_primary_cta_click", "gallery");
-  });
-
-  it("相談先を渡さないとき、作品集（showcase）では渡されても、リンクを出さない", () => {
-    const { unmount } = render(
-      <PortfolioGallery collections={collections} works={[withImage("1")]} />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "作品1 を拡大表示" }));
-    expect(screen.queryByRole("link", { name: "この雰囲気で相談する" })).toBeNull();
-    unmount();
-
-    render(
-      <PortfolioGallery
-        collections={collections}
-        works={[withImage("1")]}
-        variant="showcase"
-        consultation={consultation}
-      />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "作品1 を拡大表示" }));
-    expect(screen.getByRole("dialog", { name: "作品1" })).toBeTruthy();
-    expect(screen.queryByRole("link", { name: "この雰囲気で相談する" })).toBeNull();
-    expect(document.querySelector('a[href*="/contact"]')).toBeNull();
+describe("PortfolioGallery lightbox without a consultation link", () => {
+  // 拡大表示は作品を見る場所なので、相談への導線は置かない（入口は冒頭・料金表・ページ下にある）。
+  it("ポートフォリオでも作品集でも、拡大表示に相談フォームへのリンクを出さない", () => {
+    for (const variant of ["full", "showcase"] as const) {
+      const { unmount } = render(
+        <PortfolioGallery
+          collections={collections}
+          works={[work("1", { image: "https://example.com/1.webp" })]}
+          variant={variant}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "作品1 を拡大表示" }));
+      expect(screen.getByRole("dialog", { name: "作品1" })).toBeTruthy();
+      expect(screen.queryByRole("link", { name: "この雰囲気で相談する" })).toBeNull();
+      expect(document.querySelector('a[href*="/contact"]')).toBeNull();
+      unmount();
+    }
   });
 });
