@@ -93,7 +93,6 @@ export default function PortfolioGallery({
   collections,
   variant = "full",
   flatPlaceholders,
-  consultation,
   intro,
 }: {
   works: PortfolioWork[];
@@ -103,11 +102,6 @@ export default function PortfolioGallery({
   intro?: string;
   /** 画像なし作品のプレースホルダーをキャラSVGではなくベタ塗りにする（デモ用） */
   flatPlaceholders?: boolean;
-  /**
-   * 拡大表示に「この雰囲気で相談する」を出すときの相談フォーム。query は「&structured=1」のような追加分。
-   * 作品集（showcase）では渡されても出さない。
-   */
-  consultation?: { contactPath: string; query: string };
 }) {
   const [selected, setSelected] = useState<PortfolioWork | null>(null);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
@@ -270,11 +264,6 @@ export default function PortfolioGallery({
     event.preventDefault();
     showAdjacentWork(event.key === "ArrowRight" ? 1 : -1);
   };
-
-  const consultationHref =
-    variant === "full" && consultation && selected
-      ? `${consultation.contactPath}?mode=consultation&work=${encodeURIComponent(selected.id)}${consultation.query}`
-      : null;
 
   const navButtonClassName =
     "pf-cute-focus absolute top-[calc(0.75rem+35dvh)] z-10 flex h-[44px] w-[44px] -translate-y-1/2 items-center justify-center rounded-full md:top-[calc(0.75rem+38dvh)]";
@@ -521,16 +510,6 @@ export default function PortfolioGallery({
                       items={workMeta(selected, selectedEntry?.collection ?? unassignedCollection)}
                     />
                   </div>
-                  {consultationHref ? (
-                    <a
-                      href={consultationHref}
-                      onClick={() => trackNatoriPageEvent("portfolio_primary_cta_click", "gallery")}
-                      className="pf-btn pf-btn-sm pf-cute-focus inline-flex min-h-[44px] shrink-0 items-center justify-center px-5 py-2 text-sm font-bold sm:text-sm"
-                      style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
-                    >
-                      この雰囲気で相談する
-                    </a>
-                  ) : null}
                 </div>
               </div>
             </div>
