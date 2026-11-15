@@ -387,5 +387,5 @@ export const portfolioBudgetOptions = [
 
 export const portfolioDeadlineOptions = [
   "通常（約1ヶ月前後）",
-  "お急ぎ納品を希望（+2,000円・要相談）",
+  "お急ぎ納品を希望（+2,000円〜・要相談）",
 ] as const;
