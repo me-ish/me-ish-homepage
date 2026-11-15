@@ -29,5 +29,5 @@ export const NATORI_INTAKE_DEADLINE_CHIP_LABELS: Readonly<Record<NatoriDeadlineV
   undecided: "未定・相談して決めたい",
   standard: "通常でOK（入金後 約1か月）",
   preferred_date: "希望の日付がある",
-  rush_consultation: `お急ぎ（+${NATORI_RUSH_DELIVERY_AMOUNT.toLocaleString("ja-JP")}円／要相談）`,
+  rush_consultation: `お急ぎ（+${NATORI_RUSH_DELIVERY_AMOUNT.toLocaleString("ja-JP")}円〜／要相談）`,
 };

@@ -277,7 +277,7 @@ export const defaultPortfolioContent: PortfolioContent = {
   deliveryNotes: [
     {
       title: "お急ぎ納品",
-      body: "お急ぎの場合は、内容やスケジュールに応じて7〜14日程度での納品にも対応しています（お急ぎ料金 +2,000円）。ご希望の場合は事前にご相談ください。",
+      body: "お急ぎの場合は、内容やスケジュールに応じて7〜14日程度での納品にも対応しています（お急ぎ料金 +2,000円〜）。ご希望の場合は事前にご相談ください。",
     },
   ],
   workflow: [
@@ -387,5 +387,5 @@ export const portfolioBudgetOptions = [
 
 export const portfolioDeadlineOptions = [
   "通常（約1ヶ月前後）",
-  "お急ぎ納品を希望（+2,000円・要相談）",
+  "お急ぎ納品を希望（+2,000円〜・要相談）",
 ] as const;

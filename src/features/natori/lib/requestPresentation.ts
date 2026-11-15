@@ -100,7 +100,7 @@ export const NATORI_DEADLINE_KIND_LABELS_V1: Readonly<
   undecided: "未定・相談して決めたい",
   standard: "通常納期でよい",
   preferred_date: "希望日がある",
-  rush_consultation: `お急ぎ希望（+${NATORI_RUSH_DELIVERY_AMOUNT.toLocaleString("ja-JP")}円／要相談）`,
+  rush_consultation: `お急ぎ希望（+${NATORI_RUSH_DELIVERY_AMOUNT.toLocaleString("ja-JP")}円〜／要相談）`,
 };
 
 const UNDECIDED_DISPLAY = "未定";

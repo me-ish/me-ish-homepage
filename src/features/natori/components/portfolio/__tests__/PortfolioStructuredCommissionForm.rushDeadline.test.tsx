@@ -60,7 +60,7 @@ describe("Phase 5 rush deadline terms survive confirmation and editing", () => {
       await openDetails("詳しい条件を追加する");
       await openDetails("予算・納期");
     }
-    const rushChip = within(screen.getByRole("group", { name: "希望納期" })).getByRole("radio", { name: "お急ぎ（+2,000円／要相談）" }) as HTMLInputElement;
+    const rushChip = within(screen.getByRole("group", { name: "希望納期" })).getByRole("radio", { name: "お急ぎ（+2,000円〜／要相談）" }) as HTMLInputElement;
     await userEvent.click(rushChip);
     const dateInput = screen.getByLabelText(/希望日/) as HTMLInputElement;
     expect(dateInput.required).toBe(false);
@@ -69,8 +69,8 @@ describe("Phase 5 rush deadline terms survive confirmation and editing", () => {
 
     const expectedDeadline = { kind: "rush_consultation", date, note: "イベント前まで" };
     const expectedDisplay = date
-      ? "お急ぎ希望（+2,000円／要相談）（2026年12月1日 希望） / イベント前まで"
-      : "お急ぎ希望（+2,000円／要相談） / イベント前まで";
+      ? "お急ぎ希望（+2,000円〜／要相談）（2026年12月1日 希望） / イベント前まで"
+      : "お急ぎ希望（+2,000円〜／要相談） / イベント前まで";
     await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
     const firstReview = await screen.findByRole("region", { name: "送信前の確認" });
     expect(firstReview.textContent).toContain(expectedDisplay);
@@ -80,7 +80,7 @@ describe("Phase 5 rush deadline terms survive confirmation and editing", () => {
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", {
       name: mode === "quote" ? "ご希望の条件と連絡先" : "ご相談内容を教えてください",
     })));
-    expect((within(screen.getByRole("group", { name: "希望納期" })).getByRole("radio", { name: "お急ぎ（+2,000円／要相談）" }) as HTMLInputElement).checked).toBe(true);
+    expect((within(screen.getByRole("group", { name: "希望納期" })).getByRole("radio", { name: "お急ぎ（+2,000円〜／要相談）" }) as HTMLInputElement).checked).toBe(true);
     expect((screen.getByLabelText(/希望日/) as HTMLInputElement).value).toBe(date ?? "");
     expect((screen.getByLabelText("納期の補足（任意）") as HTMLInputElement).value).toBe("イベント前まで");
     await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
