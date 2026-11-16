@@ -19,6 +19,13 @@ describe("which completion the case screen offers",()=>{
   expect(caseCompletionOption(view({requestData:{schemaVersion:1}}),now)).toBeNull();
   expect(caseCompletionOption(view({},{records:[{id:req,kind:"origin",data:{note:"x",origin:"internal"},operator:{kind:"auth-user",userId:null},created_at:"2026-10-01T00:00:00Z"}]}),now)).toBeNull();
  });
+ it("offers external completion for a site case handed over outside the site and recorded as received",()=>{
+  const rec=(kind:"manual_delivery"|"manual_receipt")=>({id:req,kind,data:{note:"x",target:"x",occurredAt:"2026-11-09T11:44:00Z"},operator:{kind:"auth-user" as const,userId:null},created_at:"2026-11-09T11:44:00Z"});
+  expect(caseCompletionOption(view({requestData:{schemaVersion:1}},{records:[rec("manual_delivery"),rec("manual_receipt")]}),now)).toBe("external");
+  expect(caseCompletionOption(view({requestData:{schemaVersion:1}},{records:[rec("manual_delivery")]}),now)).toBeNull();
+  expect(caseCompletionOption(view({requestData:{schemaVersion:1},deliveredMailAt:"2026-11-01T00:00:00Z"},{records:[rec("manual_receipt")]}),now)).toBeNull();
+  expect(caseCompletionOption(view({requestData:{schemaVersion:1}},{records:[rec("manual_receipt")],release:release("2026-11-30T00:00:00Z")}),now)).toBeNull();
+ });
  it("offers deemed completion only after the delivery page expired without acceptance",()=>{
   expect(caseCompletionOption(view({status:"delivered"},{release:release("2026-10-30T00:00:00Z")}),now)).toBe("deemed");
   expect(caseCompletionOption(view({status:"delivered"},{release:release("2026-11-30T00:00:00Z")}),now)).toBeNull();

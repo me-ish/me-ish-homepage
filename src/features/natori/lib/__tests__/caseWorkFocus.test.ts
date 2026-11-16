@@ -43,10 +43,11 @@ it("for an outside order, raises delivery until it is handed over, then completi
   expect(caseWorkFocus(view({ ...outside, clientEmail: null }, { records: [origin] }), now)).toBe("complete");
 });
 
-it("asks for no form on a site case once delivery or receipt was recorded by hand", () => {
+it("on a site case handed over by hand, waits after a delivery record and asks to complete after a receipt record", () => {
   expect(caseWorkFocus(view(), now)).toBe("delivery");
   expect(caseWorkFocus(view({}, { records: [record("manual_delivery")] }), now)).toBeNull();
-  expect(caseWorkFocus(view({}, { records: [record("manual_receipt")] }), now)).toBeNull();
+  // Received outside the site: no customer will press 受け取り, so completion is the next step.
+  expect(caseWorkFocus(view({}, { records: [record("manual_receipt")] }), now)).toBe("complete");
   // A delivery page that is already out still wins over the hand records.
   expect(caseWorkFocus(view({ status: "delivered" }, { release: release("2026-11-04T00:00:00Z"), records: [record("manual_receipt")] }), now)).toBe("complete");
 });

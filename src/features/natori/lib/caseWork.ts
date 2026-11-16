@@ -59,15 +59,22 @@ export const caseCompletionCommand=z.object({
 export type CaseCompletionCommand=z.infer<typeof caseCompletionCommand>;
 /**
  * Which completion the screen offers. Mirrors natori_case_complete_v1:
- * external = no delivery page, not from the site form, not recorded as a site case;
+ * external = no delivery page and no delivery mail, and either not a site case
+ *   (not from the site form, not recorded as a site case) or a site case that
+ *   was handed over outside the site and recorded as received (manual_receipt);
  * deemed = delivery page expired (with extensions) and never accepted.
  */
 export function caseCompletionOption(view:CaseWorkView,now:number):CaseCompletionKind|null{
  const p=view.project;
  if(p.deletedAt||p.completedAt||p.deliveryAcceptedAt||p.status==="completed"||p.status==="closed")return null;
  if(view.release)return !view.release.acceptedAt&&p.status==="delivered"&&Date.parse(view.release.expiresAt)<=now?"deemed":null;
- if(p.requestData!==null||p.deliveredMailAt)return null;
- return view.records.some(r=>r.kind==="origin"&&r.data.origin==="internal")?null:"external";
+ if(p.deliveredMailAt)return null;
+ if(isCaseFromSite(view)&&!view.records.some(r=>r.kind==="manual_receipt"))return null;
+ return "external";
+}
+/** A case that came through the site form, or that staff recorded as a site case. */
+export function isCaseFromSite(view:CaseWorkView):boolean{
+ return view.project.requestData!==null||view.records.some(r=>r.kind==="origin"&&r.data.origin==="internal");
 }
 /** The work panel's forms that can be folded to one line. */
 export type CaseWorkForm="record"|"revision"|"delivery"|"complete";
@@ -88,9 +95,8 @@ export function caseWorkFocus(view:CaseWorkView,now:number):CaseWorkForm|null{
  const completion=caseCompletionOption(view,now);
  if(completion==="deemed")return "complete";
  if(completion==="external")return p.status==="delivered"||!p.clientEmail||view.records.some(r=>r.kind==="manual_delivery"||r.kind==="manual_receipt")?"complete":"delivery";
- // Off-system progress recorded by hand leaves nothing pressing in this panel:
- // a recorded receipt settles the tail, and a recorded delivery means the
- // delivery-page form is not the next step (receipt is recorded the same way).
+ // A recorded delivery by hand means the delivery-page form is not the next step
+ // (receipt is recorded the same way; once received, completion above takes over).
  if(view.records.some(r=>r.kind==="manual_receipt"))return null;
  return view.release||view.records.some(r=>r.kind==="manual_delivery")?null:"delivery";
 }
