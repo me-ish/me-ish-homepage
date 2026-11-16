@@ -69,9 +69,10 @@
     "supabase/migrations/20261114120000_natori_case_items_contract.sql",
     "supabase/migrations/20261114130000_natori_case_insights.sql",
     "supabase/migrations/20261115000000_natori_case_anonymize.sql",
-    "supabase/migrations/20261115120000_natori_case_completion_schedule.sql"
+    "supabase/migrations/20261115120000_natori_case_completion_schedule.sql",
+    "supabase/migrations/20261116120000_natori_case_completion_handover.sql"
   ],
-  "activeMigrationCount": 61,
+  "activeMigrationCount": 62,
   "legacyMigrationCount": 55,
   "remoteOnlyEvidenceCount": 3,
   "sourceProjectRef": "lvnfspyainrxtztjytbo",
@@ -150,7 +151,8 @@
     "20261114120000_natori_case_items_contract.sql",
     "20261114130000_natori_case_insights.sql",
     "20261115000000_natori_case_anonymize.sql",
-    "20261115120000_natori_case_completion_schedule.sql"
+    "20261115120000_natori_case_completion_schedule.sql",
+    "20261116120000_natori_case_completion_handover.sql"
   ],
   "archiveVerification": {
     "status": "verified",
@@ -340,7 +342,8 @@
     "sha256:supabase/migrations/20261114120000_natori_case_items_contract.sql": "8cb1d5940af1bf37136c74050dfe5db3e7af85829726e9082d0ac4e91e038421",
     "sha256:supabase/migrations/20261114130000_natori_case_insights.sql": "ad02a081b9766775ab16deadc568e5e829bbb836e6a1c567612fd6d1987ab368",
     "sha256:supabase/migrations/20261115000000_natori_case_anonymize.sql": "886c0451c5938178e86a9d065b700104fd2b294ab26450dec40b6a29fa53afad",
-    "sha256:supabase/migrations/20261115120000_natori_case_completion_schedule.sql": "028e92c1e39c7854c0b1e5635f66bb7536becf8a6698f594b2c724a3f76d3596"
+    "sha256:supabase/migrations/20261115120000_natori_case_completion_schedule.sql": "028e92c1e39c7854c0b1e5635f66bb7536becf8a6698f594b2c724a3f76d3596",
+    "sha256:supabase/migrations/20261116120000_natori_case_completion_handover.sql": "61805daa83fe8d8f1e63031a86b0660d6aaa0fc170eb04bde58127575c978847"
   },
   "operatorConfirmationRequired": [
     "target project ref is non-production and not lvnfspyainrxtztjytbo",

@@ -105,5 +105,25 @@ ok "evidence table rejects schedule on a non-deemed row" "$(q "do \$\$begin begi
 ok "no frame left behind (schedule)" "$(q "select count(*) from natori_case_guard.frames")" 0
 ok "guard contract still holds for every root (schedule)" "$(q "do \$\$declare r record;begin for r in select distinct root from natori_case_guard.permissions loop perform natori_case_guard.check_contract(r.root);end loop;end\$\$;select 'ok'")" ok
 
+# サイトの外で渡した案件（フォーム経由でも「受け取ってもらった」記録があれば external で完了できる）。
+HAND=a0000000-0000-4000-8000-000000000009; HAND_NO=a0000000-0000-4000-8000-00000000000a; HAND_REL=a0000000-0000-4000-8000-00000000000b; HAND_MAIL=a0000000-0000-4000-8000-00000000000c
+R7=c0000000-0000-4000-8000-000000000007
+for id in $HAND $HAND_NO $HAND_REL $HAND_MAIL; do
+  q "insert into public.natori_projects(id,user_id,title,client_name,status,type,amount,next_action,delivery_plan,created_at,updated_at,request_data,payment_confirmed_at) values('$id','$OWNER','架空の案件','架空依頼者','delivery_prep','illustration',12000,'-','normal',now()-interval '60 days',now(),'{\"schemaVersion\":1}',now()-interval '50 days')"
+done
+q "insert into public.natori_delivery_releases(project_id,manifest,snapshot,published_at,expires_at) values('$HAND_REL','[{\"id\":\"x\"}]','{}',now()-interval '5 days',now()+interval '25 days')"
+q "update public.natori_projects set delivered_mail_at=now()-interval '5 days' where id='$HAND_MAIL'"
+work(){ # project kind
+  q "insert into public.natori_case_work_records(id,owner_id,project_id,kind,data,request_hash,operator) values(gen_random_uuid(),'$OWNER','$1','$2','{\"target\":\"x\",\"occurredAt\":\"2026-11-09T11:44:00Z\",\"note\":\"x\"}','$(printf 'b%.0s' {1..64})','{\"kind\":\"auth-user\",\"userId\":null}')"
+}
+work $HAND manual_delivery; work $HAND manual_receipt; work $HAND_NO manual_delivery; work $HAND_REL manual_receipt; work $HAND_MAIL manual_receipt
+ok "site-form case handed over outside: delivery record alone is not enough" "$(call $OWNER $HAND_NO external $R7)" not-eligible
+ok "site-form case with a delivery page stays not eligible even with a receipt record" "$(call $OWNER $HAND_REL external $R7)" not-eligible
+ok "site-form case with a delivery mail stays not eligible even with a receipt record" "$(call $OWNER $HAND_MAIL external $R7)" not-eligible
+ok "site-form case with a receipt record completes" "$(call $OWNER $HAND external $R7 ",'completedAt','2026-11-09T12:00:00Z'")" applied
+ok "handover status/date, no customer acceptance" "$(q "select status||'|'||(completed_at at time zone 'UTC')::text||'|'||coalesce(delivery_accepted_at::text,'null') from public.natori_projects where id='$HAND'")" "completed|2026-11-09 12:00:00|null"
+ok "no frame left behind (handover)" "$(q "select count(*) from natori_case_guard.frames")" 0
+ok "guard contract still holds for every root (handover)" "$(q "do \$\$declare r record;begin for r in select distinct root from natori_case_guard.permissions loop perform natori_case_guard.check_contract(r.root);end loop;end\$\$;select 'ok'")" ok
+
 if [ "$fails" -ne 0 ]; then echo "$fails check(s) failed"; exit 1; fi
 echo "all checks passed"
