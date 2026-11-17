@@ -9,7 +9,7 @@ mkdirSync(output, {recursive:true});
 for (const dir of ['components','features','hooks','i18n','lib','styles','types']) {
   cpSync(resolve(repo,'src',dir),resolve(output,'src',dir),{recursive:true,filter:p=>!p.includes('/__tests__')});
 }
-const exact = ['src/middleware.ts','src/app/globals.css','src/app/[locale]/layout.tsx',
+const exact = ['src/proxy.ts','src/app/globals.css','src/app/[locale]/layout.tsx',
   'src/app/[locale]/natori/dashboard/page.tsx','src/app/[locale]/natori/dashboard/layout.tsx',
   'src/app/[locale]/natori/projects/page.tsx','src/app/admin-login/page.tsx','src/app/admin-login/AdminLoginClient.tsx',
   ...['projects','events','profile','pricing','page-events','notifications'].map(p=>`src/app/api/natori/admin/${p}/route.ts`),

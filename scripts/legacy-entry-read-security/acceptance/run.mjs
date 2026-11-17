@@ -48,7 +48,7 @@ function docker(name,args) {
   call('docker',['run','--detach','--name',name,'--network',prefix,'--label','meish.entry-acceptance='+prefix,...args]);containers.push(name);
 }
 const sha256=value=>createHash('sha256').update(value).digest('hex');
-const sourceFiles=['src/lib/coa/server.ts','src/lib/coa/reissueAuth.ts','src/middleware.ts','supabase/migrations/20261011221028_lockdown_legacy_entries_reads.sql','scripts/legacy-entry-read-security/fixture.sql',
+const sourceFiles=['src/lib/coa/server.ts','src/lib/coa/reissueAuth.ts','src/proxy.ts','supabase/migrations/20261011221028_lockdown_legacy_entries_reads.sql','scripts/legacy-entry-read-security/fixture.sql',
  ...readdirSync(scripts).map(name=>'scripts/legacy-entry-read-security/acceptance/'+name)];
 const source={nodeVersion:process.version,head:call('git',['rev-parse','HEAD']).trim(),diffSha256:sha256(call('git',['diff','HEAD'])),fileSha256:Object.fromEntries(sourceFiles.map(name=>[name,sha256(readFileSync(join(root,name)))]))};
 writeFileSync(join(directory,'source.json'),JSON.stringify(source,null,2)+'\n');

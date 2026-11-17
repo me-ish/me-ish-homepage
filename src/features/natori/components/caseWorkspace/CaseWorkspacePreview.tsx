@@ -80,7 +80,7 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
   const [searchOpen]=useState(()=>!!nav.query||nav.sort!=="default"||nav.source!=="all"||nav.intakeFilter!=="all");
   const listPositions=useRef(new Map<string,number>());
   const entryPositions=useRef(new Map<CaseEntry,CaseWorkspaceLocation>());
-  const restoredFocus=useRef<string>();
+  const restoredFocus=useRef<string>(undefined);
 
   useEffect(()=>{
     if(!application)return;

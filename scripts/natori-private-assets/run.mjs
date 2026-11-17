@@ -174,7 +174,7 @@ const inventory = call("git", ["ls-files"])
       (path.startsWith("src/app/") &&
         (path.includes("/natori/") ||
           path.includes("/natori-portfolio.png/"))) ||
-      path === "src/middleware.ts" ||
+      path === "src/proxy.ts" ||
       path === "src/types/supabase.ts" ||
       path === "next.config.mjs" ||
       path === "package-lock.json" ||

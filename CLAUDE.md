@@ -3,7 +3,7 @@
 ## Project context
 - Repo: me-ish/me-ish-homepage (Next.js App Router, TypeScript, Tailwind, shadcn/ui, Supabase, Stripe, Resend).
 - 現役のプロダクトはナトリ（ポートフォリオ、依頼受付、案件管理、見積・支払い・納品）だけ。
-- 旧サービス（me-ish ギャラリー / AURA / CARD）は 2026-10-10 に新規受付・公開を終了済み。停止の判定は `src/lib/legacyServiceSuspension.ts`（middleware から呼ぶ）。旧コードは終了案内と記録確認のために一部残っているだけなので、新しい機能を足さない。何を残しているかは `docs/cleanup-index.md` を見る。
+- 旧サービス（me-ish ギャラリー / AURA / CARD）は 2026-10-10 に新規受付・公開を終了済み。停止の判定は `src/lib/legacyServiceSuspension.ts`（`src/proxy.ts` から呼ぶ。Next 16 で middleware.ts から改名）。旧コードは終了案内と記録確認のために一部残っているだけなので、新しい機能を足さない。何を残しているかは `docs/cleanup-index.md` を見る。
 - `src/features/etorie/` と `/etorie/demo/app` はナトリ受付のデモ・CI 試験に使っているので消さない。
 
 ## Non-negotiables

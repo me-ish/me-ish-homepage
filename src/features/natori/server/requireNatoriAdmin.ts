@@ -51,7 +51,7 @@ async function hasNatoriKeyCookie(): Promise<boolean> {
   if (!key) return false;
   const cookieValue = (await cookies()).get(NATORI_KEY_COOKIE)?.value;
   if (!cookieValue) return false;
-  // Cookie にはキー平文ではなく、発行時刻つき HMAC トークンを保存する（middleware.ts 参照）。
+  // Cookie にはキー平文ではなく、発行時刻つき HMAC トークンを保存する（proxy.ts 参照）。
   // 8 時間の期限はブラウザの maxAge に任せず、ここでも検証する。
   return verifyNatoriDashboardCookieToken(key, cookieValue);
 }
@@ -63,7 +63,7 @@ async function hasNatoriKeyCookie(): Promise<boolean> {
  * デフォルトは deny。以下のいずれかを満たす場合のみ許可する:
  * - NATORI_DASHBOARD_KEY を設定した合言葉キー方式: `?natori-key=<値>` 付き URL を
  *   一度開くと HMAC トークン Cookie がセットされ、以後ログイン不要
- *   （middleware.ts 参照）。
+ *   （proxy.ts 参照）。
  * - Supabase ログイン（admin / NATORI_STAFF_EMAILS / NATORI_OWNER_EMAILS）。
  *
  * env が何も設定されていない場合は全拒否（フェイルクローズ）。

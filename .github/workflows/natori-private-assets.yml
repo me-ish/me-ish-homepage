@@ -9,7 +9,7 @@ on:
       - 'src/features/natori/**'
       - 'src/app/**/natori/**'
       - 'src/app/og/natori-portfolio.png/**'
-      - 'src/middleware.ts'
+      - 'src/proxy.ts'
       - 'supabase/migrations/**'
       - 'supabase/baseline/manifest.json'
       - 'package-lock.json'

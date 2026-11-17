@@ -25,7 +25,7 @@ export async function prepare(out) {
  }}]});
  const envelopes=JSON.parse(execFileSync(process.execPath,[out+'/fixtures.mjs'],{cwd:root,env:{PATH:process.env.PATH,NODE_OPTIONS:'--require='+root+'/scripts/natori-case-preview/deny-network.cjs'},encoding:'utf8'}));
  const proof={app:'tracked full application copied without environment files',files:files.length,sha256:{},substitutions:['Google Font CSS uses local fallback; external CSS fonts blocked in browser','local password SDK bootstrap instead of Google OAuth UI'],auth:'real GoTrue, no Auth or authorization module replacements in app'};
- for(const file of ['src/middleware.ts','src/lib/supabase/server.ts','src/features/natori/server/requireNatoriAdmin.ts','src/features/natori/server/caseWorkspaceRead.ts','next.config.mjs']){
+ for(const file of ['src/proxy.ts','src/lib/supabase/server.ts','src/features/natori/server/requireNatoriAdmin.ts','src/features/natori/server/caseWorkspaceRead.ts','next.config.mjs']){
   const actual=await readFile(resolve(app,file)),source=await readFile(resolve(root,file));
   if(!actual.equals(source))throw Error('copied source mismatch');proof.sha256[file]=createHash('sha256').update(actual).digest('hex');
  }
