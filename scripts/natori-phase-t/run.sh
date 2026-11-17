@@ -452,11 +452,12 @@ pid=$(docker inspect -f '{{.State.Pid}}' "$runner")
 sudo nsenter -t "$pid" -n iptables -F OUTPUT
 sudo nsenter -t "$pid" -n iptables -P OUTPUT DROP
 sudo nsenter -t "$pid" -n iptables -A OUTPUT -d "$api_ip" -p tcp --dport 8000 -j ACCEPT
-# Loopback inside this sealed namespace stays reachable. Next 16 (Turbopack) runs PostCSS/loaders in
-# Node.js child processes that connect back to the dev server on an ephemeral 127.0.0.1 port; without
-# this the first compile never finishes. Only processes started by the tests share this namespace;
-# external IPv4/IPv6, DNS, the host gateway and other API ports stay blocked (see isolation.mjs).
-sudo nsenter -t "$pid" -n iptables -A OUTPUT -o lo -s 127.0.0.0/8 -d 127.0.0.0/8 -j ACCEPT
+# TCP between 127.0.0.1 ports inside this sealed namespace stays reachable. Next 16 (Turbopack) runs
+# PostCSS/loaders in Node.js child processes that connect back to the dev server on an ephemeral
+# 127.0.0.1 port; without this the first compile never finishes. Only 127.0.0.1/TCP is opened: Docker's
+# embedded DNS lives on 127.0.0.11 and must stay unreachable, as must external IPv4/IPv6, the host
+# gateway and other API ports (see isolation.mjs).
+sudo nsenter -t "$pid" -n iptables -A OUTPUT -o lo -p tcp -s 127.0.0.1 -d 127.0.0.1 -j ACCEPT
 sudo nsenter -t "$pid" -n iptables -A OUTPUT -j REJECT
 sudo nsenter -t "$pid" -n ip6tables -P OUTPUT DROP
 echo 'TEST: kernel egress allowlist active; no downloads or production destinations'

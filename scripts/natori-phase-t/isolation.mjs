@@ -43,9 +43,9 @@ await test('kernel-ipv4-external-block', () => blocked('198.51.100.10', 443));
 await test('kernel-host-gateway-block', () => blocked('172.30.250.1', 55431));
 await test('kernel-api-wrong-port-block', () => blocked(new URL(origin).hostname, 8001));
 await test('kernel-ipv6-block', () => blocked('2001:db8::1', 443));
-// Loopback within this namespace is allowed on purpose: Next 16 (Turbopack) workers connect back to the
-// dev server on an ephemeral 127.0.0.1 port. Isolation from everything outside the namespace is asserted
-// by the external, host-gateway, wrong-port, IPv6, DNS and child-process checks.
+// TCP on 127.0.0.1 within this namespace is allowed on purpose: Next 16 (Turbopack) workers connect back
+// to the dev server on an ephemeral 127.0.0.1 port. Everything else stays blocked and is asserted by the
+// external, host-gateway, wrong-port, IPv6, DNS (Docker resolver on 127.0.0.11) and child-process checks.
 await test('kernel-loopback-within-namespace-reachable', async () => {
   const server = net.createServer(s => s.destroy());
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
