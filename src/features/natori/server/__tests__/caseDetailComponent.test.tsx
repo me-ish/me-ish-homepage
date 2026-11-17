@@ -36,7 +36,9 @@ it("keeps input focus in an open exact detail when the slower collection first a
  let finish!:(rows:readonly CaseWorkspaceRecord[])=>void;
  const load=vi.fn().mockImplementation(()=>new Promise(resolve=>{finish=resolve;})),detail=vi.fn().mockResolvedValue(record);
  render(<CaseWorkspacePreview application readOnly load={load} loadDetail={detail} initialSearch={`?case=${record.id}`}/>);
- await screen.findByRole('heading',{name:record.title});
+ const heading=await screen.findByRole('heading',{name:record.title});
+ // 詳細が届いたときの見出しへのフォーカス移動は useEffect（表示の確定後）。それが済んでから入力欄へ移す。
+ await waitFor(()=>expect(document.activeElement).toBe(heading));
  const search=screen.getByRole('searchbox');search.focus();expect(document.activeElement).toBe(search);
  await act(async()=>finish([record]));
  expect(document.activeElement).toBe(search);
