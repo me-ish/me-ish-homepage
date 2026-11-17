@@ -43,14 +43,22 @@ await test('kernel-ipv4-external-block', () => blocked('198.51.100.10', 443));
 await test('kernel-host-gateway-block', () => blocked('172.30.250.1', 55431));
 await test('kernel-api-wrong-port-block', () => blocked(new URL(origin).hostname, 8001));
 await test('kernel-ipv6-block', () => blocked('2001:db8::1', 443));
-// TCP on 127.0.0.1 within this namespace is allowed on purpose: Next 16 (Turbopack) workers connect back
-// to the dev server on an ephemeral 127.0.0.1 port. Everything else stays blocked and is asserted by the
-// external, host-gateway, wrong-port, IPv6, DNS (Docker resolver on 127.0.0.11) and child-process checks.
-await test('kernel-loopback-within-namespace-reachable', async () => {
+await test('kernel-loopback-listener-block', async () => {
+  const server = net.createServer(s => s.destroy());
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(18081, '127.0.0.1', resolve); });
+  try { await blocked('127.0.0.1', 18081); } finally { server.close(); }
+});
+// Kernel-assigned 127.0.0.1 ports are reachable on purpose: Next 16 (Turbopack) workers connect back to
+// the dev server on a port bound to 127.0.0.1:0. run.sh opens exactly 32768-60999, so the namespace's
+// ephemeral range must match it; fixed ports such as 18081 above stay blocked.
+await test('kernel-loopback-ephemeral-reachable', async () => {
+  const range = readFileSync('/proc/sys/net/ipv4/ip_local_port_range', 'utf8').trim().split(/\s+/).map(Number);
+  check(range[0] === 32768 && range[1] === 60999);
   const server = net.createServer(s => s.destroy());
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
   try {
     const { port } = server.address();
+    check(port >= 32768 && port <= 60999);
     await new Promise((resolve, reject) => {
       const socket = net.connect({ host: '127.0.0.1', port });
       const timer = setTimeout(() => { socket.destroy(); reject(new Error('LOOPBACK_TIMEOUT')); }, 2000);
