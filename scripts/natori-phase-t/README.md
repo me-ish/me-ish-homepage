@@ -38,6 +38,7 @@ CLI bootstrapだけはループバックbindの専用構築networkを使用す�
 テストcontainerは非root、capabilities全剥奪、no-new-privileges、readonly root、Docker socketなし。子プロセスも同じnamespaceを継承する。NodeのURL guardだけに隔離を依存しない。
 
 `isolation.mjs`は、prod風Supabase/Stripe/mail/DB URLをtransport呼出前に拒否する試験と、実socket/UDP/子プロセスの通信拒否、許可APIへの接続成功を実施する。外部IPの否定試験は文書用予約IPを使い、本番をprobeしない。redirectも禁止。
+同じnamespace内で、カーネルが割り当てる 127.0.0.1 の一時ポート（32768〜60999）への TCP だけを許可する（2026-11、Next 16 移行）。固定ポート（例: 18081、可視試験の 3001）は従来どおり遮断。Docker の内部 DNS は 127.0.0.11 にあるので、宛先を 127.0.0.1 から広げない。Next 16 の Turbopack は PostCSS などを Node.js の子プロセスで動かし、dev サーバーへ 127.0.0.1 の任意ポートで接続し直すため、これを拒否すると最初のコンパイルが終わらない。外部 IPv4/IPv6・DNS・host gateway・API の別 port は従来どおり遮断し、`isolation.mjs` で毎回確認する（`kernel-loopback-listener-block` はそのまま残し、一時ポート範囲が規則と一致して到達できることを `kernel-loopback-ephemeral-reachable` で確認する。件数は 18）。
 テスト中のSQLは専用名・label検証済みDBに`docker exec`のローカルsocketで渡す。SQLfixtureは追加の`phase_t.sandbox=ephemeral` guard必須。
 
 資格情報はruntimeの限定JSONだけ。CLI status/start/stopのraw log、config、Auth user、JWT、署名URLはログ/artifact/Gitへ出さない。artifactは件数・固定試験名・非機密catalog・バージョン・namespaceルールのみ。

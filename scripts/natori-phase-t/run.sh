@@ -452,6 +452,13 @@ pid=$(docker inspect -f '{{.State.Pid}}' "$runner")
 sudo nsenter -t "$pid" -n iptables -F OUTPUT
 sudo nsenter -t "$pid" -n iptables -P OUTPUT DROP
 sudo nsenter -t "$pid" -n iptables -A OUTPUT -d "$api_ip" -p tcp --dport 8000 -j ACCEPT
+# Kernel-assigned (ephemeral) 127.0.0.1 TCP ports inside this sealed namespace stay reachable. Next 16
+# (Turbopack) runs PostCSS/loaders in Node.js child processes that connect back to the dev server on a
+# port bound to 127.0.0.1:0; without this the first compile never finishes. Only that range is opened:
+# fixed loopback ports other than the explicitly allowed app ports stay blocked, Docker's embedded DNS
+# (127.0.0.11) stays unreachable, and so do external IPv4/IPv6, the host gateway and other API ports.
+# isolation.mjs asserts the namespace's ip_local_port_range matches this rule.
+sudo nsenter -t "$pid" -n iptables -A OUTPUT -o lo -p tcp -s 127.0.0.1 -d 127.0.0.1 --dport 32768:60999 -j ACCEPT
 sudo nsenter -t "$pid" -n iptables -A OUTPUT -j REJECT
 sudo nsenter -t "$pid" -n ip6tables -P OUTPUT DROP
 echo 'TEST: kernel egress allowlist active; no downloads or production destinations'

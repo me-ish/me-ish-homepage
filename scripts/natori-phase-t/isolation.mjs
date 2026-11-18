@@ -48,6 +48,25 @@ await test('kernel-loopback-listener-block', async () => {
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(18081, '127.0.0.1', resolve); });
   try { await blocked('127.0.0.1', 18081); } finally { server.close(); }
 });
+// Kernel-assigned 127.0.0.1 ports are reachable on purpose: Next 16 (Turbopack) workers connect back to
+// the dev server on a port bound to 127.0.0.1:0. run.sh opens exactly 32768-60999, so the namespace's
+// ephemeral range must match it; fixed ports such as 18081 above stay blocked.
+await test('kernel-loopback-ephemeral-reachable', async () => {
+  const range = readFileSync('/proc/sys/net/ipv4/ip_local_port_range', 'utf8').trim().split(/\s+/).map(Number);
+  check(range[0] === 32768 && range[1] === 60999);
+  const server = net.createServer(s => s.destroy());
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  try {
+    const { port } = server.address();
+    check(port >= 32768 && port <= 60999);
+    await new Promise((resolve, reject) => {
+      const socket = net.connect({ host: '127.0.0.1', port });
+      const timer = setTimeout(() => { socket.destroy(); reject(new Error('LOOPBACK_TIMEOUT')); }, 2000);
+      socket.once('connect', () => { clearTimeout(timer); socket.destroy(); resolve(); });
+      socket.once('error', (error) => { clearTimeout(timer); reject(error); });
+    });
+  } finally { server.close(); }
+});
 await test('kernel-dns-block', async () => {
   const s = dgram.createSocket('udp4');
   // A real DNS query to Docker's resolver must not leave the test namespace.
