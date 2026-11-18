@@ -447,6 +447,8 @@ async function main() {
     check(browserProblems.size === 0, 'BROWSER_RUNTIME_ERRORS');
   });
   console.log(`Phase 4 browser diagnostics: ${[...browserProblems].join(',') || 'none'}`);
+  // Classification only (no message text): which test, error kind, category and known source file.
+  for (const d of browserErrorDiagnostics) console.log(`Phase 4 page error: ${d.stage} ${d.kind} ${d.category} ${d.source ?? 'unknown-source'}`);
   await client.close(); await manager.close();
   const summary = { tests: results, passed: results.filter(r => r.status === 'passed').length, failed: results.filter(r => r.status === 'failed').length, skipped: 0, engine: 'Chromium 1.58.2; mobile viewport only, not iPhone Safari', providerRequests: providerCalls, browserProblems: [...browserProblems], browserErrorDiagnostics, resourceFailures, stylesheetResponses };
   writeFileSync('/results/phase4-browser.json', JSON.stringify(summary, null, 2));
