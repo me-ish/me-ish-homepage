@@ -133,8 +133,8 @@ async function main() {
     c.on('page', page => {
       page.on('pageerror', error => {
         browserProblems.add('UNHANDLED_PAGE_ERROR');
-        const kind = ['TypeError', 'ReferenceError', 'RangeError', 'SyntaxError', 'Error'].includes(error.name) ? error.name : 'other';
-        const category = /Cannot read properties/.test(error.message) ? 'property_read' : /is not a function/.test(error.message) ? 'not_callable' : /Server Components render/.test(error.message) ? 'server_render' : 'other';
+        const kind = /^[A-Z][A-Za-z]{2,40}$/.test(error.name ?? '') ? error.name : 'other';
+        const category = /Cannot read properties/.test(error.message) ? 'property_read' : /is not a function/.test(error.message) ? 'not_callable' : /Server Components render/.test(error.message) ? 'server_render' : /chunk/i.test(error.message) ? 'chunk_load' : /hydrat/i.test(error.message) ? 'hydration' : /Failed to fetch|NetworkError/.test(error.message) ? 'fetch_failed' : /Minified React error #\d+/.test(error.message) ? `react_${error.message.match(/Minified React error #(\d+)/)[1]}` : 'other';
         const source = error.stack?.match(/(?:ConsultationThread|RenewConsultationLink|ProjectsBoard|InquiryConversation)\.tsx:\d+:\d+/)?.[0] ?? null;
         const redacted = error.message.replace(/(?:https?|postgres(?:ql)?):\/\/[^\s"'`<>]+/gi, '[url]')
           .replace(/eyJ[\w-]+\.[\w-]+\.[\w-]+|[A-Za-z0-9_+/.=-]{24,}/g, '[opaque]')
