@@ -22,3 +22,11 @@ Module._load=function(request,parent,isMain){
  }
  FixtureStripe.default=FixtureStripe;FixtureStripe.Stripe=FixtureStripe;return FixtureStripe;
 };
+// Next 16 builds with Turbopack, which loads server externals with import() under a hashed alias
+// ("stripe-<hash>") instead of require('stripe'), and does not support experimental.esmExternals.
+// Route that ESM specifier to a module that requires 'stripe' through the CommonJS hook above, so the
+// disposable Next process sees the same fixture adapter either way.
+Module.register('data:text/javascript,'+encodeURIComponent(`
+export async function resolve(specifier,context,next){if(/^stripe(?:-[0-9a-f]{8,})?$/.test(specifier))return {url:'phase2c-fixture:stripe',shortCircuit:true};return next(specifier,context);}
+export async function load(url,context,next){if(url==='phase2c-fixture:stripe')return {format:'module',shortCircuit:true,source:"import {createRequire} from 'node:module';const Stripe=createRequire('/app/package.json')('stripe');export default Stripe;export {Stripe};"};return next(url,context);}
+`));
