@@ -113,10 +113,15 @@ async function main() {
   if (!ready) { console.log(`Next startup: ${[...classifications].join(',')}`); throw new Error('NEXT_NOT_READY'); }
   browser = await chromium.launch({ headless: true, args: ['--host-resolver-rules=MAP localhost 127.0.0.1'] });
   const context = async () => { const c = await browser.newContext({ baseURL: appOrigin, serviceWorkers: 'block' }); c.setDefaultTimeout(15000); c.setDefaultNavigationTimeout(60000);
-    c.on('response', response => {
+    c.on('response', async response => {
       const u = new URL(response.url());
       if (response.request().resourceType() === 'stylesheet' && u.origin === appOrigin) {
-        stylesheetResponses.push({ stage, status: response.status(), asset: u.pathname.endsWith('/app/layout.css') ? 'root-layout-css' : 'other-css' });
+        const entry = { stage, status: response.status(), asset: u.pathname.endsWith('/app/layout.css') ? 'root-layout-css' : 'other-css' };
+        stylesheetResponses.push(entry);
+        // Next 16 dev (Turbopack) names CSS chunks by hash, not app/layout.css; its chunk lists the source modules.
+        if (entry.asset === 'other-css' && u.pathname.startsWith('/_next/static/chunks/')) {
+          try { if ((await response.text()).includes('/* [project]/src/app/globals.css ')) entry.asset = 'root-layout-css'; } catch { /* body unavailable */ }
+        }
       }
     });
     c.on('requestfailed', req => {
@@ -128,8 +133,8 @@ async function main() {
     c.on('page', page => {
       page.on('pageerror', error => {
         browserProblems.add('UNHANDLED_PAGE_ERROR');
-        const kind = ['TypeError', 'ReferenceError', 'RangeError', 'SyntaxError', 'Error'].includes(error.name) ? error.name : 'other';
-        const category = /Cannot read properties/.test(error.message) ? 'property_read' : /is not a function/.test(error.message) ? 'not_callable' : /Server Components render/.test(error.message) ? 'server_render' : 'other';
+        const kind = /^[A-Z][A-Za-z]{2,40}$/.test(error.name ?? '') ? error.name : 'other';
+        const category = /Cannot read properties/.test(error.message) ? 'property_read' : /is not a function/.test(error.message) ? 'not_callable' : /Server Components render/.test(error.message) ? 'server_render' : /chunk/i.test(error.message) ? 'chunk_load' : /hydrat/i.test(error.message) ? 'hydration' : /Failed to fetch|NetworkError/.test(error.message) ? 'fetch_failed' : /Minified React error #\d+/.test(error.message) ? `react_${error.message.match(/Minified React error #(\d+)/)[1]}` : 'other';
         const source = error.stack?.match(/(?:ConsultationThread|RenewConsultationLink|ProjectsBoard|InquiryConversation)\.tsx:\d+:\d+/)?.[0] ?? null;
         const redacted = error.message.replace(/(?:https?|postgres(?:ql)?):\/\/[^\s"'`<>]+/gi, '[url]')
           .replace(/eyJ[\w-]+\.[\w-]+\.[\w-]+|[A-Za-z0-9_+/.=-]{24,}/g, '[opaque]')
@@ -442,6 +447,8 @@ async function main() {
     check(browserProblems.size === 0, 'BROWSER_RUNTIME_ERRORS');
   });
   console.log(`Phase 4 browser diagnostics: ${[...browserProblems].join(',') || 'none'}`);
+  // Classification only (no message text): which test, error kind, category and known source file.
+  for (const d of browserErrorDiagnostics) console.log(`Phase 4 page error: ${d.stage} ${d.kind} ${d.category} ${d.source ?? 'unknown-source'}`);
   await client.close(); await manager.close();
   const summary = { tests: results, passed: results.filter(r => r.status === 'passed').length, failed: results.filter(r => r.status === 'failed').length, skipped: 0, engine: 'Chromium 1.58.2; mobile viewport only, not iPhone Safari', providerRequests: providerCalls, browserProblems: [...browserProblems], browserErrorDiagnostics, resourceFailures, stylesheetResponses };
   writeFileSync('/results/phase4-browser.json', JSON.stringify(summary, null, 2));

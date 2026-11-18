@@ -126,7 +126,7 @@ export default function ConsultationThread(props: Props) {
   const [roughOkActionsAllowed, setRoughOkActionsAllowed] = useState(false);
   const [body, setBody] = useState("");
   const [review,setReview]=useState(false);
-  const reviewGuard=useRef<unknown>();
+  const reviewGuard=useRef<unknown>(undefined);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(props.mode === "staff");
   const [error, setError] = useState("");
@@ -238,7 +238,7 @@ export default function ConsultationThread(props: Props) {
         const roughOksChanged = props.mode === "staff" && (probe.roughOks === null || (typeof probe.roughOks === "string" && probe.roughOks !== (roughOksRef.current === null ? null : roughOkSignature(roughOksRef.current))));
         if (!different && !closedChanged && !roughsChanged && !roughOksChanged) return;
         const nearBottom = !last || last.getBoundingClientRect().bottom <= window.innerHeight + FOLLOW_SLACK_PX;
-        if (await reload(false, nearBottom) && roughOksChanged) changed?.();
+        if ((await reload(false, nearBottom)) && roughOksChanged) changed?.();
       } catch { /* Silent: the next tick or a manual refresh retries. */ } finally {
         polling.current = false;
       }
@@ -352,7 +352,7 @@ export default function ConsultationThread(props: Props) {
     if(pending){
       if(files.length!==pending.files.length){setError("さっきと同じファイルを選んでください。変える時は「送るのをやめる」を押してください。");return;}
       const restored=await Promise.all(files.map(async(file,index)=>{
-        const saved=pending.files[index];return saved&&file.name===saved.fileName&&file.type===saved.mimeType&&file.size===saved.sizeBytes&&await consultationDigest(await file.arrayBuffer())===saved.sha256?{id:saved.id,file}:null;
+        const saved=pending.files[index];return saved&&file.name===saved.fileName&&file.type===saved.mimeType&&file.size===saved.sizeBytes&&(await consultationDigest(await file.arrayBuffer()))===saved.sha256?{id:saved.id,file}:null;
       }));
       if (!ownsPending(pending, job)) return;
       if(restored.some(file=>!file)){setError("前回と同じ添付を選択してください。");return;}
@@ -367,7 +367,7 @@ export default function ConsultationThread(props: Props) {
     const job={actor:actorKey,generation:++operationGeneration.current};
     busyOwner.current=job;setBusy(true);setError("");setNotice("");
     try{
-      const operation=pending??await freezeConsultationOperation(body,draftFiles);
+      const operation=pending??(await freezeConsultationOperation(body,draftFiles));
       if (!ownsAttempt(job)) return;
       if (pending ? !cachedPendingMatches(operation) : sessionStorage.getItem(cacheKey) !== null) throw new Error("\u4fdd\u5b58\u3055\u308c\u305f\u9001\u4fe1\u306e\u8a18\u9332\u304c\u5909\u308f\u3063\u3066\u3044\u307e\u3059\u3002\u5165\u529b\u3092\u4fdd\u6301\u3057\u3066\u3001\u30da\u30fc\u30b8\u3092\u518d\u8aad\u307f\u8fbc\u307f\u3057\u3066\u78ba\u8a8d\u3057\u3066\u304f\u3060\u3055\u3044\u3002");
       if(workspaceLookup&&!pending)sessionStorage.setItem(cacheKey+"/guard",JSON.stringify(reviewGuard.current??(props.mode==="staff"?props.workspaceExpected:null)));
@@ -400,7 +400,7 @@ export default function ConsultationThread(props: Props) {
       const committed=await callOperation("commit",operation);
       if (!ownsPending(operation, job)) return;
       if(committed.data.kind==="notice_expired"){setNoticeExpired(true);return;}
-      if(!committed.response.ok||!await recordSaved(operation,committed.data,job))throw new Error("送信結果を確認できません。同じ送信で再試行してください。");
+      if(!committed.response.ok||!(await recordSaved(operation,committed.data,job)))throw new Error("送信結果を確認できません。同じ送信で再試行してください。");
     }catch(err){if(ownsAttempt(job))setError(err instanceof Error?err.message:"送信結果を確認できません。同じ送信で再試行してください。");}
     finally{releaseBusy(job);}
   };

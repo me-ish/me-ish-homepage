@@ -127,7 +127,8 @@ describe("PortfolioEditor 動画ファイルのアップロード中の保存", 
       fireEvent.change(videoFileInput(), { target: { files: [mp4()] } });
 
       await waitFor(() => expect(processSection().getByRole("alert")).toBeTruthy());
-      expect(saveButton().disabled).toBe(false);
+      // 「アップロード中」の解除は useEffect で親へ届くので、エラー表示と同時とは限らない。届くまで待つ。
+      await waitFor(() => expect(saveButton().disabled).toBe(false));
       expect(status().textContent).toBe("未保存の変更があります");
       consoleError.mockRestore();
     },

@@ -23,7 +23,8 @@ describe("delivery acceptance safety", () => {
     fireEvent.click(screen.getByRole("button", { name: "内容を確認し、受け取りを完了する" }));
     await screen.findByRole("alert");
     expect(screen.queryByRole("status")).toBeNull();
-    expect(document.activeElement).toBe(screen.getByRole("alert"));
+    // フォーカスは表示の確定後（useEffect）に移すので、届くまで待つ（下の再訪テストと同じ書き方）。
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("alert")));
   });
   it("keeps accepted evidence on a revisit even when files are unavailable", async () => {
     render(<DeliveryAcceptCard {...base} acceptedAt="2026-09-27T01:00:00Z" canAccept={false}

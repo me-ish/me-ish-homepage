@@ -9,7 +9,7 @@ mkdirSync(output, {recursive:true});
 for (const dir of ['components','features','hooks','i18n','lib','styles','types']) {
   cpSync(resolve(repo,'src',dir),resolve(output,'src',dir),{recursive:true,filter:p=>!p.includes('/__tests__')});
 }
-const exact = ['src/middleware.ts','src/app/globals.css','src/app/[locale]/layout.tsx',
+const exact = ['src/proxy.ts','src/app/globals.css','src/app/[locale]/layout.tsx',
   'src/app/[locale]/natori/dashboard/page.tsx','src/app/[locale]/natori/dashboard/layout.tsx',
   'src/app/[locale]/natori/projects/page.tsx','src/app/admin-login/page.tsx','src/app/admin-login/AdminLoginClient.tsx',
   ...['projects','events','profile','pricing','page-events','notifications'].map(p=>`src/app/api/natori/admin/${p}/route.ts`),
@@ -39,8 +39,10 @@ export async function POST(request:Request) {
 `);
 mkdirSync(resolve(output,'src/app/[locale]/fixture-session'),{recursive:true});
 writeFileSync(resolve(output,'src/app/[locale]/fixture-session/page.tsx'), `'use client';
-import {useState} from 'react';
-export default function Page(){const [done,setDone]=useState(false);return <form method="post" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const r=await fetch('/api/fixture-session',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:f.get('email'),password:f.get('password')})});setDone(r.ok);}}><label>Email<input name="email" type="email"/></label><label>Password<input name="password" type="password"/></label><button>Sign in</button>{done&&<p>Session ready</p>}</form>;}
+import {useEffect,useState} from 'react';
+// The button stays disabled until hydration, so a click can never fall back to a native form post
+// (Next 16 dev compiles client chunks on first request, which can take seconds on CI runners).
+export default function Page(){const [done,setDone]=useState(false);const [hydrated,setHydrated]=useState(false);useEffect(()=>setHydrated(true),[]);return <form method="post" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const r=await fetch('/api/fixture-session',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:f.get('email'),password:f.get('password')})});setDone(r.ok);}}><label>Email<input name="email" type="email"/></label><label>Password<input name="password" type="password"/></label><button disabled={!hydrated}>Sign in</button>{done&&<p>Session ready</p>}</form>;}
 `);
 writeFileSync(resolve(output,'source-checksums.json'),JSON.stringify(checksums,null,2));
 console.log('Prepared unchanged management routes and isolated test-only shell');

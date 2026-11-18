@@ -354,7 +354,10 @@ describe("PortfolioProcessVideoEditor 動画ファイル", () => {
     uploadMock.mockRejectedValueOnce(new ProcessVideoUploadError("アップロードに失敗しました。"));
     fireEvent.change(fileInput(), { target: { files: [mp4()] } });
     await screen.findByRole("alert");
-    expect(onUploadingChange.mock.calls.map(([uploading]) => uploading)).toEqual([false, true, false, true, false]);
+    // 親への通知は useEffect（描画の確定後）で送るので、エラー表示と同時とは限らない。届くまで待つ。
+    await waitFor(() =>
+      expect(onUploadingChange.mock.calls.map(([uploading]) => uploading)).toEqual([false, true, false, true, false])
+    );
     consoleError.mockRestore();
   });
 

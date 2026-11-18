@@ -166,8 +166,10 @@ async function main(){
         const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/natori/admin/projects');
         await page.goto('/natori/projects');check((await response).status()===503,'CONFIG_NOT_503');
         await page.getByText('エラー詳細',{exact:true}).click();
-        await expect(page.getByText('管理対象の設定を確認できません。案件は変更していません。管理者に連絡してください。',{exact:true})).toBeVisible({timeout:30000});
-        await expect(page.getByText(title,{exact:true})).toHaveCount(0);
+        // Next 16's dev overlay also lists the page's console error text; assert on the page content only.
+        const content=page.locator('main');
+        await expect(content.getByText('管理対象の設定を確認できません。案件は変更していません。管理者に連絡してください。',{exact:true})).toBeVisible({timeout:30000});
+        await expect(content.getByText(title,{exact:true})).toHaveCount(0);
         if(setting==='')await page.screenshot({path:'/results/browser-configuration-error.png',fullPage:true});
       }finally{await ctx.close();}
       const after=await admin.from('natori_projects').select('*').in('user_id',actors.map(a=>a.id)).order('id');

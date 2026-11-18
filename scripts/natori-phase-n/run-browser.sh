@@ -41,4 +41,4 @@ docker run -d --name "$project-browser" --label "natori.phase-t=$project" --netw
   mcr.microsoft.com/playwright:v1.58.2-noble /runtime-bin/node -e 'setTimeout(()=>{},1800000)' >/dev/null
 timeout 600 docker exec "$project-browser" /runtime-bin/node /browser-test/browser.mjs
 
-if [[ ${PHASE_4:-0} == 1 ]]; then timeout 480 docker exec "$project-browser" /runtime-bin/node /phase4-browser/browser.mjs; fi
+if [[ ${PHASE_4:-0} == 1 ]]; then timeout 480 docker exec "$project-browser" /runtime-bin/node --require /browser-test/wait-for-hydration.cjs /phase4-browser/browser.mjs; fi

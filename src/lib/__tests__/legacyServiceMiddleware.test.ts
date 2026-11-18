@@ -4,7 +4,7 @@ import { unstable_doesMiddlewareMatch } from 'next/experimental/testing/server';
 
 const { intl } = vi.hoisted(() => ({ intl: vi.fn() }));
 vi.mock('next-intl/middleware', () => ({ default: () => intl }));
-import middleware, { config } from '@/middleware';
+import middleware, { config } from '@/proxy';
 import { NATORI_KEY_COOKIE } from '@/features/natori/constants/dashboardKey';
 
 describe('legacy suspension middleware', () => {

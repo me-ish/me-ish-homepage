@@ -104,11 +104,16 @@ async function main() {
         window.__phase1RecordRejectedResource(record).catch(() => {});
       });
     });
-    c.on('response', response => {
+    c.on('response', async response => {
       const u = new URL(response.url());
       if (response.request().resourceType() === 'stylesheet' && u.origin === appOrigin) {
-        stylesheetResponses.push({ stage, status: response.status(),
-          asset: u.pathname.endsWith('/app/layout.css') ? 'root-layout-css' : 'other-css' });
+        const entry = { stage, status: response.status(),
+          asset: u.pathname.endsWith('/app/layout.css') ? 'root-layout-css' : 'other-css' };
+        stylesheetResponses.push(entry);
+        // Next 16 dev (Turbopack) names CSS chunks by hash, not app/layout.css; its chunk lists the source modules.
+        if (entry.asset === 'other-css' && u.pathname.startsWith('/_next/static/chunks/')) {
+          try { if ((await response.text()).includes('/* [project]/src/app/globals.css ')) entry.asset = 'root-layout-css'; } catch { /* body unavailable */ }
+        }
       }
     });
     c.on('requestfailed', req => {

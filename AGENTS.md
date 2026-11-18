@@ -26,7 +26,7 @@ Shared working agreement for coding agents operating in this repo.
 ## UI/UX conventions
 - Maintain existing visual language unless asked to redesign. The public portfolio (`src/features/natori/components/portfolio/`) is "paper and stationery": cream paper background, hand-drawn frames (`.pf-sketch`), marker underlines (`.pf-marker`), paper buttons (`.pf-btn`). No English tracking labels, no card shadows, no decorative animation.
 - Prefer Tailwind utility classes over new CSS files. Portfolio-wide rules live in `PortfolioStyles.tsx`; colors come from `constants/portfolioContent.ts` (`portfolioColors`).
-- Use `next/image` for images except in the public portfolio, which deliberately uses plain `img` (object-fit overrides and the private-image guard in `middleware.ts`).
+- Use `next/image` for images except in the public portfolio, which deliberately uses plain `img` (object-fit overrides and the private-image guard in `src/proxy.ts`, formerly `middleware.ts`).
 
 ## Supabase/data conventions
 - Keep queries typed and handle errors.

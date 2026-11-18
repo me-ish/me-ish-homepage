@@ -116,7 +116,8 @@ async function main() {
     sessionReadiness.formMarkerMatched = ready.formMarkerMatched; sessionReadiness.ownerRevalidated = ready.ownerRevalidated;
   } finally { sessionReadiness.elapsedMs = Math.max(0, Date.now() - startupStartedAt); }
   stage = 'visual-browser';
-  child = spawn(process.execPath, [mode === '6b' ? '/phase6b-browser/browser.mjs' : '/phase7-browser/browser.mjs'], {
+  // process.execArgv carries run.sh's test-only hydration-wait preload into the browser child.
+  child = spawn(process.execPath, [...process.execArgv, mode === '6b' ? '/phase6b-browser/browser.mjs' : '/phase7-browser/browser.mjs'], {
     cwd: '/app', env: { PATH: env.PATH, HOME: '/tmp', TMPDIR: '/tmp', NODE_OPTIONS: env.NODE_OPTIONS, PLAYWRIGHT_BROWSERS_PATH: '/ms-playwright', PHASE_N_BROWSER: 'ephemeral',
       PHASE_6B_BROWSER: 'ephemeral', PHASE_6B_APP_URL: app, PHASE_6B_RESULTS: '/results/phase6b-visual',
       ...(mode === '7' ? { PHASE_7_BROWSER: 'ephemeral', PHASE_7_FIXTURE_STATE: JSON.stringify(fixture) } : {}) }, stdio: ['ignore', 'pipe', 'pipe'],

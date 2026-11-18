@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 import path from 'path';
 
 export default defineConfig({
-  // tsconfig の jsx は Next の "preserve" のため、テスト変換側で automatic runtime を使う
+  // テスト変換側で automatic runtime を使う（tsconfig の jsx は Next 16 で react-jsx に固定されたが、変換は vitest 側で明示する）
   esbuild: { jsx: 'automatic' },
   test: {
     globals: true,

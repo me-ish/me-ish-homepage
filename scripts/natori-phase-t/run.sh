@@ -539,7 +539,7 @@ if [[ $phase1 == 1 ]]; then
   dbsql <"$work/phase1.sql" >/dev/null
   phase1_status=0
   if ! timeout 360 docker exec "$runner" node /phase1/integration.cjs; then phase1_status=1; fi
-  if ! timeout 600 docker exec "$project-browser" /runtime-bin/node /phase1-browser/browser.mjs; then phase1_status=1; fi
+  if ! timeout 600 docker exec "$project-browser" /runtime-bin/node --require /browser-test/wait-for-hydration.cjs /phase1-browser/browser.mjs; then phase1_status=1; fi
   # Collect independent evidence after a failed assertion, while still failing the mandatory gate.
   [[ $phase1_status == 0 ]] || { echo 'Phase 1 mandatory tests failed'; exit 1; }
 fi
@@ -548,7 +548,7 @@ sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/egress-counters.t
 if [[ $phase2a == 1 ]]; then
   dbsql <"$work/phase2a.sql" >/dev/null
   timeout 300 docker exec "$runner" node /phase2a/integration.cjs
-  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase2a-browser/browser.mjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node --require /browser-test/wait-for-hydration.cjs /phase2a-browser/browser.mjs
 fi
 
 if [[ $phase2b == 1 ]]; then
@@ -565,14 +565,14 @@ fi
 if [[ $phase2c == 1 ]]; then
   dbsql <"$work/phase2c.sql" >/dev/null
   timeout 300 docker exec "$runner" node /phase2c/integration.cjs
-  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase2c-browser/browser.mjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node --require /browser-test/wait-for-hydration.cjs /phase2c-browser/browser.mjs
 fi
 
 if [[ $phase2d == 1 ]]; then
   dbsql <"$work/phase2d.sql" >/dev/null
   timeout 300 docker exec "$runner" node /phase2d/phase2b-compatibility.cjs
   timeout 300 docker exec "$runner" node /phase2d/integration.cjs
-  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase2d-browser/browser.mjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node --require /browser-test/wait-for-hydration.cjs /phase2d-browser/browser.mjs
 fi
 
 if [[ $phase3a == 1 ]]; then
@@ -580,7 +580,7 @@ if [[ $phase3a == 1 ]]; then
   # Both helper bundles are mounted read-only in this same sealed namespace.
   dbsql <"$work/phase3a.sql" >/dev/null
   timeout 360 docker exec "$runner" node /phase3a/integration.cjs
-  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase3a-browser/browser.mjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node --require /browser-test/wait-for-hydration.cjs /phase3a-browser/browser.mjs
   # Separate final evidence; retain every earlier phase report and egress snapshot.
   sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/phase3a-egress-counters.txt"
   sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/phase3a-egress-counters.txt"
@@ -592,7 +592,7 @@ if [[ $phase3b == 1 ]]; then
   dbsql <"$repo/scripts/natori-phase-3b/purpose-compatibility.sql" >/dev/null
   phase3b_status=0
   if ! timeout 360 docker exec "$runner" node /phase3b/integration.cjs; then phase3b_status=1; fi
-  if ! timeout 600 docker exec "$project-browser" /runtime-bin/node /phase3b-browser/browser.mjs; then phase3b_status=1; fi
+  if ! timeout 600 docker exec "$project-browser" /runtime-bin/node --require /browser-test/wait-for-hydration.cjs /phase3b-browser/browser.mjs; then phase3b_status=1; fi
   sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/phase3b-egress-counters.txt"
   sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/phase3b-egress-counters.txt"
   [[ $phase3b_status == 0 ]] || { echo "Phase 3B mandatory tests failed"; exit 1; }
@@ -600,22 +600,22 @@ fi
 
 if [[ $phase5 == 1 ]]; then
   # Independent sealed Next lifecycle; retain all prior DB/browser cases and reports.
-  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase5-browser/browser.mjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node --require /browser-test/wait-for-hydration.cjs /phase5-browser/browser.mjs
   sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/phase5-egress-counters.txt"
   sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/phase5-egress-counters.txt"
 fi
 
 if [[ $phase6a == 1 ]]; then
   timeout 300 docker exec "$runner" node /phase6a/integration.cjs
-  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase6a-browser/browser.mjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node --require /browser-test/wait-for-hydration.cjs /phase6a-browser/browser.mjs
 fi
 
 # Each visual mode starts and stops its own Next process in the same sealed namespace.
 if [[ $phase6b == 1 ]]; then
-  timeout 900 docker exec "$project-browser" /runtime-bin/node /phase7-browser/visual-server.mjs 6b
+  timeout 900 docker exec "$project-browser" /runtime-bin/node --require /browser-test/wait-for-hydration.cjs /phase7-browser/visual-server.mjs 6b
 fi
 if [[ $phase7 == 1 ]]; then
-  timeout 900 docker exec "$project-browser" /runtime-bin/node /phase7-browser/visual-server.mjs 7
+  timeout 900 docker exec "$project-browser" /runtime-bin/node --require /browser-test/wait-for-hydration.cjs /phase7-browser/visual-server.mjs 7
 fi
 
 echo 'Required real Storage tests completed; production remains unchanged'

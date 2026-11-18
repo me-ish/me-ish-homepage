@@ -12,7 +12,7 @@ on:
       - 'src/features/natori/components/dashboard/**'
       - 'src/app/**/natori/dashboard/**'
       - 'src/app/**/natori/projects/**'
-      - 'src/middleware.ts'
+      - 'src/proxy.ts'
       - 'next.config.mjs'
       - 'src/i18n/**'
       - 'src/features/natori/data/supabaseProjects.ts'

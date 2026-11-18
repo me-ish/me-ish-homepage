@@ -1,4 +1,4 @@
-// src/middleware.ts
+// src/proxy.ts（Next 16 で middleware.ts から改名。中身は同じ）
 import createMiddleware from 'next-intl/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 import { routing } from './i18n/routing';
@@ -31,7 +31,7 @@ function protectPrivateResponse(response: NextResponse, pathname: string): NextR
   return response;
 }
 
-export default async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   if (caseAcceptanceConfigured()) {
     try {

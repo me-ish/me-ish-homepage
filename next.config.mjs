@@ -33,9 +33,12 @@ function isEphemeralTestApp() {
 const nextConfig = {
   // 転送中だけポートフォリオの依頼欄に「つなぐで受け付けています」の一文を出すため、ページ側へ渡す。
   env: { NATORI_TEMPORARY_INTAKE_ACTIVE: natoriTemporaryIntakeActive ? '1' : '' },
-  // The image ceiling remains 10 MiB; middleware also buffers multipart headers.
+  // The image ceiling remains 10 MiB; proxy (formerly middleware) also buffers multipart headers.
   // A bounded extra MiB prevents truncating a valid file at that exact ceiling.
-  experimental: { middlewareClientMaxBodySize: '11mb' },
+  experimental: { proxyClientMaxBodySize: '11mb' },
+  // Next 16 の `next dev` は既定で AGENTS.md に自前の案内ブロックを書き足す。AGENTS.md は人が管理する
+  // ファイルなので、Next 15 のときと同じく書き換えさせない。
+  agentRules: false,
   images: {
     // Supabase Storage の公開URLを許可
     // 例) https://<project>.supabase.co/storage/v1/object/public/avatars/...
