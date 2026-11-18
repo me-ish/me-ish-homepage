@@ -54,7 +54,8 @@ jobs:
 
       # 本番に載る依存だけで合否を決める。開発用依存の braces は修正版がなく
       # （docs/natori/Security_Dependency_Update_2026-10-08.md）、全体で判定すると常に赤になる。
-      - run: npm audit --omit=dev --audit-level=high
+      # 修正版の無い注意報だけは、scripts/security-audit-gate.mjs の一覧で期限付きで合否から外す。
+      - run: node scripts/security-audit-gate.mjs
 
       # 開発用も含めた全体の結果は失敗扱いにせず、ログと注釈で見えるように残す。
       - name: Full audit (report only)
