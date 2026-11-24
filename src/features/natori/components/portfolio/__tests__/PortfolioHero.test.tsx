@@ -50,8 +50,8 @@ describe("PF-03 portfolio hero", () => {
     // 料金・お返事・納期は掲載内容と受付文面から短く言い直したものだけを出す。
     const facts = hero.querySelector("dl") as HTMLElement;
     expect(Array.from(facts.querySelectorAll("dt, dd"), (node) => node.textContent)).toEqual([
-      "全身",
-      "10,000円～",
+      "胸上",
+      "4,000円～",
       "お返事",
       "2〜3日以内",
       "納期",
@@ -177,7 +177,7 @@ describe("PF-03 portfolio hero", () => {
     );
 
     expect(document.querySelector("#hero dl")).toBeNull();
-    expect(screen.queryByText("10,000円～")).toBeNull();
+    expect(screen.queryByText("4,000円～")).toBeNull();
   });
 
   it("keeps the showcase hero free of direct transaction actions", () => {
@@ -193,7 +193,7 @@ describe("PF-03 portfolio hero", () => {
 
     expect(screen.queryByRole("link", { name: "相談・見積もり" })).toBeNull();
     expect(screen.queryByText("納期の目安")).toBeNull();
-    expect(screen.queryByText("10,000円～")).toBeNull();
+    expect(screen.queryByText("4,000円～")).toBeNull();
     expect(screen.queryByText("2〜3日以内")).toBeNull();
     expect(screen.queryByText("約1か月")).toBeNull();
     expect(screen.getByRole("link", { name: "実績を見る" }).getAttribute("href")).toBe(
