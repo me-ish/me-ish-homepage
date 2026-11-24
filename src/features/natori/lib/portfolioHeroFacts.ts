@@ -18,12 +18,12 @@ function parsePlanPrice(price: string): number | null {
   return Number.isSafeInteger(amount) && amount > 0 ? amount : null;
 }
 
-/** 1画面目の料金は、依頼の多い「全身」を基準に見せる。 */
-const HERO_PLAN_KEYWORD = "全身";
+/** 1画面目の料金は「胸上」を基準に見せる。 */
+const HERO_PLAN_KEYWORD = "胸上";
 
 /**
- * 1画面目に出すプランを「全身」「10,000円～」の形で返す。
- * 「全身」のプランがあればそれを、無ければいちばん安いプランを出す。
+ * 1画面目に出すプランを「胸上」「4,000円～」の形で返す。
+ * 「胸上」のプランがあればそれを、無ければいちばん安いプランを出す。
  */
 export function portfolioStartingPlan(
   plans: PortfolioContent["plans"],
