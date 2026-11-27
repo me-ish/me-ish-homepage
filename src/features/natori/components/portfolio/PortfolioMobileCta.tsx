@@ -55,7 +55,6 @@ export default function PortfolioMobileCta({ href = "/natori/portfolio/contact" 
       }}
     >
       相談・見積もり
-      <span aria-hidden="true" className="pf-btn-arrow">→</span>
     </a>
   );
 }

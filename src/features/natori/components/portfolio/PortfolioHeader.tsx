@@ -71,7 +71,7 @@ export default function PortfolioHeader({
           </span>
           {subName ? (
             <span
-              className="hidden truncate text-xs font-semibold uppercase tracking-[0.2em] sm:block"
+              className="hidden truncate text-xs font-semibold sm:block"
               style={{ ...fontEnStyle, color: c.textSoft }}
             >
               {subName}

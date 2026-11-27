@@ -20,7 +20,6 @@ export default function PortfolioHeroPrimaryCta({
       style={style}
     >
       相談・見積もり
-      <span aria-hidden="true" className="pf-btn-arrow">→</span>
     </a>
   );
 }
