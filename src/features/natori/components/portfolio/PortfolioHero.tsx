@@ -147,8 +147,8 @@ export default function PortfolioHero({
                 className="mt-3 flex items-baseline justify-center gap-2 text-sm"
                 style={{ color: c.textSoft }}
               >
-                <span className="text-sm font-semibold uppercase tracking-[0.16em]">
-                  Selected work
+                <span className="text-sm font-semibold">
+                  作品
                 </span>
                 <span className="font-bold" style={{ color: c.text }}>
                   {fallbackWork.title}

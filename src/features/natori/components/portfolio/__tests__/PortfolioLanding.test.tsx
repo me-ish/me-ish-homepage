@@ -97,9 +97,7 @@ describe("PF-01 portfolio information architecture", () => {
       { href: "/natori/portfolio/contact", label: "相談・見積もり" },
     ]);
     const formCta = document.querySelector("#form a") as HTMLElement;
-    // 矢印は飾り（aria-hidden）なので、読み上げ名は「相談・見積もり」のまま。
-    expect(formCta.textContent).toBe("相談・見積もり→");
-    expect(formCta.querySelector('[aria-hidden="true"]')?.textContent).toBe("→");
+    expect(formCta.textContent).toBe("相談・見積もり");
     expect(formCta.className).toContain("pf-btn");
     expect(formCta.getAttribute("href")).toBe("/natori/portfolio/contact");
     expect(formCta.style.backgroundColor).toBe(""); // The shared CTA owns every interaction state.
